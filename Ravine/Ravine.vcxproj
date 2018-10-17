@@ -147,8 +147,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="SingleFileLibraries\imgui.cpp" />
+    <ClCompile Include="SingleFileLibraries\imgui_demo.cpp" />
+    <ClCompile Include="SingleFileLibraries\imgui_draw.cpp" />
+    <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SingleFileLibraries\imconfig.h" />
+    <ClInclude Include="SingleFileLibraries\imgui.h" />
+    <ClInclude Include="SingleFileLibraries\imgui_internal.h" />
+    <ClInclude Include="SingleFileLibraries\imstb_rectpack.h" />
+    <ClInclude Include="SingleFileLibraries\imstb_textedit.h" />
+    <ClInclude Include="SingleFileLibraries\imstb_truetype.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

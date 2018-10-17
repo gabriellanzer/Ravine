@@ -14,6 +14,9 @@
 #include <algorithm>
 #include <fstream>
 
+//Assimp Includes
+#include "assimp/Importer.hpp"
+
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -1180,6 +1183,9 @@ private:
 
 int main() {
 	HelloTriangleApplication app;
+
+	Assimp::Importer importer;
+	
 
 	try {
 		app.run();

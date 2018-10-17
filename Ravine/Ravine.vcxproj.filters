@@ -53,5 +53,16 @@
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VKImGUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bin\data\shaders\shader.frag">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="bin\data\shaders\shader.vert">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -160,6 +160,11 @@
     <ClInclude Include="SingleFileLibraries\imstb_textedit.h" />
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
+    <ClInclude Include="VKImGUI.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bin\data\shaders\shader.frag" />
+    <None Include="bin\data\shaders\shader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -63,6 +63,12 @@ struct Vertex {
 
 };
 
+struct UniformBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
+};
+
 class Ravine
 {
 
@@ -70,12 +76,7 @@ public:
 	Ravine();
 	~Ravine();
 
-	void run() {
-		initWindow();
-		initVulkan();
-		mainLoop();
-		cleanup();
-	}
+	void run();
 
 private:
 
@@ -85,12 +86,14 @@ private:
 
 
 	const std::vector<Vertex> vertices = {
-			{ { -0.5f, +0.5f },{ 1.0f, 0.0f, 0.0f } },
-			{ { -0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
-			{ {	+0.5f, +0.5f },{ 0.0f, 0.0f, 1.0f } },
-			{ {	+0.5f, +0.5f },{ 0.0f, 0.0f, 1.0f } },
-			{ { -0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
-			{ { +0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f } }
+		{ { -0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f } },
+		{ { +0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
+		{ { +0.5f, +0.5f },{ 0.0f, 0.0f, 1.0f } },
+		{ { -0.5f, +0.5f },{ 1.0f, 1.0f, 1.0f } }
+	};
+
+	const std::vector<uint16_t> indices = {
+		0, 1, 2, 2, 3, 0
 	};
 
 
@@ -132,6 +135,11 @@ private:
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 
+	//Descriptors related content
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorPool descriptorPool;
+	std::vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
+
 	//Commands Buffers and it's Pool
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
@@ -143,9 +151,20 @@ private:
 	//Queue fences
 	std::vector<VkFence> inFlightFences;
 
-	// Verter buffer and it's related device memory
+	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
+	//Reference: https://developer.nvidia.com/vulkan-memory-management
+
+	//Verter buffer
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
+	
+	//Index buffer
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
+
+	//Uniform buffers (per swap chain)
+	std::vector<VkBuffer> uniformBuffers;
+	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
 	//Current frame for swap chain and Semaphore access
 	size_t currentFrame = 0;
@@ -206,6 +225,15 @@ private:
 	//Inform Vulkan of the framebuffers and their properties
 	void createRenderPass();
 
+	//Creating descriptor binding layouts (uniform layouts)
+	void createDescriptorSetLayout();
+	
+	//Creating pool for descriptor sets (uniforms bindings)
+	void createDescriptorPool();
+
+	//Creating descriptors sets (uniforms bindings)
+	void createDescriptorSets();
+
 	//Build graphics pipeline
 	void createGraphicsPipeline();
 
@@ -221,8 +249,14 @@ private:
 	//Helper function to copy a buffer's content into another
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	//Create vertex command buffer
+	//Create vertex buffer
 	void createVertexBuffer();
+
+	//Create index buffer
+	void createIndexBuffer();
+
+	//Create uniform buffers
+	void createUniformBuffers();
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
@@ -247,6 +281,9 @@ private:
 	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();
 
+	//Updates uniform buffer for given image
+	void updateUniformBuffer(uint32_t currentImage);
+
 	//Partial Cleanup of Swap Chain data
 	void cleanupSwapChain();
 
@@ -260,7 +297,7 @@ private:
 
 #pragma region Static
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
-	
+
 	static std::vector<char> readFile(const std::string& filename);
 
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);

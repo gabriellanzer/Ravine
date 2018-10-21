@@ -9,6 +9,15 @@
 #include <algorithm>
 #include <fstream>
 
+//GLM Includes
+#include <glm\gtc\matrix_transform.hpp>
+
+//Ravine Systems Includes
+#include "Time.h"
+
+//Dear ImGUI Includes
+//#include "VKImGUI.h"
+
 Ravine::Ravine()
 {
 }
@@ -18,9 +27,14 @@ Ravine::~Ravine()
 {
 }
 
-//#include "VKImGUI.h"
-
-
+void Ravine::run()
+{
+	initWindow();
+	Time::initialize();
+	initVulkan();
+	mainLoop();
+	cleanup();
+}
 
 //Validation layers to be enabled
 const std::vector<const char*> validationLayers = {
@@ -115,10 +129,15 @@ void Ravine::initVulkan() {
 	createSwapChain();
 	createImageViews();
 	createRenderPass();
+	createDescriptorSetLayout();
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
 	createVertexBuffer();
+	createIndexBuffer();
+	createUniformBuffers();
+	createDescriptorPool();
+	createDescriptorSets();
 	createCommandBuffers();
 	createSyncObjects();
 }
@@ -571,6 +590,82 @@ void Ravine::createRenderPass() {
 
 }
 
+void Ravine::createDescriptorPool()
+{
+	VkDescriptorPoolSize poolSize = {};
+	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSize.descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+
+	VkDescriptorPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
+
+	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create descriptor pool!");
+	}
+}
+
+void Ravine::createDescriptorSets()
+{
+	std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = descriptorPool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(swapChainImages.size());
+	allocInfo.pSetLayouts = layouts.data();
+
+	// Setting descriptor sets vector to count of SwapChain images
+	descriptorSets.resize(swapChainImages.size());
+	if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate descriptor sets!");
+	}
+
+	//Configuring descriptor sets
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		VkDescriptorBufferInfo bufferInfo = {};
+		bufferInfo.buffer = uniformBuffers[i];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+
+		VkWriteDescriptorSet descriptorWrite = {};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = descriptorSets[i];
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+		descriptorWrite.pImageInfo = nullptr; // Optional
+		descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+		vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+	}
+
+}
+
+void Ravine::createDescriptorSetLayout()
+{
+	VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount = 1;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	//Only relevant for image sampling related descriptors.
+	uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &uboLayoutBinding;
+
+	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create descriptor set layout!");
+	}
+
+}
+
 void Ravine::createGraphicsPipeline() {
 
 	std::vector<char> vertShaderCode = readFile("../data/shaders/vert.spv");
@@ -643,7 +738,8 @@ void Ravine::createGraphicsPipeline() {
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL; //Could be FILL, LINE or POINT (requires GPU feature enabling)
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	//Used for shadow mapping
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -704,8 +800,8 @@ void Ravine::createGraphicsPipeline() {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Pipeline_layout
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // Optional
-	pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -872,6 +968,7 @@ void Ravine::createVertexBuffer()
 	//Staging buffer is being used as the source in an a memory transfer operation
 	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
+	//Fetching verteices data
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
@@ -880,7 +977,51 @@ void Ravine::createVertexBuffer()
 	//Verter buffer is being used as the destination for such memory transfer operation
 	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
 
+	//Transfering vertices to index buffer
 	copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+	//Clearing staging buffer
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
+	vkFreeMemory(device, stagingBufferMemory, nullptr);
+}
+
+void Ravine::createIndexBuffer()
+{
+	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	//Creating staging buffer
+	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	//Feching indices data
+	void* data;
+	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, indices.data(), (size_t)bufferSize);
+	vkUnmapMemory(device, stagingBufferMemory);
+
+	//Creating index buffer
+	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+
+	//Transfering indices to index buffer
+	copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+	//Clearing staging buffer
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
+	vkFreeMemory(device, stagingBufferMemory, nullptr);
+}
+
+void Ravine::createUniformBuffers()
+{
+	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+	//Setting size of uniform buffers vector to count of SwapChain's images.
+	uniformBuffers.resize(swapChainImages.size());
+	uniformBuffersMemory.resize(swapChainImages.size());
+
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+	}
 }
 
 uint32_t Ravine::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -948,9 +1089,12 @@ void Ravine::createCommandBuffers() {
 		VkBuffer vertexBuffers[] = { vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
+		//Binding descriptor sets (uniforms)
+		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 		//Call drawing
-		vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		//Finishing Render Pass
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
@@ -1044,7 +1188,7 @@ void Ravine::createLogicalDevice()
 	}
 
 	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create logical device!");
+		throw std::runtime_error("Failed to create logical device!");
 	}
 
 	vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
@@ -1053,12 +1197,13 @@ void Ravine::createLogicalDevice()
 
 void Ravine::createSurface() {
 	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create window surface!");
+		throw std::runtime_error("Failed to create window surface!");
 	}
 }
 
 void Ravine::mainLoop() {
 	while (!glfwWindowShouldClose(window)) {
+		Time::update();
 		glfwPollEvents();
 		drawFrame();
 	}
@@ -1091,8 +1236,10 @@ void Ravine::drawFrame()
 		return;
 	}
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-		throw std::runtime_error("failed to acquire swap chain image!");
+		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
+
+	updateUniformBuffer(imageIndex);
 
 	//Submitting the command queue
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Submitting_the_command_buffer
@@ -1135,10 +1282,35 @@ void Ravine::drawFrame()
 		recreateSwapChain();
 	}
 	else if (result != VK_SUCCESS) {
-		throw std::runtime_error("failed to present swap chain image!");
+		throw std::runtime_error("Failed to present swap chain image!");
 	}
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void Ravine::updateUniformBuffer(uint32_t currentImage)
+{
+	//Comment on constantly changed uniforms.
+	/*
+	Using a UBO this way is not the most efficient way to pass frequently changing values to the shader.
+	A more efficient way to pass a small buffer of data to shaders are push constants.
+	Reference: https://vulkan-tutorial.com/Uniform_buffers/Descriptor_layout_and_buffer
+	*/
+	UniformBufferObject ubo = {};
+
+	//Rotating object 90 degrees per second
+	ubo.model = glm::rotate(glm::mat4(1.0f), (float)Time::elapsedTime() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+
+	//Flipping coordinates (because glm was designed for openGL, with fliped Y coordinate)
+	ubo.proj[1][1] *= -1;
+
+	//Transfering uniform data to uniform buffer
+	void* data;
+	vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
 }
 
 void Ravine::cleanupSwapChain() {
@@ -1165,6 +1337,18 @@ void Ravine::cleanupSwapChain() {
 void Ravine::cleanup()
 {
 	cleanupSwapChain();
+
+	//Destroy descriptor pool
+	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
+	//Destroying uniform buffers
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
+		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+	}
+
+	//Destroy descriptor set layout (uniform bind)
+	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
 	//Destroy Vertex Buffer Object
 	vkDestroyBuffer(device, vertexBuffer, nullptr);

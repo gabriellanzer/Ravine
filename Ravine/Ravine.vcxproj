@@ -152,6 +152,7 @@
     <ClCompile Include="SingleFileLibraries\imgui_demo.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_draw.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp" />
+    <ClCompile Include="Time.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ravine.h" />
@@ -162,6 +163,7 @@
     <ClInclude Include="SingleFileLibraries\imstb_textedit.h" />
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
+    <ClInclude Include="Time.h" />
     <ClInclude Include="VKImGUI.h" />
   </ItemGroup>
   <ItemGroup>

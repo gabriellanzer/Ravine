@@ -85,12 +85,12 @@ private:
 
 
 	const std::vector<Vertex> vertices = {
-			{ { -0.5f, +0.5f },{ 0.0f, 1.0f, 0.0f } },
-			{ { -0.5f, -0.5f },{ 1.0f, 1.0f, 1.0f } },
+			{ { -0.5f, +0.5f },{ 1.0f, 0.0f, 0.0f } },
+			{ { -0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
 			{ {	+0.5f, +0.5f },{ 0.0f, 0.0f, 1.0f } },
 			{ {	+0.5f, +0.5f },{ 0.0f, 0.0f, 1.0f } },
-			{ { -0.5f, -0.5f },{ 0.0f, 0.0f, 1.0f } },
-			{ { +0.5f, -0.5f },{ 0.0f, 0.0f, 1.0f } }
+			{ { -0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
+			{ { +0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f } }
 	};
 
 
@@ -142,6 +142,10 @@ private:
 
 	//Queue fences
 	std::vector<VkFence> inFlightFences;
+
+	// Verter buffer and it's related device memory
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
 
 	//Current frame for swap chain and Semaphore access
 	size_t currentFrame = 0;
@@ -210,6 +214,12 @@ private:
 
 	//Defines command buffer pool
 	void createCommandPool();
+
+	//Helper function for creating buffers
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+	//Helper function to copy a buffer's content into another
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	//Create vertex command buffer
 	void createVertexBuffer();

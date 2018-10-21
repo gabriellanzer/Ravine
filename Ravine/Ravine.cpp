@@ -55,6 +55,8 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 	}
 }
 
+#pragma region Static Methods
+
 VKAPI_ATTR VkBool32 VKAPI_CALL Ravine::debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
 
 	std::cerr << "Validation layer: " << msg << std::endl;
@@ -66,7 +68,7 @@ std::vector<char> Ravine::readFile(const std::string& filename) {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
 	if (!file.is_open()) {
-		throw std::runtime_error("Failed to open file!");
+		throw std::runtime_error("Failed to open file at " + filename);
 	}
 
 	size_t fileSize = (size_t)file.tellg();
@@ -80,13 +82,25 @@ std::vector<char> Ravine::readFile(const std::string& filename) {
 	return buffer;
 }
 
+//Static method because GLFW doesn't know how to call a member function with the "this" pointer to our Ravine instance.
+void Ravine::framebufferResizeCallback(GLFWwindow * window, int width, int height)
+{
+	auto app = reinterpret_cast<Ravine*>(glfwGetWindowUserPointer(window));
+	app->framebufferResized = true;
+}
+
+#pragma endregion
+
 void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+	//Storing Ravine pointer inside window instance
+	glfwSetWindowUserPointer(window, this);
+	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void Ravine::initVulkan() {
@@ -317,7 +331,7 @@ void Ravine::createSwapChain() {
 	createInfo.clipped = VK_TRUE;
 
 	//TODO: Change that to create another swap chain when resize screen
-	createInfo.oldSwapchain = VK_NULL_HANDLE;
+	createInfo.oldSwapchain = swapChain;
 
 	//Create swap chain with given information
 	if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
@@ -334,7 +348,19 @@ void Ravine::createSwapChain() {
 }
 
 void Ravine::recreateSwapChain() {
+
+	int width = 0, height = 0;
+	//If the window is minimized, wait for it to come back to the foreground.
+	//TODO: We probably want to handle that another way, which we should probably discuss.
+	while (width == 0 || height == 0) {
+		glfwGetFramebufferSize(window, &width, &height);
+		glfwWaitEvents();
+	}
+
 	vkDeviceWaitIdle(device);
+
+	//Storing handle
+	VkSwapchainKHR oldSwapchain = swapChain;
 
 	createSwapChain();
 	createImageViews();
@@ -342,6 +368,9 @@ void Ravine::recreateSwapChain() {
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandBuffers();
+
+	//Deleting old swapchain
+	vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
 }
 
 SwapChainSupportDetails Ravine::querySwapChainSupport(VkPhysicalDevice device) {
@@ -1040,18 +1069,15 @@ void Ravine::drawFrame()
 	presentInfo.pResults = nullptr; // Optional
 
 	result = vkQueuePresentKHR(presentQueue, &presentInfo);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+		framebufferResized = false;
 		recreateSwapChain();
 	}
 	else if (result != VK_SUCCESS) {
 		throw std::runtime_error("failed to present swap chain image!");
 	}
-	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-	vkQueueWaitIdle(presentQueue);
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
 }
 
 void Ravine::cleanupSwapChain() {

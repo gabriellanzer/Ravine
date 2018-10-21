@@ -13,56 +13,68 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\ImGui">
+      <UniqueIdentifier>{87b59c21-e71d-4f4c-854b-9ce6fdc07576}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders">
+      <UniqueIdentifier>{4a6ffd5e-0ec7-49fc-ba48-f3f58792b665}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SingleFileLibraries\imgui.cpp">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="SingleFileLibraries\imgui_demo.cpp">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="SingleFileLibraries\imgui_draw.cpp">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Ravine.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SingleFileLibraries\imconfig.h">
+    <ClInclude Include="VKImGUI.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SingleFileLibraries\imconfig.h">
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imgui.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imgui_internal.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imstb_rectpack.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imstb_textedit.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="VKImGUI.h">
+    <ClInclude Include="Ravine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\shader.frag">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="bin\data\shaders\shader.vert">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

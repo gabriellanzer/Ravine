@@ -41,7 +41,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -147,12 +147,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Ravine.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_demo.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_draw.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Ravine.h" />
     <ClInclude Include="SingleFileLibraries\imconfig.h" />
     <ClInclude Include="SingleFileLibraries\imgui.h" />
     <ClInclude Include="SingleFileLibraries\imgui_internal.h" />

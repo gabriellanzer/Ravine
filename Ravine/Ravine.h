@@ -79,8 +79,8 @@ public:
 
 private:
 
-	const int WIDTH = 1920;
-	const int HEIGHT = 1080;
+	const int WIDTH = 1280;
+	const int HEIGHT = 720;
 	const int MAX_FRAMES_IN_FLIGHT = 2;
 
 
@@ -114,7 +114,7 @@ private:
 	VkQueue presentQueue;
 
 	//Swap chain related content
-	VkSwapchainKHR swapChain;
+	VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
@@ -145,6 +145,9 @@ private:
 
 	//Current frame for swap chain and Semaphore access
 	size_t currentFrame = 0;
+
+	//Helper variable for changes on framebuffer
+	bool framebufferResized = false;
 #pragma endregion
 
 #pragma region Methods
@@ -243,14 +246,14 @@ private:
 	//Debugging
 	bool checkValidationLayerSupport();
 
-
-
 #pragma endregion
 
 #pragma region Static
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 	
 	static std::vector<char> readFile(const std::string& filename);
+
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 #pragma endregion
 };
 

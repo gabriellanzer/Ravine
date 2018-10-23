@@ -1147,7 +1147,7 @@ void Ravine::showFPS()
 
 void Ravine::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
-	
+
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
 	VkBufferCopy copyRegion = {};
@@ -1291,7 +1291,7 @@ void Ravine::createTextureSampler()
 	//Anisotropy filter
 	samplerCreateInfo.anisotropyEnable = VK_TRUE;
 	samplerCreateInfo.maxAnisotropy = 16;
-	
+
 	//Sampling beyond image with "Clamp to Border"
 	samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 
@@ -1499,8 +1499,7 @@ void Ravine::mainLoop() {
 	std::string fpsTitle = "";
 	while (!glfwWindowShouldClose(window)) {
 		Time::update();
-		fpsTitle = "Ravine - " + std::to_string(1000.0f/Time::deltaTime());
-		std::cout << Time::deltaTime() << std::endl;
+		fpsTitle = "Ravine - FPS " + std::to_string(Time::deltaTime() * 1000.0);
 		glfwSetWindowTitle(window, fpsTitle.c_str());
 		glfwPollEvents();
 		drawFrame();

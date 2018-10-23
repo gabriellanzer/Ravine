@@ -8,6 +8,7 @@
 #include <set>
 #include <algorithm>
 #include <fstream>
+#include <string>
 
 //GLM Includes
 #include <glm\gtc\matrix_transform.hpp>
@@ -1074,7 +1075,7 @@ void Ravine::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout
 	VkPipelineStageFlags destinationStage;
 
 	//Transition types -
-	//Undefined -> Transfer destination → transfer writes that don't need to wait on anything
+	//Undefined → Transfer destination: transfer writes that don't need to wait on anything
 	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -1083,7 +1084,7 @@ void Ravine::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	}
-	//Transfer destination -> shader reading: shader reads should wait on transfer writes, specifically the shader reads in the fragment shader, because that's where we're going to use the texture
+	//Transfer destination → shader reading: shader reads should wait on transfer writes, specifically the shader reads in the fragment shader, because that's where we're going to use the texture
 	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -1138,6 +1139,10 @@ void Ravine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, u
 	);
 
 	endSingleTimeCommands(commandBuffer);
+}
+
+void Ravine::showFPS()
+{
 }
 
 void Ravine::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -1491,8 +1496,12 @@ void Ravine::createSurface() {
 }
 
 void Ravine::mainLoop() {
+	std::string fpsTitle = "";
 	while (!glfwWindowShouldClose(window)) {
 		Time::update();
+		fpsTitle = "Ravine - " + std::to_string(1000.0f/Time::deltaTime());
+		std::cout << Time::deltaTime() << std::endl;
+		glfwSetWindowTitle(window, fpsTitle.c_str());
 		glfwPollEvents();
 		drawFrame();
 	}

@@ -336,6 +336,9 @@ private:
 	//Transfer buffer's data to an image
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+	//Control fps in window title
+	void showFPS();
+
 #pragma endregion
 
 #pragma region Static

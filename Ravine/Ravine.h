@@ -166,6 +166,12 @@ private:
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
+	//Texture related objects
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
+	VkImageView textureImageView;
+	VkSampler textureSampler;
+
 	//Current frame for swap chain and Semaphore access
 	size_t currentFrame = 0;
 
@@ -243,9 +249,6 @@ private:
 	//Defines command buffer pool
 	void createCommandPool();
 
-	//Helper function for creating buffers
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-
 	//Helper function to copy a buffer's content into another
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
@@ -257,6 +260,15 @@ private:
 
 	//Create uniform buffers
 	void createUniformBuffers();
+
+	//Load image and upload into Vulkan Image Object
+	void createTextureImage();
+
+	//Creating image view to hold a texture object
+	void createTextureImageView();
+
+	//Create texture sampler - interface for extracting colors from a texture
+	void createTextureSampler();
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
@@ -292,6 +304,29 @@ private:
 
 	//Debugging
 	bool checkValidationLayerSupport();
+
+#pragma endregion
+
+#pragma region Helpers
+
+	//Helper function for creating buffers
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+	//Helper function for creating images
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+
+	//Helper function for craeting image views
+	VkImageView createImageView(VkImage image, VkFormat format);
+
+	//Single time command buffer helpers
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+	//Set image to correct layout
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	
+	//Transfer buffer's data to an image
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
 #pragma endregion
 

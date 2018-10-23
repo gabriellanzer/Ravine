@@ -1427,7 +1427,7 @@ void Ravine::createLogicalDevice()
 
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 	//Enabling anisotropy
-	//deviceFeatures.samplerAnisotropy = VK_TRUE;
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

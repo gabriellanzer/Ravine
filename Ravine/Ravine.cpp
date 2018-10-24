@@ -1499,7 +1499,7 @@ void Ravine::mainLoop() {
 	std::string fpsTitle = "";
 	while (!glfwWindowShouldClose(window)) {
 		Time::update();
-		fpsTitle = "Ravine - FPS " + std::to_string(Time::deltaTime() * 1000.0);
+		fpsTitle = "Ravine - Milisseconds " + std::to_string(Time::deltaTime() * 1000.0);
 		glfwSetWindowTitle(window, fpsTitle.c_str());
 		glfwPollEvents();
 		drawFrame();

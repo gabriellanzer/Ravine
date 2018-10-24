@@ -182,6 +182,7 @@ private:
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
 	//Texture related objects
+	uint32_t mipLevels;
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
 	VkImageView textureImageView;
@@ -290,6 +291,8 @@ private:
 	//Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();
 
+	void generateMipmaps(VkImage image, VkFormat imageFormat,int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+
 	//Create resources for depth testing
 	void createDepthResources();
 
@@ -337,10 +340,10 @@ private:
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
 	//Helper function for creating images
-	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 	//Helper function for craeting image views
-	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 	//Helper function to get some device info
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -354,7 +357,7 @@ private:
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	//Set image to correct layout
-	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 	
 	//Transfer buffer's data to an image
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);

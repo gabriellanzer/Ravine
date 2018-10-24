@@ -193,6 +193,12 @@ private:
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 
+	//MSAA related objects
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+	VkImage msColorImage;
+	VkDeviceMemory msColorImageMemory;
+	VkImageView msColorImageView;
+
 	//Current frame for swap chain and Semaphore access
 	size_t currentFrame = 0;
 
@@ -299,6 +305,12 @@ private:
 	//Helper to get depth format
 	VkFormat findDepthFormat();
 
+	//Get max sampling counts
+	VkSampleCountFlagBits getMaxUsableSampleCount();
+
+	//Create resources for sampling
+	void createMultiSamplingResources();
+
 	//Creates command buffers array
 	void createCommandBuffers();
 
@@ -340,7 +352,7 @@ private:
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
 	//Helper function for creating images
-	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 	//Helper function for craeting image views
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);

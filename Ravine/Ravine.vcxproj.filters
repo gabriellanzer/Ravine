@@ -36,18 +36,15 @@
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp">
       <Filter>Header Files\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="Ravine.cpp">
+    <ClCompile Include="Time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Time.cpp">
+    <ClCompile Include="Ravine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="VKImGUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imconfig.h">
@@ -68,10 +65,13 @@
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h">
       <Filter>Header Files\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="Ravine.h">
+    <ClInclude Include="Time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Time.h">
+    <ClInclude Include="VKImGUI_old.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Ravine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -80,6 +80,12 @@
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="bin\data\shaders\shader.vert">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="bin\data\shaders\imgui.frag">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="bin\data\shaders\imgui.vert">
       <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>

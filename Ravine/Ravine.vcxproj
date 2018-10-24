@@ -164,9 +164,11 @@
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="Time.h" />
-    <ClInclude Include="VKImGUI.h" />
+    <ClInclude Include="VKImGUI_old.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="bin\data\shaders\imgui.frag" />
+    <None Include="bin\data\shaders\imgui.vert" />
     <None Include="bin\data\shaders\shader.frag" />
     <None Include="bin\data\shaders\shader.vert" />
   </ItemGroup>

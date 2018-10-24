@@ -728,8 +728,8 @@ void Ravine::createDescriptorSetLayout()
 
 void Ravine::createGraphicsPipeline() {
 
-	std::vector<char> vertShaderCode = readFile("../data/shaders/vert.spv");
-	std::vector<char> fragShaderCode = readFile("../data/shaders/frag.spv");
+	std::vector<char> vertShaderCode = readFile("../data/shaders/shader.vert.spv");
+	std::vector<char> fragShaderCode = readFile("../data/shaders/shader.frag.spv");
 
 	vertShaderModule = createShaderModule(vertShaderCode);
 	fragShaderModule = createShaderModule(fragShaderCode);

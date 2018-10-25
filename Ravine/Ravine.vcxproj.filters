@@ -42,6 +42,12 @@
     <ClCompile Include="Ravine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SingleFileLibraries\imgui_impl_glfw.cpp">
+      <Filter>Header Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="SingleFileLibraries\imgui_impl_vulkan.cpp">
+      <Filter>Header Files\ImGui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -73,6 +79,12 @@
     </ClInclude>
     <ClInclude Include="Ravine.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SingleFileLibraries\imgui_impl_glfw.h">
+      <Filter>Header Files\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="SingleFileLibraries\imgui_impl_vulkan.h">
+      <Filter>Header Files\ImGui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

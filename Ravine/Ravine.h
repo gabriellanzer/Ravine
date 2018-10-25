@@ -13,6 +13,8 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
+#include <vulkan\vulkan.h>
+
 //Structure for Queue Family query of available queue types
 struct QueueFamilyIndices {
 	int graphicsFamily = -1;

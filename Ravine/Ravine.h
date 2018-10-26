@@ -15,6 +15,11 @@
 
 #include <vulkan\vulkan.h>
 
+//ImGUI includes
+#include "SingleFileLibraries\imgui.h"
+#include "SingleFileLibraries\imgui_impl_glfw.h"
+#include "SingleFileLibraries\imgui_impl_vulkan.h"
+
 //Structure for Queue Family query of available queue types
 struct QueueFamilyIndices {
 	int graphicsFamily = -1;
@@ -94,6 +99,9 @@ private:
 	const int HEIGHT = 720;
 	const int MAX_FRAMES_IN_FLIGHT = 2;
 
+	ImGui_ImplVulkanH_WindowData g_WindowData;
+	void setupImGUIData();
+
 	const std::vector<Vertex> vertices = {
 		//Top Square
 		{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f } },
@@ -113,7 +121,6 @@ private:
 		4, 5, 6, 6, 7, 4	//Bottom square
 	};
 
-
 #pragma region Attributes
 	//Window/Surface related contents
 	GLFWwindow * window;
@@ -126,7 +133,7 @@ private:
 	VkDebugReportCallbackEXT callback;
 
 	//Physical and Logical device handles
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDevice physicalDevice;
 	VkDevice device;
 
 	//Queues

@@ -86,6 +86,9 @@
     <ClInclude Include="SingleFileLibraries\imgui_impl_vulkan.h">
       <Filter>Header Files\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="ImGUITest.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\shader.frag">

@@ -34,8 +34,8 @@ Ravine::~Ravine()
 
 void Ravine::run()
 {
-	initWindow();
 	Time::initialize();
+	initWindow();
 	initVulkan();
 	mainLoop();
 	cleanup();

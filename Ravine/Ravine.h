@@ -8,12 +8,13 @@
 #include <vector>
 #include <array>
 
+//Vulkan Include
+#include <vulkan\vulkan.h>
+
 //GLM includes
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
-
-#include <vulkan\vulkan.h>
 
 //ImGUI includes
 #include "SingleFileLibraries\imgui.h"
@@ -181,7 +182,7 @@ private:
 	//Verter buffer
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
-	
+
 	//Index buffer
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
@@ -269,7 +270,7 @@ private:
 
 	//Creating descriptor binding layouts (uniform layouts)
 	void createDescriptorSetLayout();
-	
+
 	//Creating pool for descriptor sets (uniforms bindings)
 	void createDescriptorPool();
 
@@ -306,7 +307,7 @@ private:
 	//Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();
 
-	void generateMipmaps(VkImage image, VkFormat imageFormat,int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+	void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
 	//Create resources for depth testing
 	void createDepthResources();
@@ -379,7 +380,7 @@ private:
 
 	//Set image to correct layout
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
-	
+
 	//Transfer buffer's data to an image
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 

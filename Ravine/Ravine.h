@@ -16,11 +16,6 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
-//ImGUI includes
-#include "SingleFileLibraries\imgui.h"
-#include "SingleFileLibraries\imgui_impl_glfw.h"
-#include "SingleFileLibraries\imgui_impl_vulkan.h"
-
 //Structure for Queue Family query of available queue types
 struct QueueFamilyIndices {
 	int graphicsFamily = -1;
@@ -99,9 +94,6 @@ private:
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
 	const int MAX_FRAMES_IN_FLIGHT = 2;
-
-	ImGui_ImplVulkanH_WindowData g_WindowData;
-	void setupImGUIData();
 
 	const std::vector<Vertex> vertices = {
 		//Top Square

@@ -20,9 +20,6 @@
 //Ravine Systems Includes
 #include "Time.h"
 
-//Dear ImGUI Includes
-//#include "VKImGUI.h"
-
 Ravine::Ravine()
 {
 }
@@ -39,31 +36,6 @@ void Ravine::run()
 	initVulkan();
 	mainLoop();
 	cleanup();
-}
-
-void Ravine::setupImGUIData()
-{
-	g_WindowData.Surface = surface;
-
-	// Select Surface Format
-	const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-	const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-	g_WindowData.SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(physicalDevice, g_WindowData.Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
-
-	// Select Present Mode
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-	VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
-#else
-	VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_FIFO_KHR };
-#endif
-	g_WindowData.PresentMode = ImGui_ImplVulkanH_SelectPresentMode(physicalDevice, g_WindowData.Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
-	//printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
-
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-
-	// Create SwapChain, RenderPass, Framebuffer, etc.
-	ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(physicalDevice, device, indices.graphicsFamily, &g_WindowData, nullptr);
-	ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(physicalDevice, device, &g_WindowData, nullptr, swapChainExtent.width, swapChainExtent.height);
 }
 
 //Validation layers to be enabled
@@ -182,9 +154,6 @@ void Ravine::initVulkan() {
 	createDescriptorSets();
 	createCommandBuffers();
 	createSyncObjects();
-
-	//ImGUI
-	setupImGUIData();
 }
 
 std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
@@ -660,7 +629,7 @@ void Ravine::createRenderPass() {
 
 void Ravine::createDescriptorPool()
 {
-	/*std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 2> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -670,28 +639,7 @@ void Ravine::createDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());*/
-
-	VkDescriptorPoolSize pool_sizes[] =
-	{
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-	};
-	VkDescriptorPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	poolInfo.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
-	poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
-	poolInfo.pPoolSizes = pool_sizes;
+	poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
 
 	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");

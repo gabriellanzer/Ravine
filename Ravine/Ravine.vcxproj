@@ -157,7 +157,6 @@
     <ClCompile Include="Time.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ImGUITest.hpp" />
     <ClInclude Include="Ravine.h" />
     <ClInclude Include="SingleFileLibraries\imconfig.h" />
     <ClInclude Include="SingleFileLibraries\imgui.h" />
@@ -169,7 +168,6 @@
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="Time.h" />
-    <ClInclude Include="VKImGUI_old.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\imgui.frag" />

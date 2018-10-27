@@ -1556,7 +1556,6 @@ uint32_t Ravine::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags prope
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
-
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
 		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
 			return i;
@@ -1564,7 +1563,6 @@ uint32_t Ravine::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags prope
 	}
 
 	throw std::runtime_error("failed to find suitable memory type!");
-
 }
 
 VkFormat Ravine::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)

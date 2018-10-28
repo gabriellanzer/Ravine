@@ -120,7 +120,9 @@ void Ravine::initWindow() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine", nullptr, nullptr);
+	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine", 
+							  /*nullptr, */glfwGetPrimaryMonitor(), //Fullscreen
+							  nullptr);
 	//Storing Ravine pointer inside window instance
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
@@ -802,7 +804,7 @@ void Ravine::createGraphicsPipeline() {
 	rasterizer.rasterizerDiscardEnable = VK_FALSE; //VK_TRUE discards any geometry rendered here
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL; //Could be FILL, LINE or POINT (requires GPU feature enabling)
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode = VK_CULL_MODE_NONE;
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	//Used for shadow mapping
@@ -1246,9 +1248,180 @@ void Ravine::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize siz
 	endSingleTimeCommands(commandBuffer);
 }
 
+bool Ravine::loadScene(const std::string& filePath)
+{
+	Importer importer;
+	const aiScene* scene = importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
+											 aiProcess_GenSmoothNormals | \
+											 aiProcess_JoinIdenticalVertices | \
+											 aiProcess_ImproveCacheLocality | \
+											 aiProcess_LimitBoneWeights | \
+											 aiProcess_RemoveRedundantMaterials | \
+											 aiProcess_Triangulate | \
+											 aiProcess_GenUVCoords | \
+											 aiProcess_SortByPType | \
+											 aiProcess_FindDegenerates | \
+											 aiProcess_FindInvalidData | \
+											 aiProcess_FindInstances | \
+											 aiProcess_ValidateDataStructure | \
+											 aiProcess_OptimizeMeshes | \
+											 0);
+
+	// If the import failed, report it
+	if (!scene)
+	{
+		return false;
+	}
+
+	//Load mesh
+	meshesCount = scene->mNumMeshes;
+	meshes = new MeshData[scene->mNumMeshes];
+
+	//Load each mesh
+	for (uint32_t i = 0; i < meshesCount; i++)
+	{
+		//Hold reference
+		const aiMesh* mesh = scene->mMeshes[i];
+
+		//Allocate data structures
+		meshes[i].vertex_count = mesh->mNumVertices;
+		meshes[i].vertices = new Vertex[mesh->mNumVertices];
+		meshes[i].index_count = mesh->mNumFaces * 3;
+		meshes[i].indices = new uint32_t[mesh->mNumFaces * 3];
+
+		//Setup vertices
+		const aiVector3D* verts = mesh->mVertices;
+		bool hasCoords = mesh->HasTextureCoords(0);
+		const aiVector3D* uvs = mesh->mTextureCoords[0];
+		bool hasColors = mesh->HasVertexColors(0);
+		const aiColor4D* cols = mesh->mColors[0];
+
+		//Treat each case for optimal performance
+		if (hasCoords && hasColors)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { cols[j].r, cols[j].g, cols[j].b };
+			}
+		}
+		else if (hasCoords)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
+			}
+		}
+		else
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { 0, 0 };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
+			}
+		}
+
+		//Setup face indices
+		for (uint32_t j = 0; j < mesh->mNumFaces; j++)
+		{
+			//Make sure it's triangulated
+			assert(mesh->mFaces[j].mNumIndices == 3);
+
+			//Copy each index (the mesh was triangulated on import)
+			meshes[i].indices[j * 3 + 0] = mesh->mFaces[j].mIndices[0];
+			meshes[i].indices[j * 3 + 1] = mesh->mFaces[j].mIndices[1];
+			meshes[i].indices[j * 3 + 2] = mesh->mFaces[j].mIndices[2];
+		}
+
+		//Register textures for late-loading (and generate texture Ids)
+		uint32_t matId = mesh->mMaterialIndex;
+		const aiMaterial* mat = scene->mMaterials[matId];
+
+		//Get the number of textures
+		uint32_t textureCounts = mat->GetTextureCount(aiTextureType_DIFFUSE);
+		meshes[i].textures_count = textureCounts;
+		meshes[i].textureIds = new uint32_t[textureCounts];
+
+		//List each texture on the texturesToLoad list and hold texture ids
+		aiString aiTexPath;
+		for (uint32_t tId = 0; tId < textureCounts; tId++)
+		{
+			if (mat->GetTexture(aiTextureType_DIFFUSE, tId, &aiTexPath) == AI_SUCCESS)
+			{
+				int textureId = -1;
+				string texPath = aiTexPath.C_Str();
+
+				//Check if the texture is listed and set it's list id
+				bool listed = false;
+				for (auto it = texturesToLoad.begin(); it != texturesToLoad.end(); it++)
+				{
+					if ((it->data()) == texPath)
+					{
+						listed = true;
+						break;
+					}
+
+					//Make sure to update textureId
+					textureId++;
+				}
+
+				//Hold textureId
+				meshes[i].textureIds[tId] = textureId;
+
+				//List texture if it isn't already
+				if (!listed)
+				{
+					texturesToLoad.push_back(texPath);
+				}
+			}
+		}
+	}
+
+	//Return success
+	return true;
+}
+
 void Ravine::createVertexBuffer()
 {
-	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+	//Assimp test
+	if (loadScene("../data/suzane.fbx"))
+	{
+		std::cout << "cube.fbx loaded!\n";
+	}
+	else
+	{
+		std::cout << "file not found at path " << "cube.fbx" << std::endl;
+	}
+
+	VkDeviceSize bufferSize = sizeof(Vertex) * meshes[0].vertex_count;
+
+	//for (size_t i = 0; i < meshes[0].vertex_count; i++)
+	//{
+	//	std::cout << "Vertex[" << i << "] = "
+	//		<< "{ " << meshes[0].vertices[i].pos.x << " "
+	//		<< ", " << meshes[0].vertices[i].pos.y << " "
+	//		<< ", " << meshes[0].vertices[i].pos.z << " }"
+	//		<< std::endl;
+	//}
 
 	/*
 	The vertex buffer should use "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT",
@@ -1264,7 +1437,7 @@ void Ravine::createVertexBuffer()
 	//Fetching verteices data
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), (size_t)bufferSize);
+	memcpy(data, (void*)meshes[0].vertices, (size_t)bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	//Verter buffer is being used as the destination for such memory transfer operation
@@ -1280,7 +1453,12 @@ void Ravine::createVertexBuffer()
 
 void Ravine::createIndexBuffer()
 {
-	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+	VkDeviceSize bufferSize = sizeof(uint32_t) * meshes[0].index_count;
+
+	//for (size_t i = 0; i < meshes[0].index_count; i++)
+	//{
+	//	std::cout << "Vertex Id" << i << " = " << meshes[0].indices[i] << std::endl;
+	//}
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -1290,7 +1468,7 @@ void Ravine::createIndexBuffer()
 	//Feching indices data
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), (size_t)bufferSize);
+	memcpy(data, (void*)meshes[0].indices, (size_t)bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	//Creating index buffer
@@ -1352,10 +1530,10 @@ void Ravine::createTextureImage()
 
 	//Creating new image
 	createImage(texWidth, texHeight, mipLevels,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		textureImage, textureImageMemory);
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				textureImage, textureImageMemory);
 
 	//Setting image layout for transfering to image object
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
@@ -1453,10 +1631,10 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 
 		//Transition waits for level (i - 1) to be filled (from Blitting or vkCmdCopyBufferToImage)
 		vkCmdPipelineBarrier(commandBuffer,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier);
+							 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+							 0, nullptr,
+							 0, nullptr,
+							 1, &barrier);
 
 		//Image blit object
 		VkImageBlit blit = {};
@@ -1477,11 +1655,11 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 
 		//Blit command
 		vkCmdBlitImage(commandBuffer,
-			image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &blit,
-			VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
-		//TODO: Change sampler filtering to variable
+					   image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					   image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					   1, &blit,
+					   VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
+				   //TODO: Change sampler filtering to variable
 
 		if (mipWidth > 1) mipWidth /= 2;
 		if (mipHeight > 1) mipHeight /= 2;
@@ -1495,10 +1673,10 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 	vkCmdPipelineBarrier(commandBuffer,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier);
+						 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+						 0, nullptr,
+						 0, nullptr,
+						 1, &barrier);
 
 	endSingleTimeCommands(commandBuffer);
 }
@@ -1640,12 +1818,12 @@ void Ravine::createCommandBuffers() {
 		VkBuffer vertexBuffers[] = { vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 		//Binding descriptor sets (uniforms)
 		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 		//Call drawing
-		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(meshes[0].index_count), 1, 0, 0, 0);
 
 		//Finishing Render Pass
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up

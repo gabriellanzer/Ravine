@@ -7,6 +7,7 @@
 //STD includes
 #include <vector>
 #include <array>
+#include <unordered_set>
 
 //Vulkan Include
 #include <vulkan\vulkan.h>
@@ -15,6 +16,18 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+
+//Assimp Includes
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/scene.h>           // Output data structure
+#include <assimp/postprocess.h>     // Post processing flags
+
+//Specific usages of STD library
+using std::string;
+using std::vector;
+
+//Specific usages of ASSIMP library
+using Assimp::Importer;
 
 //Structure for Queue Family query of available queue types
 struct QueueFamilyIndices {
@@ -74,6 +87,18 @@ struct Vertex {
 
 };
 
+struct MeshData
+{
+	Vertex*		vertices;
+	uint32_t	vertex_count;
+
+	uint32_t*	indices;
+	uint32_t	index_count;
+
+	uint32_t*	textureIds;
+	uint32_t	textures_count;
+};
+
 struct UniformBufferObject {
 	glm::mat4 model;
 	glm::mat4 view;
@@ -91,8 +116,8 @@ public:
 
 private:
 
-	const int WIDTH = 1280;
-	const int HEIGHT = 720;
+	const int WIDTH = 1920;
+	const int HEIGHT = 1080;
 	const int MAX_FRAMES_IN_FLIGHT = 2;
 
 	const std::vector<Vertex> vertices = {
@@ -109,10 +134,14 @@ private:
 		{ { -0.5f, +0.5f, -0.5f },{ 1.0f, 1.0f, 1.0f },{ 0.0f, 1.0f } }
 	};
 
-	const std::vector<uint16_t> indices = {
+	const std::vector<uint32_t> indices = {
 		0, 1, 2, 2, 3, 0,	//Top square
 		4, 5, 6, 6, 7, 4	//Bottom square
 	};
+
+	MeshData* meshes;
+	uint32_t meshesCount;
+	vector<string> texturesToLoad;
 
 #pragma region Attributes
 	//Window/Surface related contents
@@ -280,6 +309,9 @@ private:
 
 	//Helper function to copy a buffer's content into another
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+	//Load scene file and populates meshes vector
+	bool loadScene(const std::string& filePath);
 
 	//Create vertex buffer
 	void createVertexBuffer();

@@ -120,8 +120,8 @@ void Ravine::initWindow() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine",
-							  nullptr,//glfwGetPrimaryMonitor(), //Fullscreen
+	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine", 
+							  nullptr, //glfwGetPrimaryMonitor(), //Fullscreen
 							  nullptr);
 	//Storing Ravine pointer inside window instance
 	glfwSetWindowUserPointer(window, this);
@@ -707,7 +707,7 @@ void Ravine::createDescriptorSetLayout()
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	//Only relevant for image sampling related descriptors.
 	uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
@@ -1296,6 +1296,8 @@ bool Ravine::loadScene(const std::string& filePath)
 		bool hasColors = mesh->HasVertexColors(0);
 		const aiColor4D* cols = mesh->mColors[0];
 
+		const aiVector3D* norms = &mesh->mNormals[0];
+
 		//Treat each case for optimal performance
 		if (hasCoords && hasColors)
 		{
@@ -1309,6 +1311,9 @@ bool Ravine::loadScene(const std::string& filePath)
 
 				//Vertex colors
 				meshes[i].vertices[j].color = { cols[j].r, cols[j].g, cols[j].b };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
 			}
 		}
 		else if (hasCoords)
@@ -1323,6 +1328,9 @@ bool Ravine::loadScene(const std::string& filePath)
 
 				//Vertex colors
 				meshes[i].vertices[j].color = { 1, 1, 1 };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
 			}
 		}
 		else
@@ -1337,6 +1345,9 @@ bool Ravine::loadScene(const std::string& filePath)
 
 				//Vertex colors
 				meshes[i].vertices[j].color = { 1, 1, 1 };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
 			}
 		}
 
@@ -2079,22 +2090,22 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	//Calculate translation
 	glm::vec4 translation = glm::vec4(0);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		translation.z -= 1.0 * Time::deltaTime();
+		translation.z -= 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		translation.x -= 1.0 * Time::deltaTime();
+		translation.x -= 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		translation.z += 1.0 * Time::deltaTime();
+		translation.z += 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		translation.x += 1.0 * Time::deltaTime();
+		translation.x += 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		translation.y -= 1.0 * Time::deltaTime();
+		translation.y -= 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		translation.y += 1.0 * Time::deltaTime();
+		translation.y += 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
@@ -2114,6 +2125,10 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Projection matrix with FOV of 45 degrees
 	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+
+	ubo.camPos = camPos;
+	ubo.objectColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ubo.lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	//Flipping coordinates (because glm was designed for openGL, with fliped Y coordinate)
 	ubo.proj[1][1] *= -1;

@@ -120,8 +120,8 @@ void Ravine::initWindow() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine", 
-							  /*nullptr, */glfwGetPrimaryMonitor(), //Fullscreen
+	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine",
+							  nullptr,//glfwGetPrimaryMonitor(), //Fullscreen
 							  nullptr);
 	//Storing Ravine pointer inside window instance
 	glfwSetWindowUserPointer(window, this);
@@ -1403,7 +1403,7 @@ bool Ravine::loadScene(const std::string& filePath)
 void Ravine::createVertexBuffer()
 {
 	//Assimp test
-	if (loadScene("../data/suzane.fbx"))
+	if (loadScene("../data/cube.fbx"))
 	{
 		std::cout << "cube.fbx loaded!\n";
 	}
@@ -1933,7 +1933,12 @@ void Ravine::createSurface() {
 }
 
 void Ravine::mainLoop() {
+
 	std::string fpsTitle = "";
+
+	//Application
+	setupFPSCam();
+
 	while (!glfwWindowShouldClose(window)) {
 		Time::update();
 		fpsTitle = "Ravine - Milisseconds " + std::to_string(Time::deltaTime() * 1000.0);
@@ -2022,6 +2027,24 @@ void Ravine::drawFrame()
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void Ravine::setupFPSCam()
+{
+	//Enable caching of buttons pressed
+	glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+
+	//Hide mouse cursor
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	//Update lastMousePos to avoid initial offset not null
+	glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
+
+	//Initial rotations
+	camHorRot = 0;
+	camVerRot = 0;
+
+}
+
+
 void Ravine::updateUniformBuffer(uint32_t currentImage)
 {
 	//Comment on constantly changed uniforms.
@@ -2032,9 +2055,64 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	*/
 	UniformBufferObject ubo = {};
 
+#pragma region Inputs
+
+	//Delta Mouse Positions
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+	double deltaX = mouseX - lastMouseX;
+	double deltaY = mouseY - lastMouseY;
+	lastMouseX = mouseX;
+	lastMouseY = mouseY;
+
+	//Calculate look rotation update
+	camHorRot -= deltaX * 30.0 * Time::deltaTime();
+	camVerRot -= deltaY * 30.0 * Time::deltaTime();
+
+	//Limit vertical angle
+	camVerRot = f_max(f_min(89.9, camVerRot), -89.9);
+
+	//Define rotation quaternion starting form look rotation
+	glm::quat lookRot = glm::vec3(0, 0, 0);
+	lookRot = glm::rotate(lookRot, glm::radians(camHorRot), glm::vec3(0, 1, 0));
+	lookRot = glm::rotate(lookRot, glm::radians(camVerRot), glm::vec3(1, 0, 0));
+
+	//Calculate translation
+	glm::vec4 translation = glm::vec4(0);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		translation.z -= 1.0 * Time::deltaTime();
+
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		translation.x -= 1.0 * Time::deltaTime();
+
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		translation.z += 1.0 * Time::deltaTime();
+
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		translation.x += 1.0 * Time::deltaTime();
+
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+		translation.y -= 1.0 * Time::deltaTime();
+
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+		translation.y += 1.0 * Time::deltaTime();
+
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+
+	camPos += lookRot * translation;
+
+#pragma endregion
+
 	//Rotating object 90 degrees per second
-	ubo.model = glm::rotate(glm::mat4(1.0f), (float)Time::elapsedTime() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	//Make the view matrix
+	glm::mat4 viewMatrix = glm::mat4() * glm::lookAt(glm::vec3(camPos), 
+					glm::vec3(camPos) + lookRot * glm::vec3(0, 0, -1),
+					glm::vec3(0, 1, 0));
+	ubo.view = viewMatrix;
+
+	//Projection matrix with FOV of 45 degrees
 	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 
 	//Flipping coordinates (because glm was designed for openGL, with fliped Y coordinate)

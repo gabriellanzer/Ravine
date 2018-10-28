@@ -16,6 +16,12 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+//Math defines
+#define f_max(a,b)            (((a) > (b)) ? (a) : (b))
+#define f_min(a,b)            (((a) < (b)) ? (a) : (b))
 
 //Assimp Includes
 #include <assimp/Importer.hpp>      // C++ importer interface
@@ -116,9 +122,17 @@ public:
 
 private:
 
-	const int WIDTH = 1920;
-	const int HEIGHT = 1080;
+	const int WIDTH = 1280;
+	const int HEIGHT = 720;
 	const int MAX_FRAMES_IN_FLIGHT = 2;
+
+	//Mouse parameters
+	double lastMouseX = 0, lastMouseY = 0;
+	double mouseX, mouseY;
+
+	//Camera parameters
+	float camHorRot = 0, camVerRot = 0;
+	glm::vec4 camPos = glm::vec4(0,0,0,0);
 
 	const std::vector<Vertex> vertices = {
 		//Top Square
@@ -365,6 +379,9 @@ private:
 
 	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();
+
+	//First person camera setup
+	void setupFPSCam();
 
 	//Updates uniform buffer for given image
 	void updateUniformBuffer(uint32_t currentImage);

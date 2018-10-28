@@ -631,11 +631,13 @@ void Ravine::createRenderPass() {
 
 void Ravine::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 3> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -675,7 +677,12 @@ void Ravine::createDescriptorSets()
 		imageInfo.imageView = textureImageView;
 		imageInfo.sampler = textureSampler;
 
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+		VkDescriptorBufferInfo materialInfo = {};
+		materialInfo.buffer = materialBuffers[i];
+		materialInfo.offset = 0;
+		materialInfo.range = sizeof(MaterialBufferObject);
+
+		std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
 
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = descriptorSets[i];
@@ -694,6 +701,15 @@ void Ravine::createDescriptorSets()
 		descriptorWrites[1].descriptorCount = 1;
 		//Image Info
 		descriptorWrites[1].pImageInfo = &imageInfo;
+
+		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet = descriptorSets[i];
+		descriptorWrites[2].dstBinding = 2;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[2].descriptorCount = 1;
+		//Buffer Info
+		descriptorWrites[2].pBufferInfo = &materialInfo;
 
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
@@ -719,8 +735,17 @@ void Ravine::createDescriptorSetLayout()
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+	//Uniform layout
+	VkDescriptorSetLayoutBinding materialLayoutBinding = {};
+	materialLayoutBinding.binding = 2;
+	materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	materialLayoutBinding.descriptorCount = 1;
+	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	//Only relevant for image sampling related descriptors.
+	materialLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
 	//Bindings array
-	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -729,7 +754,7 @@ void Ravine::createDescriptorSetLayout()
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor set layout!");
-	}
+	};
 
 }
 
@@ -1496,13 +1521,18 @@ void Ravine::createIndexBuffer()
 void Ravine::createUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+	VkDeviceSize materialSize = sizeof(MaterialBufferObject);
 
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	uniformBuffers.resize(swapChainImages.size());
 	uniformBuffersMemory.resize(swapChainImages.size());
 
+	materialBuffers.resize(swapChainImages.size());
+	materialBuffersMemory.resize(swapChainImages.size());
+
 	for (size_t i = 0; i < swapChainImages.size(); i++) {
 		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+		createBuffer(materialSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, materialBuffers[i], materialBuffersMemory[i]);
 	}
 }
 
@@ -2101,10 +2131,10 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		translation.x += 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_Q) || glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 		translation.y -= 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_E) || glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		translation.y += 2.0 * Time::deltaTime();
 
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -2138,6 +2168,16 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+
+	//Material
+	MaterialBufferObject materialUbo = {};
+
+	materialUbo.customColor = glm::vec4(0.23f, 0.37f, 0.89f, 1.0f);
+
+	void* materialData;
+	vkMapMemory(device, materialBuffersMemory[currentImage], 0, sizeof(materialUbo), 0, &materialData);
+	memcpy(materialData, &materialUbo, sizeof(materialUbo));
+	vkUnmapMemory(device, materialBuffersMemory[currentImage]);
 }
 
 void Ravine::cleanupSwapChain() {

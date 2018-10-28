@@ -121,6 +121,10 @@ struct UniformBufferObject {
 	glm::vec4 camPos;
 };
 
+struct MaterialBufferObject {
+	glm::vec4 customColor;
+};
+
 class Ravine
 {
 
@@ -235,6 +239,9 @@ private:
 	//Uniform buffers (per swap chain)
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
+
+	std::vector<VkBuffer> materialBuffers;
+	std::vector<VkDeviceMemory> materialBuffersMemory;
 
 	//Texture related objects
 	uint32_t mipLevels;

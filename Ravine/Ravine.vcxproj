@@ -156,6 +156,7 @@
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp" />
     <ClCompile Include="Time.cpp" />
     <ClCompile Include="VulkanDevice.cpp" />
+    <ClCompile Include="VulkanTools.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ravine.h" />
@@ -170,6 +171,7 @@
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="Time.h" />
     <ClInclude Include="VulkanDevice.h" />
+    <ClInclude Include="VulkanTools.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\imgui.frag" />

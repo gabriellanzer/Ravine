@@ -112,6 +112,7 @@ struct MeshData
 	uint32_t	textures_count;
 };
 
+//REORGANIZE AND DIVIDE
 struct UniformBufferObject {
 	glm::mat4 model;
 	glm::mat4 view;
@@ -121,6 +122,7 @@ struct UniformBufferObject {
 	glm::vec4 camPos;
 };
 
+//REORGANIZE AND DIVIDE
 struct MaterialBufferObject {
 	glm::vec4 customColor;
 };
@@ -136,61 +138,55 @@ public:
 
 private:
 
+	//MOVE TO: WINDOW
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
+	//MOVE TO: SWAPCHAIN
 	const int MAX_FRAMES_IN_FLIGHT = 2;
 
 	//Mouse parameters
+	//MOVE TO: IO
 	double lastMouseX = 0, lastMouseY = 0;
 	double mouseX, mouseY;
 
 	//Camera parameters
+	//MOVE TO: CAMERA
 	float camHorRot = 0, camVerRot = 0;
 	glm::vec4 camPos = glm::vec4(0,0,0,0);
-
-	const std::vector<Vertex> vertices = {
-		//Top Square
-		{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f } },
-		{ { +0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
-		{ { +0.5f, +0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f },{ 1.0f, 1.0f } },
-		{ { -0.5f, +0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f },{ 0.0f, 1.0f } },
-
-		//Bottom square
-		{ { -0.5f, -0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f } },
-		{ { +0.5f, -0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
-		{ { +0.5f, +0.5f, -0.5f },{ 0.0f, 0.0f, 1.0f },{ 1.0f, 1.0f } },
-		{ { -0.5f, +0.5f, -0.5f },{ 1.0f, 1.0f, 1.0f },{ 0.0f, 1.0f } }
-	};
-
-	const std::vector<uint32_t> indices = {
-		0, 1, 2, 2, 3, 0,	//Top square
-		4, 5, 6, 6, 7, 4	//Bottom square
-	};
-
+	
+	//MOVE TO: MESH
 	MeshData* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
 
 #pragma region Attributes
 	//Window/Surface related contents
+	//MOVE TO: WINDOW
 	GLFWwindow * window;
+	//MOVE TO: WINDOW
 	VkSurfaceKHR surface;
 
 	//Vulkan Instance
+	//MOVE TO: VULKAN APP
 	VkInstance instance;
 
 	//Debug Callback Handler
+	//MOVE TO: DEBUG
 	VkDebugReportCallbackEXT callback;
 
 	//Physical and Logical device handles
+	//MOVED: DEVICE
 	VkPhysicalDevice physicalDevice;
+	//MOVED: DEVICE
 	VkDevice device;
 
 	//Queues
+	//MOVE TO: DEVICE
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 
 	//Swap chain related content
+	//MOVE TO: SWAPCHAIN
 	VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
@@ -198,52 +194,68 @@ private:
 	std::vector<VkImageView> swapChainImageViews;
 
 	//Framebuffers
+	//MOVE TO: FRAMEBUFFER
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
 	//Shader Modules
+	//MOVE TO: GRAPHICS PIPELINE
 	VkShaderModule vertShaderModule;
 	VkShaderModule fragShaderModule;
 
 	//Pipeline related content
+	//MOVE TO: VULKAN APP
 	VkRenderPass renderPass;
+	//MOVE TO: GRAPHICS PIPELINE
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 
 	//Descriptors related content
+	//MOVE TO: DESCRIPTOR
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
 
 	//Commands Buffers and it's Pool
+	//CHANGE NAME TO SOMETHING MORE MEANINGFUL
+	//(This one should be "graphicsCommandPool")
+	//MOVE TO: DEVICE
 	VkCommandPool commandPool;
+	//MOVE TO: COMMAND BUFFER
 	std::vector<VkCommandBuffer> commandBuffers;
 
 	//Queues semaphors
+	//MOVE TO: SWAPCHAIN??
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 
 	//Queue fences
+	//MOVE TO: SWAPCHAIN??
 	std::vector<VkFence> inFlightFences;
 
 	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
 	//Reference: https://developer.nvidia.com/vulkan-memory-management
 
 	//Verter buffer
+	//MOVE TO: BUFFER
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
 
 	//Index buffer
+	//MOVE TO: BUFFER
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
 
 	//Uniform buffers (per swap chain)
+	//MOVE TO: UNIFORM
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
+	//MOVE TO: UNIFORM
 	std::vector<VkBuffer> materialBuffers;
 	std::vector<VkDeviceMemory> materialBuffersMemory;
 
 	//Texture related objects
+	//MOVE TO: TEXTURE
 	uint32_t mipLevels;
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
@@ -251,20 +263,25 @@ private:
 	VkSampler textureSampler;
 
 	//Depth related objects
+	//MOVE TO: FRAMEBUFFER
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 
 	//MSAA related objects
+	//MOVE TO: RENDER PASS
 	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+	//MOVE TO: FRAMEBUFFER
 	VkImage msColorImage;
 	VkDeviceMemory msColorImageMemory;
 	VkImageView msColorImageView;
 
 	//Current frame for swap chain and Semaphore access
+	//MOVE TO: VULKAN APP
 	size_t currentFrame = 0;
 
 	//Helper variable for changes on framebuffer
+	//MOVE TO: WINDOW
 	bool framebufferResized = false;
 #pragma endregion
 
@@ -371,6 +388,7 @@ private:
 	VkFormat findDepthFormat();
 
 	//Get max sampling counts
+	//MOVED: DEVICE!
 	VkSampleCountFlagBits getMaxUsableSampleCount();
 
 	//Create resources for sampling
@@ -426,17 +444,23 @@ private:
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 	//Helper function to get some device info
+	//MOVED: DEVICE
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+	//MOVED: DEVICE
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
 	//Checks for stencil flag
+	//MOVED: TOOLS
 	bool hasStencilComponent(VkFormat format);
 
 	//Single time command buffer helpers
+	//MOVE TO: BUFFER
 	VkCommandBuffer beginSingleTimeCommands();
+	//MOVE TO: BUFFER
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	//Set image to correct layout
+	//MOVE TO: BUFFER
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 
 	//Transfer buffer's data to an image

@@ -99,13 +99,12 @@ void Ravine::initVulkan() {
 	//Rendering pipeline
 	swapChain = new RvSwapChain(*device, surface, WIDTH, HEIGHT, NULL);
 	swapChain->CreateImageViews();
-	renderPass = new RvRenderPass(*device, *swapChain);
+	swapChain->CreateRenderPass();
 	createDescriptorSetLayout();
-	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, *renderPass);
-	createCommandPool();
+	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, swapChain->renderPass);
 	createMultiSamplingResources();
 	createDepthResources();
-	createFramebuffers();
+	swapChain->CreateFramebuffers();
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
@@ -300,11 +299,11 @@ void Ravine::recreateSwapChain() {
 
 	swapChain = new RvSwapChain(*device, surface, WIDTH, HEIGHT, oldSwapchain->handle);
 	swapChain->CreateImageViews();
-	renderPass = new RvRenderPass(*device, *swapChain);
-	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, *renderPass);
+	swapChain->CreateRenderPass();
+	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, swapChain->renderPass);
 	createMultiSamplingResources();
 	createDepthResources();
-	createFramebuffers();
+	swapChain->CreateFramebuffers();
 	createCommandBuffers();
 
 	//Deleting old swapchain
@@ -440,48 +439,6 @@ void Ravine::createDescriptorSetLayout()
 
 }
 
-void Ravine::createFramebuffers() {
-
-	//Create a framebuffer for each image view in the swapchain
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Framebuffers
-	swapChainFramebuffers.resize(swapChain->imageViews.size());
-
-	for (size_t i = 0; i < swapChain->imageViews.size(); i++) {
-		std::array<VkImageView, 3> attachments = {
-			msColorImageView,
-			depthImageView,	//Same depth image because only one subpass is being ran at a time (due to semaphores)
-			swapChain->imageViews[i]
-		};
-
-		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = *renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = swapChain->extent.width;
-		framebufferInfo.height = swapChain->extent.height;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create framebuffer!");
-		}
-	}
-}
-
-void Ravine::createCommandPool() {
-
-	vkTools::QueueFamilyIndices queueFamilyIndices = vkTools::findQueueFamilies(device->physicalDevice, surface);
-
-	VkCommandPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-	poolInfo.flags = 0; // Optional
-
-	if (vkCreateCommandPool(*device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create command pool!");
-	}
-}
-
 void Ravine::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
 {
 	//Defining buffer creation info
@@ -513,145 +470,9 @@ void Ravine::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryP
 	vkBindBufferMemory(*device, buffer, bufferMemory, 0);
 }
 
-
-
-VkCommandBuffer Ravine::beginSingleTimeCommands()
-{
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = commandPool;
-	allocInfo.commandBufferCount = 1;
-
-	//TODO: We might want to have a separate command pool for this kind of short lived command buffer.
-	//Reference: https://vulkan-tutorial.com/Vertex_buffers/Staging_buffer#page_Using_a_staging_buffer
-	VkCommandBuffer commandBuffer;
-	vkAllocateCommandBuffers(*device, &allocInfo, &commandBuffer);
-
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; //Telling the driver we're only using the buffer once
-
-	vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-	return commandBuffer;
-}
-
-void Ravine::endSingleTimeCommands(VkCommandBuffer commandBuffer)
-{
-	vkEndCommandBuffer(commandBuffer);
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-
-	//The graphics queue implictly has a transfer queue
-	vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	//TODO: Could use a fence instead of waiting for the queue.
-	//That would allow for scheduling multiple transfers simultaneously and waiting for all to complete.
-	vkQueueWaitIdle(device->graphicsQueue);
-
-	vkFreeCommandBuffers(*device, commandPool, 1, &commandBuffer);
-}
-
-void Ravine::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
-{
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = oldLayout;
-	barrier.newLayout = newLayout;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; //We're not transfering ownership
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; //So we use FAMILY_IGNORED
-	barrier.image = image;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = mipLevels;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-	barrier.srcAccessMask = 0; // TODO
-	barrier.dstAccessMask = 0; // TODO
-
-	//Setting aspect mask
-	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-		if (vkTools::hasStencilComponent(format)) {
-			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-	}
-	else {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-
-	vkCmdPipelineBarrier(
-		commandBuffer,
-		0 /* TODO */, 0 /* TODO */,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	);
-
-	//Defining pipeline stage flags
-	VkPipelineStageFlags sourceStage;
-	VkPipelineStageFlags destinationStage;
-
-	//TODO: We can change that to separated functions for optimization!
-
-	//Transition types -
-	//Undefined → Transfer destination: transfer writes that don't need to wait on anything
-	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		//Setting to top of pipe because it doesn't have to wait on anything
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-	}
-	//Transfer destination → shader reading: shader reads should wait on transfer writes, specifically the shader reads in the fragment shader, because that's where we're going to use the texture
-	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-	}
-	//Undefined → depth|stencil attachment
-	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;				//Doesn't have to wait
-		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;	//Phase where buffer reading occurs
-	}
-	//Undefined → Layout color attachment
-	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	}
-	else {
-		throw std::invalid_argument("Unsupported layout transition!");
-	}
-
-	vkCmdPipelineBarrier(
-		commandBuffer,
-		sourceStage, destinationStage,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	);
-
-	endSingleTimeCommands(commandBuffer);
-}
-
 void Ravine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 {
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = device->beginSingleTimeCommands();
 
 	VkBufferImageCopy region = {};
 	region.bufferOffset = 0;
@@ -679,19 +500,19 @@ void Ravine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, u
 		&region
 	);
 
-	endSingleTimeCommands(commandBuffer);
+	device->endSingleTimeCommands(commandBuffer);
 }
 
 void Ravine::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
 
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = device->beginSingleTimeCommands();
 
 	VkBufferCopy copyRegion = {};
 	copyRegion.size = size;
 	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-	endSingleTimeCommands(commandBuffer);
+	device->endSingleTimeCommands(commandBuffer);
 }
 
 bool Ravine::loadScene(const std::string& filePath)
@@ -998,7 +819,7 @@ void Ravine::createTextureImage()
 		textureImage, textureImageMemory);
 
 	//Setting image layout for transfering to image object
-	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+	vkTools::transitionImageLayout(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 
 	//Transfering buffer data to image object
 	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
@@ -1067,7 +888,7 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 		throw std::runtime_error("Texture image format does not support linear blitting!");
 	}
 
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = device->beginSingleTimeCommands();
 
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1139,43 +960,54 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 		0, nullptr,
 		1, &barrier);
 
-	endSingleTimeCommands(commandBuffer);
+	device->endSingleTimeCommands(commandBuffer);
 }
 
 void Ravine::createDepthResources()
 {
 	VkFormat depthFormat = device->findDepthFormat();
-	//Creating image for storing depth
-	device->createImage(
-		swapChain->extent.width, swapChain->extent.height, 1,
-		msaaSamples,
-		depthFormat,
-		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		depthImage, depthImageMemory);
-	depthImageView = vkTools::createImageView(*device, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-	transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+	RvFramebufferAttachmentCreateInfo createInfo = {};
+	createInfo.layerCount = 1;
+	createInfo.mipLevels = 1;
+	createInfo.format = depthFormat;
+	createInfo.tilling = VK_IMAGE_TILING_OPTIMAL;
+	createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	createInfo.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	createInfo.aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	createInfo.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	swapChain->AddFramebufferAttachment(createInfo);
 }
 
 void Ravine::createMultiSamplingResources()
 {
 	VkFormat colorFormat = swapChain->imageFormat;
 
-	device->createImage(swapChain->extent.width, swapChain->extent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, msColorImage, msColorImageMemory);
-	msColorImageView = vkTools::createImageView(*device, msColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	RvFramebufferAttachmentCreateInfo createInfo = {};
+	createInfo.layerCount = 1;
+	createInfo.mipLevels = 1;
+	createInfo.format = colorFormat;
+	createInfo.tilling = VK_IMAGE_TILING_OPTIMAL;
+	createInfo.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	createInfo.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	createInfo.aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	createInfo.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	transitionImageLayout(msColorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+	swapChain->AddFramebufferAttachment(createInfo);
 }
 
 
 void Ravine::createCommandBuffers() {
 
-	commandBuffers.resize(swapChainFramebuffers.size());
+	commandBuffers.resize(swapChain->framebuffers.size());
 
 	//Allocate command buffers
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = device->commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
@@ -1199,8 +1031,8 @@ void Ravine::createCommandBuffers() {
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = *renderPass;
-		renderPassInfo.framebuffer = swapChainFramebuffers[i];
+		renderPassInfo.renderPass = swapChain->renderPass;
+		renderPassInfo.framebuffer = swapChain->framebuffers[i];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = swapChain->extent;
 
@@ -1411,16 +1243,16 @@ void Ravine::cleanupSwapChain() {
 	vkFreeMemory(*device, depthImageMemory, nullptr);
 
 	//Destroy FrameBuffers
-	for (VkFramebuffer framebuffer : swapChainFramebuffers) {
+	//TODO: Do that in the swapchain itself
+	for (VkFramebuffer framebuffer : swapChain->framebuffers) {
 		vkDestroyFramebuffer(*device, framebuffer, nullptr);
 	}
 
-	vkFreeCommandBuffers(*device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+	vkFreeCommandBuffers(*device, device->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
 	//Destroy Graphics Pipeline and all it's components
 	vkDestroyPipeline(*device, *graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(*device, graphicsPipeline->pipelineLayout, nullptr);
-	delete renderPass;
 
 	//Destroy swap chain and all it's images
 	swapChain->Clear();
@@ -1457,12 +1289,14 @@ void Ravine::cleanup()
 	vkFreeMemory(*device, vertexBufferMemory, nullptr);
 
 	//Destroy Command Buffer Pool
-	vkDestroyCommandPool(*device, commandPool, nullptr);
+	//TODO: Destroy with device?
+	vkDestroyCommandPool(*device, device->commandPool, nullptr);
 
 	//Destroy graphics pipeline
 	delete graphicsPipeline;
 
 	//Destroy vulkan logical device and validation layer
+	device->Clear();
 	delete device;
 	#ifdef VALIDATION_LAYERS_ENABLED
 		DestroyDebugReportCallbackEXT(instance, callback, nullptr);

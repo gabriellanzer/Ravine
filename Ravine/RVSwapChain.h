@@ -11,8 +11,9 @@
 //Vulkan Tools
 #include "VulkanTools.h"
 
-//VK Wrappers
-#include "RVDevice.h"
+//Ravine Includes
+#include "RvDevice.h"
+#include "RvFramebufferAttachment.h"
 
 //Structure for Swap Chain Support query of details
 struct SwapChainSupportDetails {
@@ -23,10 +24,15 @@ struct SwapChainSupportDetails {
 
 struct RvSwapChain
 {
+private:
 	//External Dependencies
 	RvDevice* device;
 	VkSurfaceKHR surface;
 
+	size_t currentFrame = 0;
+
+	bool framebufferResized = false;
+public:
 	//Extent values
 	uint32_t WIDTH;
 	uint32_t HEIGHT;
@@ -37,11 +43,18 @@ struct RvSwapChain
 	//Vulkan Object Handle
 	VkSwapchainKHR handle = VK_NULL_HANDLE;
 
+	//Renderpass
+	VkRenderPass renderPass;
+
 	//Swap chain properties
 	std::vector<VkImage> images;
 	VkFormat imageFormat;
 	VkExtent2D extent;
 	std::vector<VkImageView> imageViews;
+
+	//Framebuffers
+	std::vector<VkFramebuffer> framebuffers;
+	std::vector<RvFramebufferAttachment> framebufferAttachments;
 
 	//Queue fences
 	std::vector<VkFence> inFlightFences;
@@ -50,16 +63,15 @@ struct RvSwapChain
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 
-	size_t currentFrame = 0;
-
-	bool framebufferResized = false;
-
 	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
 	~RvSwapChain();
 
 	void Clear();
 
 	void CreateImageViews();
+	void CreateRenderPass();
+	void AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	void CreateFramebuffers();
 
 	void CreateSyncObjects();
 

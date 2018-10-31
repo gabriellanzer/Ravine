@@ -19,6 +19,12 @@
     <Filter Include="Source Files\Shaders">
       <UniqueIdentifier>{4a6ffd5e-0ec7-49fc-ba48-f3f58792b665}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Ravine System">
+      <UniqueIdentifier>{f2382bb2-d864-4e40-9bbf-3869eb1102b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System">
+      <UniqueIdentifier>{669ad292-3ec7-44c0-98d8-3345b57b2eac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -39,29 +45,26 @@
     <ClCompile Include="Time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Ravine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SingleFileLibraries\imgui_impl_glfw.cpp">
       <Filter>Header Files\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="SingleFileLibraries\imgui_impl_vulkan.cpp">
       <Filter>Header Files\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="Ravine.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
     <ClCompile Include="VulkanTools.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RVSwapChain.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="RvDevice.cpp">
+      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RVDevice.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="RvGraphicsPipeline.cpp">
+      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RVGraphicsPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RVRenderPass.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="RvSwapChain.cpp">
+      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -89,38 +92,38 @@
     <ClInclude Include="Time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Ravine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SingleFileLibraries\imgui_impl_glfw.h">
       <Filter>Header Files\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\imgui_impl_vulkan.h">
       <Filter>Header Files\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Ravine.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
     <ClInclude Include="VulkanTools.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVDataTypes.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvConfig.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVUniformTypes.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvDataTypes.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVSwapChain.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvDevice.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVDevice.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvGraphicsPipeline.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVConfig.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvSwapChain.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVGraphicsPipeline.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvUniformTypes.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RVRenderPass.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvFramebufferAttachment.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

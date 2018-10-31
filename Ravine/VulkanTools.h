@@ -7,8 +7,8 @@
 #include <vector>
 
 //Ravine Includes
-#include "RVSwapChain.h"
-#include "RVDevice.h"
+#include "RvSwapChain.h"
+#include "RvDevice.h"
 
 struct SwapChainSupportDetails;
 
@@ -37,6 +37,8 @@ namespace vkTools
 	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 	std::vector<char> readFile(const std::string& filename);
+
+	void transitionImageLayout(RvDevice device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 
 };
 

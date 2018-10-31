@@ -23,14 +23,13 @@
 #include <glm/gtc/type_ptr.hpp>
 
 //Types dependencies
-#include "RVDataTypes.h"
-#include "RVUniformTypes.h"
+#include "RvDataTypes.h"
+#include "RvUniformTypes.h"
 
 //VK Wrappers
-#include "RVDevice.h"
-#include "RVSwapChain.h"
-#include "RVGraphicsPipeline.h"
-#include "RVRenderPass.h"
+#include "RvDevice.h"
+#include "RvSwapChain.h"
+#include "RvGraphicsPipeline.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -69,7 +68,6 @@ private:
 	RvDevice* device;
 	RvSwapChain* swapChain;
 	RvGraphicsPipeline* graphicsPipeline;
-	RvRenderPass* renderPass;
 
 	//Mouse parameters
 	//MOVE TO: Input
@@ -101,10 +99,6 @@ private:
 	//MOVE TO: DEBUG
 	VkDebugReportCallbackEXT callback;
 
-	//Framebuffers
-	//MOVE TO: FRAMEBUFFER
-	std::vector<VkFramebuffer> swapChainFramebuffers;
-
 	//Descriptors related content
 	//MOVE TO: DESCRIPTOR
 	VkDescriptorSetLayout descriptorSetLayout;
@@ -112,10 +106,6 @@ private:
 	std::vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
 
 	//Commands Buffers and it's Pool
-	//CHANGE NAME TO SOMETHING MORE MEANINGFUL
-	//(This one should be "graphicsCommandPool")
-	//MOVE TO: DEVICE
-	VkCommandPool commandPool;
 	//MOVE TO: COMMAND BUFFER
 	std::vector<VkCommandBuffer> commandBuffers;
 
@@ -142,7 +132,7 @@ private:
 	std::vector<VkDeviceMemory> materialBuffersMemory;
 
 	//Texture related objects
-	//MOVE TO: TEXTURE
+	//MOVE TO: TEXTURE (inherits from framebuffer?)
 	uint32_t mipLevels;
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
@@ -204,12 +194,6 @@ private:
 
 	//Creating descriptors sets (uniforms bindings)
 	void createDescriptorSets();
-
-	//Create framebuffers for drawing
-	void createFramebuffers();
-
-	//Defines command buffer pool
-	void createCommandPool();
 
 	//Helper function to copy a buffer's content into another
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
@@ -276,16 +260,6 @@ private:
 
 	//Helper function for creating buffers
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-
-	//Single time command buffer helpers
-	//MOVE TO: BUFFER
-	VkCommandBuffer beginSingleTimeCommands();
-	//MOVE TO: BUFFER
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
-
-	//Set image to correct layout
-	//MOVE TO: BUFFER
-	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 
 	//Transfer buffer's data to an image
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);

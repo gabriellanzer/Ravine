@@ -5,7 +5,7 @@
 #include <vulkan\vulkan.h>
 
 //Ravine Systems
-#include "RVDevice.h"
+#include "RvDevice.h"
 
 struct RvGraphicsPipeline
 {

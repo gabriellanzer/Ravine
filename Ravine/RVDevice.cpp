@@ -8,7 +8,7 @@
 #include "VulkanTools.h"
 #include "RVConfig.h"
 
-RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : physicalDevice(physicalDevice)
+RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : physicalDevice(physicalDevice), surface(&surface)
 {
 	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(physicalDevice, surface);
 
@@ -60,14 +60,36 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : phys
 
 	//TODO: This should be dynamically chosen
 	sampleCount = getMaxUsableSampleCount();
+
+	//Create command pool
+	CreateCommandPool();
 }
 
 
 RvDevice::~RvDevice()
 {
+}
+
+void RvDevice::CreateCommandPool()
+{
+	vkTools::QueueFamilyIndices queueFamilyIndices = vkTools::findQueueFamilies(physicalDevice, *surface);
+
+	VkCommandPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+	poolInfo.flags = 0; // Optional
+
+	if (vkCreateCommandPool(handle, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create command pool!");
+	}
+}
+
+void RvDevice::Clear()
+{
 	vkDestroyDevice(handle, nullptr);
 }
 
+//TODO: Change parameters to use RvFramebufferAttachmentCreateInfo ?
 void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory)
 {
 	//Defining image creation info
@@ -155,6 +177,46 @@ VkSampleCountFlagBits RvDevice::getMaxUsableSampleCount()
 	if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
 	return VK_SAMPLE_COUNT_1_BIT;
+}
+
+VkCommandBuffer RvDevice::beginSingleTimeCommands()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	//TODO: We might want to have a separate command pool for this kind of short lived command buffer.
+	//Reference: https://vulkan-tutorial.com/Vertex_buffers/Staging_buffer#page_Using_a_staging_buffer
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(handle, &allocInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; //Telling the driver we're only using the buffer once
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	return commandBuffer;
+}
+
+void RvDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer)
+{
+	vkEndCommandBuffer(commandBuffer);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	//The graphics queue implictly has a transfer queue
+	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	//TODO: Could use a fence instead of waiting for the queue.
+	//That would allow for scheduling multiple transfers simultaneously and waiting for all to complete.
+	vkQueueWaitIdle(graphicsQueue);
+
+	vkFreeCommandBuffers(handle, commandPool, 1, &commandBuffer);
 }
 
 VkFormatProperties RvDevice::getFormatProperties(VkFormat format)

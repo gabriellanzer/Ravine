@@ -38,12 +38,12 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(rvCfgDeviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = rvCfgDeviceExtensions.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(rvCfg::DeviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = rvCfg::DeviceExtensions.data();
 
 #ifdef VALIDATION_LAYERS_ENABLED
-		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfgValidationLayers.size());
-		createInfo.ppEnabledLayerNames = rvCfgValidationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
+		createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
 #else
 		createInfo.enabledLayerCount = 0;
 #endif

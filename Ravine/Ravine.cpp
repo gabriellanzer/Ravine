@@ -19,7 +19,8 @@
 
 //Ravine Systems Includes
 #include "Time.h"
-#include "RVConfig.h"
+#include "RvConfig.h"
+#include "RvDebug.h"
 
 Ravine::Ravine()
 {
@@ -39,32 +40,9 @@ void Ravine::run()
 }
 
 
-//MOVE TO: DEBUG
-VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
-	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-	if (func != nullptr) {
-		return func(instance, pCreateInfo, pAllocator, pCallback);
-	}
-	else {
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-}
-
-//MOVE TO: DEBUG
-void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
-	auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-	if (func != nullptr) {
-		func(instance, callback, pAllocator);
-	}
-}
-
 #pragma region Static Methods
 
-VKAPI_ATTR VkBool32 VKAPI_CALL Ravine::debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
-	std::cerr << "Validation layer: " << msg << std::endl;
 
-	return VK_FALSE;
-}
 
 //Static method because GLFW doesn't know how to call a member function with the "this" pointer to our Ravine instance.
 void Ravine::framebufferResizeCallback(GLFWwindow * window, int width, int height)
@@ -92,7 +70,7 @@ void Ravine::initWindow() {
 void Ravine::initVulkan() {
 	//Core setup
 	createInstance();
-	setupDebugCallback();
+	rvDebug::setupDebugCallback(instance);
 	createSurface();
 	pickPhysicalDevice();
 
@@ -135,7 +113,7 @@ void Ravine::createInstance() {
 
 	//Check validation layer support
 #ifdef VALIDATION_LAYERS_ENABLED
-	if (!checkValidationLayerSupport()) {
+	if (!rvCfg::CheckValidationLayerSupport()) {
 		throw std::runtime_error("Validation layers requested, but not available!");
 	}
 #endif
@@ -183,8 +161,8 @@ void Ravine::createInstance() {
 
 	//Add validation layer info
 	#ifdef VALIDATION_LAYERS_ENABLED
-		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfgValidationLayers.size());
-		createInfo.ppEnabledLayerNames = rvCfgValidationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
+		createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
 		std::cout << "!Enabling validation layers!" << std::endl;
 	#else
 		createInfo.enabledLayerCount = 0;
@@ -193,22 +171,6 @@ void Ravine::createInstance() {
 	//Ask for an instance
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create instance!");
-	}
-}
-
-void Ravine::setupDebugCallback()
-{
-#ifndef VALIDATION_LAYERS_ENABLED
-	return;
-#endif
-
-	VkDebugReportCallbackCreateInfoEXT createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-	createInfo.pfnCallback = debugCallback;
-
-	if (CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to set up debug callback!");
 	}
 }
 
@@ -271,7 +233,7 @@ bool Ravine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-	std::set<std::string> requiredExtensions(rvCfgDeviceExtensions.begin(), rvCfgDeviceExtensions.end());
+	std::set<std::string> requiredExtensions(rvCfg::DeviceExtensions.begin(), rvCfg::DeviceExtensions.end());
 
 	for (const auto& extension : availableExtensions) {
 		requiredExtensions.erase(extension.extensionName);
@@ -1280,8 +1242,9 @@ void Ravine::cleanup()
 	//Destroy vulkan logical device and validation layer
 	device->Clear();
 	delete device;
+
 	#ifdef VALIDATION_LAYERS_ENABLED
-		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
+		rvDebug::DestroyDebugReportCallbackEXT(instance, rvDebug::callback, nullptr);
 	#endif
 
 	//Destroy VK surface and instance
@@ -1291,30 +1254,4 @@ void Ravine::cleanup()
 	//Finish GLFW
 	glfwDestroyWindow(window);
 	glfwTerminate();
-}
-
-
-bool Ravine::checkValidationLayerSupport() {
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-	std::vector<VkLayerProperties> availableLayers(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-	for (const char* layerName : rvCfgValidationLayers) {
-		bool layerFound = false;
-
-		for (const VkLayerProperties& layerProperties : availableLayers) {
-			if (strcmp(layerName, layerProperties.layerName) == 0) {
-				layerFound = true;
-				break;
-			}
-		}
-
-		if (!layerFound) {
-			return false;
-		}
-	}
-
-	return true;
 }

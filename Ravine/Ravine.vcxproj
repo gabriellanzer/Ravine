@@ -148,6 +148,8 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
+    <ClCompile Include="RvConfig.cpp" />
+    <ClCompile Include="RvDebug.cpp" />
     <ClCompile Include="RvDevice.cpp" />
     <ClCompile Include="RvGraphicsPipeline.cpp" />
     <ClCompile Include="RvSwapChain.cpp" />
@@ -164,6 +166,7 @@
     <ClInclude Include="Ravine.h" />
     <ClInclude Include="RvConfig.h" />
     <ClInclude Include="RvDataTypes.h" />
+    <ClInclude Include="RvDebug.h" />
     <ClInclude Include="RvDevice.h" />
     <ClInclude Include="RvGraphicsPipeline.h" />
     <ClInclude Include="RvFramebufferAttachment.h" />

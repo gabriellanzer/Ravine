@@ -66,6 +66,12 @@
     <ClCompile Include="RvSwapChain.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="RvDebug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RvConfig.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -104,9 +110,6 @@
     <ClInclude Include="VulkanTools.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RvConfig.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
     <ClInclude Include="RvDataTypes.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
@@ -123,6 +126,12 @@
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="RvFramebufferAttachment.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvDebug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvConfig.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>

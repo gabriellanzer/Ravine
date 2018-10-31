@@ -95,10 +95,6 @@ private:
 	//MOVE TO: VULKAN APP
 	VkInstance instance;
 
-	//Debug Callback Handler
-	//MOVE TO: DEBUG
-	VkDebugReportCallbackEXT callback;
-
 	//Descriptors related content
 	//MOVE TO: DESCRIPTOR
 	VkDescriptorSetLayout descriptorSetLayout;
@@ -156,9 +152,6 @@ private:
 
 	//Create Vulkan Instance for the start of the application
 	void createInstance();
-
-	//Create DebugReport callback handler and check validation layer support
-	void setupDebugCallback();
 
 	//Get a suitable device and set it up
 	void pickPhysicalDevice();
@@ -237,9 +230,6 @@ private:
 	//Finalize
 	void cleanup();
 
-	//Debugging
-	bool checkValidationLayerSupport();
-
 #pragma endregion
 
 #pragma region Helpers
@@ -254,9 +244,6 @@ private:
 #pragma endregion
 
 #pragma region Static
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
-
-
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 #pragma endregion
 };

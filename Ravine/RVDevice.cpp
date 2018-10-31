@@ -3,6 +3,7 @@
 //STD Includes
 #include <algorithm>
 #include <set>
+#include <iostream>
 
 //Ravine System Includes
 #include "VulkanTools.h"
@@ -60,6 +61,7 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	//TODO: This should be dynamically chosen
 	sampleCount = getMaxUsableSampleCount();
+	std::cout << "Choosen samples count: " << sampleCount << std::endl;
 
 	//Create command pool
 	CreateCommandPool();
@@ -89,7 +91,6 @@ void RvDevice::Clear()
 	vkDestroyDevice(handle, nullptr);
 }
 
-//TODO: Change parameters to use RvFramebufferAttachmentCreateInfo ?
 void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory)
 {
 	//Defining image creation info

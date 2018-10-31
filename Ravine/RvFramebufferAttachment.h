@@ -8,7 +8,6 @@ struct RvFramebufferAttachment {
 	VkImage image;
 	VkDeviceMemory memory;
 	VkImageView imageView;
-	VkFormat format;
 };
 
 struct RvFramebufferAttachmentCreateInfo {

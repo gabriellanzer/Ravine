@@ -227,8 +227,6 @@ void Ravine::pickPhysicalDevice()
 	for (const auto& curPhysicalDevice : devices) {
 		if (isDeviceSuitable(curPhysicalDevice)) {
 			device = new RvDevice(curPhysicalDevice, surface);
-			msaaSamples = device->getMaxUsableSampleCount();
-			std::cout << "Choosen samples count: " << msaaSamples << std::endl;
 			break;
 		}
 	}
@@ -1231,22 +1229,6 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 }
 
 void Ravine::cleanupSwapChain() {
-
-	//Destroy multi sampling related objects
-	vkDestroyImageView(*device, msColorImageView, nullptr);
-	vkDestroyImage(*device, msColorImage, nullptr);
-	vkFreeMemory(*device, msColorImageMemory, nullptr);
-
-	//Destroy depth related objects
-	vkDestroyImageView(*device, depthImageView, nullptr);
-	vkDestroyImage(*device, depthImage, nullptr);
-	vkFreeMemory(*device, depthImageMemory, nullptr);
-
-	//Destroy FrameBuffers
-	//TODO: Do that in the swapchain itself
-	for (VkFramebuffer framebuffer : swapChain->framebuffers) {
-		vkDestroyFramebuffer(*device, framebuffer, nullptr);
-	}
 
 	vkFreeCommandBuffers(*device, device->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 

@@ -129,6 +129,19 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 
 void RvSwapChain::Clear()
 {
+	//Destroy attachments
+	for (size_t i = 0; i < framebufferAttachments.size(); i++)
+	{
+	vkDestroyImageView(*device, framebufferAttachments[i].imageView, nullptr);
+	vkDestroyImage(*device, framebufferAttachments[i].image, nullptr);
+	vkFreeMemory(*device, framebufferAttachments[i].memory, nullptr);
+	}
+
+	//Destroy FrameBuffers
+	for (VkFramebuffer framebuffer : framebuffers) {
+		vkDestroyFramebuffer(*device, framebuffer, nullptr);
+	}
+
 	vkDestroyRenderPass(*device, renderPass, nullptr);
 	for (VkImageView imageView : imageViews) {
 		vkDestroyImageView(*device, imageView, nullptr);

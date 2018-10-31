@@ -139,20 +139,6 @@ private:
 	VkImageView textureImageView;
 	VkSampler textureSampler;
 
-	//Depth related objects
-	//MOVE TO: FRAMEBUFFER
-	VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
-
-	//MSAA related objects
-	//MOVE TO: RENDER PASS
-	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-	//MOVE TO: FRAMEBUFFER
-	VkImage msColorImage;
-	VkDeviceMemory msColorImageMemory;
-	VkImageView msColorImageView;
-
 	//Helper variable for changes on framebuffer
 	//MOVE TO: WINDOW
 	bool framebufferResized = false;

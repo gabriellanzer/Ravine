@@ -75,7 +75,7 @@ RvSwapChain::RvSwapChain(VkDevice& device, VkPhysicalDevice physicalDevice, VkSu
 	images.resize(imageCount);
 	vkGetSwapchainImagesKHR(*this->device, handle, &imageCount, images.data());
 	imageFormat = surfaceFormat.format;
-	extent = extent;
+	this->extent = extent;
 }
 
 VkSurfaceFormatKHR RvSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {

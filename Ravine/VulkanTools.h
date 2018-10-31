@@ -8,6 +8,7 @@
 
 //Ravine Includes
 #include "RVSwapChain.h"
+#include "RVDevice.h"
 
 extern struct SwapChainSupportDetails;
 
@@ -34,7 +35,6 @@ namespace vkTools
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
-
 
 };
 

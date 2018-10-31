@@ -27,6 +27,7 @@
 #include "RVUniformTypes.h"
 
 //VK Wrappers
+#include "RVDevice.h"
 #include "RVSwapChain.h"
 
 //Math defines
@@ -61,6 +62,8 @@ private:
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
 
+	//Device handle and related content
+	RvDevice* device;
 	RvSwapChain* swapChain;
 
 	//Mouse parameters
@@ -92,17 +95,6 @@ private:
 	//Debug Callback Handler
 	//MOVE TO: DEBUG
 	VkDebugReportCallbackEXT callback;
-
-	//Physical and Logical device handles
-	//MOVED: DEVICE
-	VkPhysicalDevice physicalDevice;
-	//MOVED: DEVICE
-	VkDevice device;
-
-	//Queues
-	//MOVE TO: DEVICE
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
 
 	//Framebuffers
 	//MOVE TO: FRAMEBUFFER
@@ -265,13 +257,6 @@ private:
 	//Create resources for depth testing
 	void createDepthResources();
 
-	//Helper to get depth format
-	VkFormat findDepthFormat();
-
-	//Get max sampling counts
-	//MOVED: DEVICE!
-	VkSampleCountFlagBits getMaxUsableSampleCount();
-
 	//Create resources for sampling
 	void createMultiSamplingResources();
 
@@ -314,19 +299,6 @@ private:
 
 	//Helper function for creating buffers
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-
-	//Helper function for creating images
-	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-
-	//Helper function to get some device info
-	//MOVED: DEVICE
-	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-	//MOVED: DEVICE
-	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-
-	//Checks for stencil flag
-	//MOVED: TOOLS
-	bool hasStencilComponent(VkFormat format);
 
 	//Single time command buffer helpers
 	//MOVE TO: BUFFER

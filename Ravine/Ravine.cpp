@@ -19,6 +19,8 @@
 
 //Ravine Systems Includes
 #include "Time.h"
+#include "RVConfig.h"
+
 
 Ravine::Ravine()
 {
@@ -38,22 +40,6 @@ void Ravine::run()
 	cleanup();
 }
 
-//Validation layers to be enabled
-const std::vector<const char*> validationLayers = {
-	"VK_LAYER_LUNARG_standard_validation"
-};
-
-//Physical Device required extensions
-const std::vector<const char*> deviceExtensions = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
-
-//MOVE TO: VULKAN APP
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
 
 //MOVE TO: TOOLS
 static void check_vk_result(VkResult err)
@@ -124,9 +110,9 @@ void Ravine::initWindow() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine", 
-							  nullptr, //glfwGetPrimaryMonitor(), //Fullscreen
-							  nullptr);
+	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine",
+		nullptr, //glfwGetPrimaryMonitor(), //Fullscreen
+		nullptr);
 	//Storing Ravine pointer inside window instance
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
@@ -141,7 +127,7 @@ void Ravine::initVulkan() {
 	createLogicalDevice();
 
 	//Rendering pipeline
-	swapChain = new RvSwapChain(device, physicalDevice, surface, WIDTH, HEIGHT, NULL);
+	swapChain = new RvSwapChain(*device, surface, WIDTH, HEIGHT, NULL);
 	swapChain->CreateImageViews();
 	createRenderPass();
 	createDescriptorSetLayout();
@@ -169,9 +155,9 @@ std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
 
 	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-	if (enableValidationLayers) {
+	#ifdef VALIDATION_LAYERS_ENABLED
 		extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-	}
+	#endif
 
 	return extensions;
 }
@@ -179,9 +165,11 @@ std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
 void Ravine::createInstance() {
 
 	//Check validation layer support
-	if (enableValidationLayers && !checkValidationLayerSupport()) {
+#ifdef VALIDATION_LAYERS_ENABLED
+	if (!checkValidationLayerSupport()) {
 		throw std::runtime_error("Validation layers requested, but not available!");
 	}
+#endif
 
 	//Application related info
 	VkApplicationInfo appInfo = {};
@@ -225,14 +213,13 @@ void Ravine::createInstance() {
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
 	//Add validation layer info
-	if (enableValidationLayers) {
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
+	#ifdef VALIDATION_LAYERS_ENABLED
+		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfgValidationLayers.size());
+		createInfo.ppEnabledLayerNames = rvCfgValidationLayers.data();
 		std::cout << "!Enabling validation layers!" << std::endl;
-	}
-	else {
+	#else
 		createInfo.enabledLayerCount = 0;
-	}
+	#endif
 
 	//Ask for an instance
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
@@ -242,8 +229,9 @@ void Ravine::createInstance() {
 
 void Ravine::setupDebugCallback()
 {
-	if (!enableValidationLayers)
-		return;
+#ifndef VALIDATION_LAYERS_ENABLED
+	return;
+#endif
 
 	VkDebugReportCallbackCreateInfoEXT createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
@@ -267,16 +255,16 @@ void Ravine::pickPhysicalDevice()
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-	for (const auto& device : devices) {
-		if (isDeviceSuitable(device)) {
-			physicalDevice = device;
-			msaaSamples = getMaxUsableSampleCount();
+	for (const auto& curPhysicalDevice : devices) {
+		if (isDeviceSuitable(curPhysicalDevice)) {
+			device = new RvDevice(curPhysicalDevice, surface);
+			msaaSamples = device->getMaxUsableSampleCount();
 			std::cout << "Choosen samples count: " << msaaSamples << std::endl;
 			break;
 		}
 	}
 
-	if (physicalDevice == VK_NULL_HANDLE) {
+	if (device->physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 }
@@ -316,7 +304,7 @@ bool Ravine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+	std::set<std::string> requiredExtensions(rvCfgDeviceExtensions.begin(), rvCfgDeviceExtensions.end());
 
 	for (const auto& extension : availableExtensions) {
 		requiredExtensions.erase(extension.extensionName);
@@ -335,12 +323,12 @@ void Ravine::recreateSwapChain() {
 		glfwWaitEvents();
 	}
 
-	vkDeviceWaitIdle(device);
+	vkDeviceWaitIdle(*device);
 
 	//Storing handle
 	RvSwapChain *oldSwapchain = swapChain;
 
-	swapChain = new RvSwapChain(device, physicalDevice, surface, WIDTH, HEIGHT, oldSwapchain->handle);
+	swapChain = new RvSwapChain(*device, surface, WIDTH, HEIGHT, oldSwapchain->handle);
 	swapChain->CreateImageViews();
 	createRenderPass();
 	createGraphicsPipeline();
@@ -399,7 +387,7 @@ void Ravine::createRenderPass() {
 	//Depth attachment description
 	//Reference: https://vulkan-tutorial.com/Depth_buffering#page_Render_pass
 	VkAttachmentDescription depthAttachment = {};
-	depthAttachment.format = findDepthFormat();
+	depthAttachment.format = device->findDepthFormat();
 	depthAttachment.samples = msaaSamples;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -447,7 +435,7 @@ void Ravine::createRenderPass() {
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+	if (vkCreateRenderPass(*device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create render pass!");
 	}
 
@@ -469,7 +457,7 @@ void Ravine::createDescriptorPool()
 	poolInfo.pPoolSizes = poolSizes.data();
 	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size());
 
-	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+	if (vkCreateDescriptorPool(*device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
 	}
 }
@@ -485,7 +473,7 @@ void Ravine::createDescriptorSets()
 
 	// Setting descriptor sets vector to count of SwapChain images
 	descriptorSets.resize(swapChain->images.size());
-	if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+	if (vkAllocateDescriptorSets(*device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate descriptor sets!");
 	}
 
@@ -535,7 +523,7 @@ void Ravine::createDescriptorSets()
 		//Buffer Info
 		descriptorWrites[2].pBufferInfo = &materialInfo;
 
-		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(*device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 
 }
@@ -576,7 +564,7 @@ void Ravine::createDescriptorSetLayout()
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
-	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+	if (vkCreateDescriptorSetLayout(*device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor set layout!");
 	};
 
@@ -721,7 +709,7 @@ void Ravine::createGraphicsPipeline() {
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(*device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
@@ -768,7 +756,7 @@ void Ravine::createGraphicsPipeline() {
 	//Settin depth/stencil state to pipeline
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(*device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline!");
 	}
 
@@ -796,7 +784,7 @@ void Ravine::createFramebuffers() {
 		framebufferInfo.height = swapChain->extent.height;
 		framebufferInfo.layers = 1;
 
-		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+		if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create framebuffer!");
 		}
 	}
@@ -804,14 +792,14 @@ void Ravine::createFramebuffers() {
 
 void Ravine::createCommandPool() {
 
-	vkTools::QueueFamilyIndices queueFamilyIndices = vkTools::findQueueFamilies(physicalDevice, surface);
+	vkTools::QueueFamilyIndices queueFamilyIndices = vkTools::findQueueFamilies(device->physicalDevice, surface);
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 	poolInfo.flags = 0; // Optional
 
-	if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+	if (vkCreateCommandPool(*device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create command pool!");
 	}
 }
@@ -826,66 +814,28 @@ void Ravine::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryP
 	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	//Creating buffer
-	if (vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
+	if (vkCreateBuffer(*device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create buffer!");
 	}
 
 	//Allocating buffer memory
 	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+	vkGetBufferMemoryRequirements(*device, buffer, &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+	allocInfo.memoryTypeIndex = device->findMemoryType(memRequirements.memoryTypeBits, properties);
 
-	if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+	if (vkAllocateMemory(*device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate buffer memory!");
 	}
 
 	//Binding buffer memory
-	vkBindBufferMemory(device, buffer, bufferMemory, 0);
+	vkBindBufferMemory(*device, buffer, bufferMemory, 0);
 }
 
-void Ravine::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory)
-{
-	//Defining image creation info
-	VkImageCreateInfo imageCreateInfo = {};
-	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageCreateInfo.extent.width = width;
-	imageCreateInfo.extent.height = height;
-	imageCreateInfo.extent.depth = 1;
-	imageCreateInfo.mipLevels = mipLevels;
-	imageCreateInfo.arrayLayers = 1;
-	imageCreateInfo.format = format;
-	imageCreateInfo.tiling = tiling;
-	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	imageCreateInfo.usage = usage;
-	imageCreateInfo.samples = numSamples;
-	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	//Creating image
-	if (vkCreateImage(device, &imageCreateInfo, nullptr, &image) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create image!");
-	}
-
-	//Allocating image memory
-	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(device, image, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-	if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to allocate image memory!");
-	}
-
-	//Binding image memory
-	vkBindImageMemory(device, image, imageMemory, 0);
-}
 
 VkCommandBuffer Ravine::beginSingleTimeCommands()
 {
@@ -898,7 +848,7 @@ VkCommandBuffer Ravine::beginSingleTimeCommands()
 	//TODO: We might want to have a separate command pool for this kind of short lived command buffer.
 	//Reference: https://vulkan-tutorial.com/Vertex_buffers/Staging_buffer#page_Using_a_staging_buffer
 	VkCommandBuffer commandBuffer;
-	vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+	vkAllocateCommandBuffers(*device, &allocInfo, &commandBuffer);
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -919,12 +869,12 @@ void Ravine::endSingleTimeCommands(VkCommandBuffer commandBuffer)
 	submitInfo.pCommandBuffers = &commandBuffer;
 
 	//The graphics queue implictly has a transfer queue
-	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 	//TODO: Could use a fence instead of waiting for the queue.
 	//That would allow for scheduling multiple transfers simultaneously and waiting for all to complete.
-	vkQueueWaitIdle(graphicsQueue);
+	vkQueueWaitIdle(device->graphicsQueue);
 
-	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+	vkFreeCommandBuffers(*device, commandPool, 1, &commandBuffer);
 }
 
 void Ravine::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
@@ -949,7 +899,7 @@ void Ravine::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout
 	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-		if (hasStencilComponent(format)) {
+		if (vkTools::hasStencilComponent(format)) {
 			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
 	}
@@ -1070,20 +1020,20 @@ bool Ravine::loadScene(const std::string& filePath)
 {
 	Importer importer;
 	const aiScene* scene = importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
-											 aiProcess_GenSmoothNormals | \
-											 aiProcess_JoinIdenticalVertices | \
-											 aiProcess_ImproveCacheLocality | \
-											 aiProcess_LimitBoneWeights | \
-											 aiProcess_RemoveRedundantMaterials | \
-											 aiProcess_Triangulate | \
-											 aiProcess_GenUVCoords | \
-											 aiProcess_SortByPType | \
-											 aiProcess_FindDegenerates | \
-											 aiProcess_FindInvalidData | \
-											 aiProcess_FindInstances | \
-											 aiProcess_ValidateDataStructure | \
-											 aiProcess_OptimizeMeshes | \
-											 0);
+		aiProcess_GenSmoothNormals | \
+		aiProcess_JoinIdenticalVertices | \
+		aiProcess_ImproveCacheLocality | \
+		aiProcess_LimitBoneWeights | \
+		aiProcess_RemoveRedundantMaterials | \
+		aiProcess_Triangulate | \
+		aiProcess_GenUVCoords | \
+		aiProcess_SortByPType | \
+		aiProcess_FindDegenerates | \
+		aiProcess_FindInvalidData | \
+		aiProcess_FindInstances | \
+		aiProcess_ValidateDataStructure | \
+		aiProcess_OptimizeMeshes | \
+		0);
 
 	// If the import failed, report it
 	if (!scene)
@@ -1265,9 +1215,9 @@ void Ravine::createVertexBuffer()
 
 	//Fetching verteices data
 	void* data;
-	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	vkMapMemory(*device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, (void*)meshes[0].vertices, (size_t)bufferSize);
-	vkUnmapMemory(device, stagingBufferMemory);
+	vkUnmapMemory(*device, stagingBufferMemory);
 
 	//Verter buffer is being used as the destination for such memory transfer operation
 	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -1276,8 +1226,8 @@ void Ravine::createVertexBuffer()
 	copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
 	//Clearing staging buffer
-	vkDestroyBuffer(device, stagingBuffer, nullptr);
-	vkFreeMemory(device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(*device, stagingBuffer, nullptr);
+	vkFreeMemory(*device, stagingBufferMemory, nullptr);
 }
 
 void Ravine::createIndexBuffer()
@@ -1296,9 +1246,9 @@ void Ravine::createIndexBuffer()
 
 	//Feching indices data
 	void* data;
-	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	vkMapMemory(*device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, (void*)meshes[0].indices, (size_t)bufferSize);
-	vkUnmapMemory(device, stagingBufferMemory);
+	vkUnmapMemory(*device, stagingBufferMemory);
 
 	//Creating index buffer
 	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -1307,8 +1257,8 @@ void Ravine::createIndexBuffer()
 	copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
 	//Clearing staging buffer
-	vkDestroyBuffer(device, stagingBuffer, nullptr);
-	vkFreeMemory(device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(*device, stagingBuffer, nullptr);
+	vkFreeMemory(*device, stagingBufferMemory, nullptr);
 }
 
 void Ravine::createUniformBuffers()
@@ -1356,18 +1306,18 @@ void Ravine::createTextureImage()
 
 	//Transfering image data
 	void* data;
-	vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+	vkMapMemory(*device, stagingBufferMemory, 0, imageSize, 0, &data);
 	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(device, stagingBufferMemory);
+	vkUnmapMemory(*device, stagingBufferMemory);
 
 	stbi_image_free(pixels);
 
 	//Creating new image
-	createImage(texWidth, texHeight, mipLevels,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				textureImage, textureImageMemory);
+	device->createImage(texWidth, texHeight, mipLevels,
+		VK_SAMPLE_COUNT_1_BIT,
+		VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		textureImage, textureImageMemory);
 
 	//Setting image layout for transfering to image object
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
@@ -1376,8 +1326,8 @@ void Ravine::createTextureImage()
 	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
 	//Clearing staging buffer
-	vkDestroyBuffer(device, stagingBuffer, nullptr);
-	vkFreeMemory(device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(*device, stagingBuffer, nullptr);
+	vkFreeMemory(*device, stagingBufferMemory, nullptr);
 
 	//Transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
 	generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, mipLevels);
@@ -1385,7 +1335,7 @@ void Ravine::createTextureImage()
 
 void Ravine::createTextureImageView()
 {
-	textureImageView = vkTools::createImageView(device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+	textureImageView = vkTools::createImageView(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 }
 
 void Ravine::createTextureSampler()
@@ -1425,7 +1375,7 @@ void Ravine::createTextureSampler()
 	samplerCreateInfo.maxLod = static_cast<float>(mipLevels);
 
 	//Creating sampler
-	if (vkCreateSampler(device, &samplerCreateInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+	if (vkCreateSampler(*device, &samplerCreateInfo, nullptr, &textureSampler) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create texture sampler!");
 	}
 }
@@ -1433,8 +1383,7 @@ void Ravine::createTextureSampler()
 void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
 {
 	//Checking device support for linear blitting
-	VkFormatProperties formatProperties;
-	vkGetPhysicalDeviceFormatProperties(physicalDevice, imageFormat, &formatProperties);
+	VkFormatProperties formatProperties = device->getFormatProperties(imageFormat);
 
 	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 		throw std::runtime_error("Texture image format does not support linear blitting!");
@@ -1465,10 +1414,10 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 
 		//Transition waits for level (i - 1) to be filled (from Blitting or vkCmdCopyBufferToImage)
 		vkCmdPipelineBarrier(commandBuffer,
-							 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-							 0, nullptr,
-							 0, nullptr,
-							 1, &barrier);
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
 
 		//Image blit object
 		VkImageBlit blit = {};
@@ -1489,11 +1438,11 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 
 		//Blit command
 		vkCmdBlitImage(commandBuffer,
-					   image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					   image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					   1, &blit,
-					   VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
-				   //TODO: Change sampler filtering to variable
+			image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &blit,
+			VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
+		//TODO: Change sampler filtering to variable
 
 		if (mipWidth > 1) mipWidth /= 2;
 		if (mipHeight > 1) mipHeight /= 2;
@@ -1507,97 +1456,39 @@ void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWid
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 	vkCmdPipelineBarrier(commandBuffer,
-						 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-						 0, nullptr,
-						 0, nullptr,
-						 1, &barrier);
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier);
 
 	endSingleTimeCommands(commandBuffer);
 }
 
 void Ravine::createDepthResources()
 {
-	VkFormat depthFormat = findDepthFormat();
+	VkFormat depthFormat = device->findDepthFormat();
 	//Creating image for storing depth
-	createImage(
+	device->createImage(
 		swapChain->extent.width, swapChain->extent.height, 1,
 		msaaSamples,
 		depthFormat,
 		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		depthImage, depthImageMemory);
-	depthImageView = vkTools::createImageView(device, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	depthImageView = vkTools::createImageView(*device, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 	transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
-}
-
-VkFormat Ravine::findDepthFormat()
-{
-	return findSupportedFormat(
-		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-}
-
-VkSampleCountFlagBits Ravine::getMaxUsableSampleCount()
-{
-	VkPhysicalDeviceProperties physicalDeviceProperties;
-	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
-
-	VkSampleCountFlags counts = std::min(physicalDeviceProperties.limits.framebufferColorSampleCounts, physicalDeviceProperties.limits.framebufferDepthSampleCounts);
-	if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
-	if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
-	if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
-	if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
-	if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
-	if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
-
-	return VK_SAMPLE_COUNT_1_BIT;
 }
 
 void Ravine::createMultiSamplingResources()
 {
 	VkFormat colorFormat = swapChain->imageFormat;
 
-	createImage(swapChain->extent.width, swapChain->extent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, msColorImage, msColorImageMemory);
-	msColorImageView = vkTools::createImageView(device, msColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	device->createImage(swapChain->extent.width, swapChain->extent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, msColorImage, msColorImageMemory);
+	msColorImageView = vkTools::createImageView(*device, msColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
 	transitionImageLayout(msColorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
 }
 
-uint32_t Ravine::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-	VkPhysicalDeviceMemoryProperties memProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-			return i;
-		}
-	}
-
-	throw std::runtime_error("failed to find suitable memory type!");
-}
-
-VkFormat Ravine::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
-{
-	for (VkFormat format : candidates) {
-		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
-
-		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-			return format;
-		}
-		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-			return format;
-		}
-	}
-
-	throw std::runtime_error("Failed to find supported format!");
-}
-
-bool Ravine::hasStencilComponent(VkFormat format)
-{
-	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
 
 void Ravine::createCommandBuffers() {
 
@@ -1610,7 +1501,7 @@ void Ravine::createCommandBuffers() {
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+	if (vkAllocateCommandBuffers(*device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate command buffers!");
 	}
 
@@ -1680,7 +1571,7 @@ VkShaderModule Ravine::createShaderModule(const std::vector<char>& code) {
 
 	//Proper creation
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(*device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create shader module!");
 	}
 
@@ -1690,50 +1581,7 @@ VkShaderModule Ravine::createShaderModule(const std::vector<char>& code) {
 
 void Ravine::createLogicalDevice()
 {
-	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(physicalDevice, surface);
 
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
-
-	float queuePriority = 1.0f;
-	for (int queueFamily : uniqueQueueFamilies) {
-		VkDeviceQueueCreateInfo queueCreateInfo = {};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = queueFamily;
-		queueCreateInfo.queueCount = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
-		queueCreateInfos.push_back(queueCreateInfo);
-	}
-
-	VkPhysicalDeviceFeatures deviceFeatures = {};
-	deviceFeatures.samplerAnisotropy = VK_TRUE; //Enabling anisotropy
-	deviceFeatures.sampleRateShading = VK_TRUE; //Enable sample shading feature for the device
-
-	VkDeviceCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-
-	createInfo.pEnabledFeatures = &deviceFeatures;
-
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-	if (enableValidationLayers) {
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-	}
-	else {
-		createInfo.enabledLayerCount = 0;
-	}
-
-	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create logical device!");
-	}
-
-	vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
-	vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
 }
 
 void Ravine::createSurface() {
@@ -1757,7 +1605,7 @@ void Ravine::mainLoop() {
 		drawFrame();
 	}
 
-	vkDeviceWaitIdle(device);
+	vkDeviceWaitIdle(*device);
 }
 
 
@@ -1775,13 +1623,13 @@ void Ravine::drawFrame()
 	//semaphores are used to syncronize operations within or across command queues - thus our best fit.
 
 	//Wait for in-flight fences
-	vkWaitForFences(device, 1, &swapChain->inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device, 1, &swapChain->inFlightFences[currentFrame]);
+	vkWaitForFences(*device, 1, &swapChain->inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(*device, 1, &swapChain->inFlightFences[currentFrame]);
 
 	//Acquiring an image from the swap chain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Acquiring_an_image_from_the_swap_chain
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, *swapChain, std::numeric_limits<uint64_t>::max(), swapChain->imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(*device, *swapChain, std::numeric_limits<uint64_t>::max(), swapChain->imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		recreateSwapChain();
 		return;
@@ -1814,7 +1662,7 @@ void Ravine::drawFrame()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, swapChain->inFlightFences[currentFrame]) != VK_SUCCESS) {
+	if (vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, swapChain->inFlightFences[currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
 
@@ -1831,7 +1679,7 @@ void Ravine::drawFrame()
 
 	presentInfo.pResults = nullptr; // Optional
 
-	result = vkQueuePresentKHR(presentQueue, &presentInfo);
+	result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 		framebufferResized = false;
 		recreateSwapChain();
@@ -1923,9 +1771,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	//Make the view matrix
-	glm::mat4 viewMatrix = glm::mat4() * glm::lookAt(glm::vec3(camPos), 
-					glm::vec3(camPos) + lookRot * glm::vec3(0, 0, -1),
-					glm::vec3(0, 1, 0));
+	glm::mat4 viewMatrix = glm::mat4() * glm::lookAt(glm::vec3(camPos),
+		glm::vec3(camPos) + lookRot * glm::vec3(0, 0, -1),
+		glm::vec3(0, 1, 0));
 	ubo.view = viewMatrix;
 
 	//Projection matrix with FOV of 45 degrees
@@ -1940,9 +1788,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Transfering uniform data to uniform buffer
 	void* data;
-	vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
+	vkMapMemory(*device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+	vkUnmapMemory(*device, uniformBuffersMemory[currentImage]);
 
 	//Material
 	RvMaterialBufferObject materialUbo = {};
@@ -1950,37 +1798,38 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	materialUbo.customColor = glm::vec4(0.23f, 0.37f, 0.89f, 1.0f);
 
 	void* materialData;
-	vkMapMemory(device, materialBuffersMemory[currentImage], 0, sizeof(materialUbo), 0, &materialData);
+	vkMapMemory(*device, materialBuffersMemory[currentImage], 0, sizeof(materialUbo), 0, &materialData);
 	memcpy(materialData, &materialUbo, sizeof(materialUbo));
-	vkUnmapMemory(device, materialBuffersMemory[currentImage]);
+	vkUnmapMemory(*device, materialBuffersMemory[currentImage]);
 }
 
 void Ravine::cleanupSwapChain() {
 
 	//Destroy multi sampling related objects
-	vkDestroyImageView(device, msColorImageView, nullptr);
-	vkDestroyImage(device, msColorImage, nullptr);
-	vkFreeMemory(device, msColorImageMemory, nullptr);
+	vkDestroyImageView(*device, msColorImageView, nullptr);
+	vkDestroyImage(*device, msColorImage, nullptr);
+	vkFreeMemory(*device, msColorImageMemory, nullptr);
 
 	//Destroy depth related objects
-	vkDestroyImageView(device, depthImageView, nullptr);
-	vkDestroyImage(device, depthImage, nullptr);
-	vkFreeMemory(device, depthImageMemory, nullptr);
+	vkDestroyImageView(*device, depthImageView, nullptr);
+	vkDestroyImage(*device, depthImage, nullptr);
+	vkFreeMemory(*device, depthImageMemory, nullptr);
 
 	//Destroy FrameBuffers
 	for (VkFramebuffer framebuffer : swapChainFramebuffers) {
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
+		vkDestroyFramebuffer(*device, framebuffer, nullptr);
 	}
 
-	vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+	vkFreeCommandBuffers(*device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
 	//Destroy Graphics Pipeline and all it's components
-	vkDestroyPipeline(device, graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	vkDestroyRenderPass(device, renderPass, nullptr);
+	vkDestroyPipeline(*device, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(*device, pipelineLayout, nullptr);
+	vkDestroyRenderPass(*device, renderPass, nullptr);
 
 	//Destroy swap chain and all it's images
 	swapChain->Clear();
+	delete swapChain;
 }
 
 
@@ -1989,41 +1838,41 @@ void Ravine::cleanup()
 	cleanupSwapChain();
 
 	//Cleaning up texture related objects
-	vkDestroySampler(device, textureSampler, nullptr);
-	vkDestroyImageView(device, textureImageView, nullptr);
-	vkDestroyImage(device, textureImage, nullptr);
-	vkFreeMemory(device, textureImageMemory, nullptr);
+	vkDestroySampler(*device, textureSampler, nullptr);
+	vkDestroyImageView(*device, textureImageView, nullptr);
+	vkDestroyImage(*device, textureImage, nullptr);
+	vkFreeMemory(*device, textureImageMemory, nullptr);
 
 	//Destroy descriptor pool
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+	vkDestroyDescriptorPool(*device, descriptorPool, nullptr);
 
 	//Destroying uniform buffers
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
-		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+		vkDestroyBuffer(*device, uniformBuffers[i], nullptr);
+		vkFreeMemory(*device, uniformBuffersMemory[i], nullptr);
 	}
 
 	//Destroy descriptor set layout (uniform bind)
-	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(*device, descriptorSetLayout, nullptr);
 
 	//Destroy Vertex Buffer Object
-	vkDestroyBuffer(device, vertexBuffer, nullptr);
+	vkDestroyBuffer(*device, vertexBuffer, nullptr);
 
 	//Free device memory from Vertex Buffer
-	vkFreeMemory(device, vertexBufferMemory, nullptr);
+	vkFreeMemory(*device, vertexBufferMemory, nullptr);
 
 	//Destroy Command Buffer Pool
-	vkDestroyCommandPool(device, commandPool, nullptr);
+	vkDestroyCommandPool(*device, commandPool, nullptr);
 
 	//Shader State Modules
-	vkDestroyShaderModule(device, fragShaderModule, nullptr);
-	vkDestroyShaderModule(device, vertShaderModule, nullptr);
+	vkDestroyShaderModule(*device, fragShaderModule, nullptr);
+	vkDestroyShaderModule(*device, vertShaderModule, nullptr);
 
 	//Destroy vulkan logical device and validation layer
-	vkDestroyDevice(device, nullptr);
-	if (enableValidationLayers) {
+	delete device;
+	#ifdef VALIDATION_LAYERS_ENABLED
 		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
-	}
+	#endif
 
 	//Destroy VK surface and instance
 	vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -2042,7 +1891,7 @@ bool Ravine::checkValidationLayerSupport() {
 	std::vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for (const char* layerName : validationLayers) {
+	for (const char* layerName : rvCfgValidationLayers) {
 		bool layerFound = false;
 
 		for (const VkLayerProperties& layerProperties : availableLayers) {

@@ -11,6 +11,9 @@
 //Vulkan Tools
 #include "VulkanTools.h"
 
+//VK Wrappers
+#include "RVDevice.h"
+
 //Structure for Swap Chain Support query of details
 struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
@@ -21,7 +24,7 @@ struct SwapChainSupportDetails {
 struct RvSwapChain
 {
 	//External Dependencies
-	VkDevice* device;
+	RvDevice* device;
 	VkSurfaceKHR surface;
 
 	//Extent values
@@ -47,7 +50,7 @@ struct RvSwapChain
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 
-	RvSwapChain(VkDevice& device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
+	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
 
 	void Clear();
 

@@ -4,7 +4,7 @@
 #include <algorithm>
 
 
-RvSwapChain::RvSwapChain(VkDevice& device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain)
+RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain)
 {
 	//TODO: Use new constructor thingy
 	this->device = &device;
@@ -13,7 +13,7 @@ RvSwapChain::RvSwapChain(VkDevice& device, VkPhysicalDevice physicalDevice, VkSu
 	this->HEIGHT = HEIGHT;
 
 	//Check swap chain support
-	SwapChainSupportDetails swapChainSupport = vkTools::querySupport(physicalDevice, surface);
+	SwapChainSupportDetails swapChainSupport = vkTools::querySupport(device.physicalDevice, surface);
 
 	//Define swap chain setup data
 	VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
@@ -40,7 +40,7 @@ RvSwapChain::RvSwapChain(VkDevice& device, VkPhysicalDevice physicalDevice, VkSu
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	//Define queue sharing modes based on ids comparison
-	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(physicalDevice, surface);
+	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(device.physicalDevice, surface);
 	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
 
 	if (indices.graphicsFamily != indices.presentFamily) {
@@ -179,5 +179,4 @@ void RvSwapChain::DestroySyncObjects()
 
 RvSwapChain::~RvSwapChain()
 {
-	vkDestroySwapchainKHR(*device, *this, nullptr);
 }

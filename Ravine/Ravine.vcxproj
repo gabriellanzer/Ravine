@@ -156,10 +156,11 @@
     <ClCompile Include="SingleFileLibraries\imgui_impl_vulkan.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp" />
     <ClCompile Include="Time.cpp" />
-    <ClCompile Include="VulkanDevice.cpp" />
+    <ClCompile Include="RVDevice.cpp" />
     <ClCompile Include="VulkanTools.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="RVConfig.h" />
     <ClInclude Include="RVDataTypes.h" />
     <ClInclude Include="Ravine.h" />
     <ClInclude Include="RVSwapChain.h" />
@@ -174,7 +175,7 @@
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="Time.h" />
     <ClInclude Include="RVUniformTypes.h" />
-    <ClInclude Include="VulkanDevice.h" />
+    <ClInclude Include="RVDevice.h" />
     <ClInclude Include="VulkanTools.h" />
   </ItemGroup>
   <ItemGroup>

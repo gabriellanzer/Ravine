@@ -12,12 +12,22 @@
 //Vulkan Include
 #include <vulkan\vulkan.h>
 
+//Vulkan Tools
+#include "VulkanTools.h"
+
 //GLM includes
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+//Types dependencies
+#include "RVDataTypes.h"
+#include "RVUniformTypes.h"
+
+//VK Wrappers
+#include "RVSwapChain.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -35,97 +45,6 @@ using std::vector;
 //Specific usages of ASSIMP library
 using Assimp::Importer;
 
-//Structure for Queue Family query of available queue types
-struct QueueFamilyIndices {
-	int graphicsFamily = -1;
-	int presentFamily = -1;
-
-	//Is this struct complete to be used?
-	bool isComplete() {
-		return graphicsFamily >= 0 && presentFamily >= 0;
-	}
-};
-
-//Structure for Swap Chain Support query of details
-struct SwapChainSupportDetails {
-	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-	glm::vec3 normal;
-
-	static VkVertexInputBindingDescription getBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription = {};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
-
-		//Position
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-		//Color
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-		//Texture
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-		//Texture
-		attributeDescriptions[3].binding = 0;
-		attributeDescriptions[3].location = 3;
-		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offsetof(Vertex, normal);
-
-		return attributeDescriptions;
-	}
-
-};
-
-struct MeshData
-{
-	Vertex*		vertices;
-	uint32_t	vertex_count;
-
-	uint32_t*	indices;
-	uint32_t	index_count;
-
-	uint32_t*	textureIds;
-	uint32_t	textures_count;
-};
-
-//REORGANIZE AND DIVIDE
-struct UniformBufferObject {
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
-	glm::vec4 objectColor;
-	glm::vec4 lightColor;
-	glm::vec4 camPos;
-};
-
-//REORGANIZE AND DIVIDE
-struct MaterialBufferObject {
-	glm::vec4 customColor;
-};
 
 class Ravine
 {
@@ -141,11 +60,11 @@ private:
 	//MOVE TO: WINDOW
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
-	//MOVE TO: SWAPCHAIN
-	const int MAX_FRAMES_IN_FLIGHT = 2;
+
+	RvSwapChain* swapChain;
 
 	//Mouse parameters
-	//MOVE TO: IO
+	//MOVE TO: Input
 	double lastMouseX = 0, lastMouseY = 0;
 	double mouseX, mouseY;
 
@@ -155,7 +74,7 @@ private:
 	glm::vec4 camPos = glm::vec4(0,0,0,0);
 	
 	//MOVE TO: MESH
-	MeshData* meshes;
+	RvMeshData* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
 
@@ -184,14 +103,6 @@ private:
 	//MOVE TO: DEVICE
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
-
-	//Swap chain related content
-	//MOVE TO: SWAPCHAIN
-	VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-	std::vector<VkImage> swapChainImages;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
-	std::vector<VkImageView> swapChainImageViews;
 
 	//Framebuffers
 	//MOVE TO: FRAMEBUFFER
@@ -222,15 +133,6 @@ private:
 	VkCommandPool commandPool;
 	//MOVE TO: COMMAND BUFFER
 	std::vector<VkCommandBuffer> commandBuffers;
-
-	//Queues semaphors
-	//MOVE TO: SWAPCHAIN??
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
-
-	//Queue fences
-	//MOVE TO: SWAPCHAIN??
-	std::vector<VkFence> inFlightFences;
 
 	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
 	//Reference: https://developer.nvidia.com/vulkan-memory-management
@@ -310,29 +212,8 @@ private:
 	//Checks 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 
-	//Properly create the swap chain used by the application
-	void createSwapChain();
-
 	//Recreate swap chain
 	void recreateSwapChain();
-
-	//Queries swap chain support details info
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-
-	//Return the ids for family queues supported on the given device
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-
-	//Choses the best swap chain surface format
-	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-
-	//Choses the best swap chain presentation mode (aka. vsync)
-	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
-
-	//Choses the best swap chain image size capabilities
-	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-	//Create the image handles (views)
-	void createImageViews();
 
 	//Inform Vulkan of the framebuffers and their properties
 	void createRenderPass();
@@ -397,9 +278,6 @@ private:
 	//Creates command buffers array
 	void createCommandBuffers();
 
-	//Creates rendering semaphore state objects
-	void createSyncObjects();
-
 	//Wrap shader code in shader module
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
@@ -439,9 +317,6 @@ private:
 
 	//Helper function for creating images
 	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-
-	//Helper function for craeting image views
-	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 	//Helper function to get some device info
 	//MOVED: DEVICE

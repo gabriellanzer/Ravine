@@ -54,6 +54,9 @@
     <ClCompile Include="VulkanTools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RVSwapChain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -93,6 +96,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="VulkanTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RVDataTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RVUniformTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RVSwapChain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

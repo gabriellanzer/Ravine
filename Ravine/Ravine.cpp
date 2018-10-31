@@ -141,8 +141,8 @@ void Ravine::initVulkan() {
 	createLogicalDevice();
 
 	//Rendering pipeline
-	createSwapChain();
-	createImageViews();
+	swapChain = new RvSwapChain(device, physicalDevice, surface, WIDTH, HEIGHT, NULL);
+	swapChain->CreateImageViews();
 	createRenderPass();
 	createDescriptorSetLayout();
 	createGraphicsPipeline();
@@ -159,7 +159,7 @@ void Ravine::initVulkan() {
 	createDescriptorPool();
 	createDescriptorSets();
 	createCommandBuffers();
-	createSyncObjects();
+	swapChain->CreateSyncObjects();
 }
 
 std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
@@ -288,13 +288,13 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	vkGetPhysicalDeviceProperties(device, &deviceProperties);
 	std::cout << "Checking device: " << deviceProperties.deviceName << "\n";
 
-	QueueFamilyIndices indices = findQueueFamilies(device);
+	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(device, surface);
 
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+		SwapChainSupportDetails swapChainSupport = vkTools::querySupport(device, surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
@@ -325,74 +325,6 @@ bool Ravine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 	return requiredExtensions.empty();
 }
 
-void Ravine::createSwapChain() {
-	//Check swap chain support
-	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
-
-	//Define swap chain setup data
-	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-	VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
-
-	//Define amount of images in swap chain
-	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
-		imageCount = swapChainSupport.capabilities.maxImageCount;
-	}
-
-	//Create Structure
-	VkSwapchainCreateInfoKHR createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = surface;
-
-	//Swap chain image details
-	createInfo.minImageCount = imageCount;
-	createInfo.imageFormat = surfaceFormat.format;
-	createInfo.imageColorSpace = surfaceFormat.colorSpace;
-	createInfo.imageExtent = extent;
-	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-	//Define queue sharing modes based on ids comparison
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
-
-	if (indices.graphicsFamily != indices.presentFamily) {
-		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-		createInfo.queueFamilyIndexCount = 2;
-		createInfo.pQueueFamilyIndices = queueFamilyIndices;
-	}
-	else {
-		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		createInfo.queueFamilyIndexCount = 0; // Optional
-		createInfo.pQueueFamilyIndices = nullptr; // Optional
-	}
-
-	//Ignore alpha channel when blending with other windows
-	createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-
-	//Define swap present mode and make sure we ignore windows pixels in front of ours
-	createInfo.presentMode = presentMode;
-	createInfo.clipped = VK_TRUE;
-
-	//TODO: Change that to create another swap chain when resize screen
-	createInfo.oldSwapchain = swapChain;
-
-	//Create swap chain with given information
-	if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create swap chain!");
-	}
-
-	//Populate swap chain images and hold it's details
-	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-	swapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
-	swapChainImageFormat = surfaceFormat.format;
-	swapChainExtent = extent;
-
-}
-
 void Ravine::recreateSwapChain() {
 
 	int width = 0, height = 0;
@@ -406,10 +338,10 @@ void Ravine::recreateSwapChain() {
 	vkDeviceWaitIdle(device);
 
 	//Storing handle
-	VkSwapchainKHR oldSwapchain = swapChain;
+	RvSwapChain *oldSwapchain = swapChain;
 
-	createSwapChain();
-	createImageViews();
+	swapChain = new RvSwapChain(device, physicalDevice, surface, WIDTH, HEIGHT, oldSwapchain->handle);
+	swapChain->CreateImageViews();
 	createRenderPass();
 	createGraphicsPipeline();
 	createMultiSamplingResources();
@@ -418,121 +350,9 @@ void Ravine::recreateSwapChain() {
 	createCommandBuffers();
 
 	//Deleting old swapchain
-	vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
+	delete oldSwapchain;
 }
 
-SwapChainSupportDetails Ravine::querySwapChainSupport(VkPhysicalDevice device) {
-	SwapChainSupportDetails details;
-
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
-	if (formatCount != 0) {
-		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-	}
-
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-
-	if (presentModeCount != 0) {
-		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-	}
-
-	return details;
-}
-
-QueueFamilyIndices Ravine::findQueueFamilies(VkPhysicalDevice device) {
-	QueueFamilyIndices indices;
-
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-	int i = 0;
-	for (const auto& queueFamily : queueFamilies) {
-		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphicsFamily = i;
-		}
-
-		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-
-		if (queueFamily.queueCount > 0 && presentSupport) {
-			indices.presentFamily = i;
-		}
-
-		if (indices.isComplete()) {
-			break;
-		}
-
-		i++;
-	}
-
-	return indices;
-}
-
-VkSurfaceFormatKHR Ravine::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
-
-	if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED) {
-		return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-	}
-
-	for (const auto& availableFormat : availableFormats) {
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-			return availableFormat;
-		}
-	}
-
-	return availableFormats[0];
-}
-
-VkPresentModeKHR Ravine::chooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes) {
-
-	//FIFO v-sync might not be available on some drivers
-	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
-
-	for (const auto& availablePresentMode : availablePresentModes) {
-		//Check if triple-buffering is available (low latency v-sync)
-		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-			return availablePresentMode;
-		}
-		//Better to use NO V-Sync to avoid unavailable modes
-		else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-			bestMode = availablePresentMode;
-		}
-	}
-
-	return VK_PRESENT_MODE_IMMEDIATE_KHR;
-}
-
-VkExtent2D Ravine::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
-	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-		return capabilities.currentExtent;
-	}
-	else {
-		VkExtent2D actualExtent = { WIDTH, HEIGHT };
-
-		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
-		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
-
-		return actualExtent;
-	}
-}
-
-void Ravine::createImageViews() {
-	//Match the size
-	swapChainImageViews.resize(swapChainImages.size());
-	for (size_t i = 0; i < swapChainImages.size(); i++)
-	{
-		swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-	}
-}
 
 void Ravine::createRenderPass() {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
@@ -540,7 +360,7 @@ void Ravine::createRenderPass() {
 	//Color Attachment description
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Attachment_description
 	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format = swapChainImageFormat;	//Formats should match
+	colorAttachment.format = swapChain->imageFormat;	//Formats should match
 	colorAttachment.samples = msaaSamples;
 
 	//What should Vulkan do after loading or storing data to framebuffers
@@ -563,7 +383,7 @@ void Ravine::createRenderPass() {
 
 	//Multisampled image resolving 
 	VkAttachmentDescription colorAttachmentResolve = {};
-	colorAttachmentResolve.format = swapChainImageFormat;
+	colorAttachmentResolve.format = swapChain->imageFormat;
 	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -637,17 +457,17 @@ void Ravine::createDescriptorPool()
 {
 	std::array<VkDescriptorPoolSize, 3> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
+	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size());
 
 	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
@@ -656,25 +476,25 @@ void Ravine::createDescriptorPool()
 
 void Ravine::createDescriptorSets()
 {
-	std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
+	std::vector<VkDescriptorSetLayout> layouts(swapChain->images.size(), descriptorSetLayout);
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(swapChainImages.size());
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(swapChain->images.size());
 	allocInfo.pSetLayouts = layouts.data();
 
 	// Setting descriptor sets vector to count of SwapChain images
-	descriptorSets.resize(swapChainImages.size());
+	descriptorSets.resize(swapChain->images.size());
 	if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate descriptor sets!");
 	}
 
 	//Configuring descriptor sets
-	for (size_t i = 0; i < swapChainImages.size(); i++) {
+	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		VkDescriptorBufferInfo bufferInfo = {};
 		bufferInfo.buffer = uniformBuffers[i];
 		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
+		bufferInfo.range = sizeof(RvUniformBufferObject);
 
 		VkDescriptorImageInfo imageInfo = {};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -684,7 +504,7 @@ void Ravine::createDescriptorSets()
 		VkDescriptorBufferInfo materialInfo = {};
 		materialInfo.buffer = materialBuffers[i];
 		materialInfo.offset = 0;
-		materialInfo.range = sizeof(MaterialBufferObject);
+		materialInfo.range = sizeof(RvMaterialBufferObject);
 
 		std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
 
@@ -789,8 +609,8 @@ void Ravine::createGraphicsPipeline() {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Vertex_input
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	auto bindingDescription = Vertex::getBindingDescription();
-	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+	auto bindingDescription = RvVertex::getBindingDescription();
+	auto attributeDescriptions = RvVertex::getAttributeDescriptions();
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
@@ -808,14 +628,14 @@ void Ravine::createGraphicsPipeline() {
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = (float)swapChainExtent.width;
-	viewport.height = (float)swapChainExtent.height;
+	viewport.width = (float)swapChain->extent.width;
+	viewport.height = (float)swapChain->extent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor = {};
 	scissor.offset = { 0, 0 };
-	scissor.extent = swapChainExtent;
+	scissor.extent = swapChain->extent;
 
 	//Combine both into a Viewport State
 	VkPipelineViewportStateCreateInfo viewportState = {};
@@ -958,13 +778,13 @@ void Ravine::createFramebuffers() {
 
 	//Create a framebuffer for each image view in the swapchain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Framebuffers
-	swapChainFramebuffers.resize(swapChainImageViews.size());
+	swapChainFramebuffers.resize(swapChain->imageViews.size());
 
-	for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+	for (size_t i = 0; i < swapChain->imageViews.size(); i++) {
 		std::array<VkImageView, 3> attachments = {
 			msColorImageView,
 			depthImageView,	//Same depth image because only one subpass is being ran at a time (due to semaphores)
-			swapChainImageViews[i]
+			swapChain->imageViews[i]
 		};
 
 		VkFramebufferCreateInfo framebufferInfo = {};
@@ -972,8 +792,8 @@ void Ravine::createFramebuffers() {
 		framebufferInfo.renderPass = renderPass;
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = swapChainExtent.width;
-		framebufferInfo.height = swapChainExtent.height;
+		framebufferInfo.width = swapChain->extent.width;
+		framebufferInfo.height = swapChain->extent.height;
 		framebufferInfo.layers = 1;
 
 		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
@@ -984,7 +804,7 @@ void Ravine::createFramebuffers() {
 
 void Ravine::createCommandPool() {
 
-	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+	vkTools::QueueFamilyIndices queueFamilyIndices = vkTools::findQueueFamilies(physicalDevice, surface);
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1065,37 +885,6 @@ void Ravine::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, Vk
 
 	//Binding image memory
 	vkBindImageMemory(device, image, imageMemory, 0);
-}
-
-VkImageView Ravine::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
-{
-	//Defining creation struct
-	VkImageViewCreateInfo imageViewCreateInfo = {};
-	imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	imageViewCreateInfo.image = image;
-	imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	imageViewCreateInfo.format = format;
-
-	//Image purpose and what part of the image should be accessible
-	imageViewCreateInfo.subresourceRange.aspectMask = aspectFlags;
-	imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-	imageViewCreateInfo.subresourceRange.levelCount = mipLevels; //Mipmap levels
-	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-	imageViewCreateInfo.subresourceRange.layerCount = 1;
-
-	//How to interpret components
-	imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY; //Optional
-	imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY; //Optional
-	imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY; //Optional
-	imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY; //Optional
-
-	//Creating image view
-	VkImageView imageView;
-	if (vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create texture image view!");
-	}
-
-	return imageView;
 }
 
 VkCommandBuffer Ravine::beginSingleTimeCommands()
@@ -1304,7 +1093,7 @@ bool Ravine::loadScene(const std::string& filePath)
 
 	//Load mesh
 	meshesCount = scene->mNumMeshes;
-	meshes = new MeshData[scene->mNumMeshes];
+	meshes = new RvMeshData[scene->mNumMeshes];
 
 	//Load each mesh
 	for (uint32_t i = 0; i < meshesCount; i++)
@@ -1314,7 +1103,7 @@ bool Ravine::loadScene(const std::string& filePath)
 
 		//Allocate data structures
 		meshes[i].vertex_count = mesh->mNumVertices;
-		meshes[i].vertices = new Vertex[mesh->mNumVertices];
+		meshes[i].vertices = new RvVertex[mesh->mNumVertices];
 		meshes[i].index_count = mesh->mNumFaces * 3;
 		meshes[i].indices = new uint32_t[mesh->mNumFaces * 3];
 
@@ -1452,7 +1241,7 @@ void Ravine::createVertexBuffer()
 		std::cout << "file not found at path " << "cube.fbx" << std::endl;
 	}
 
-	VkDeviceSize bufferSize = sizeof(Vertex) * meshes[0].vertex_count;
+	VkDeviceSize bufferSize = sizeof(RvVertex) * meshes[0].vertex_count;
 
 	//for (size_t i = 0; i < meshes[0].vertex_count; i++)
 	//{
@@ -1524,17 +1313,17 @@ void Ravine::createIndexBuffer()
 
 void Ravine::createUniformBuffers()
 {
-	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-	VkDeviceSize materialSize = sizeof(MaterialBufferObject);
+	VkDeviceSize bufferSize = sizeof(RvUniformBufferObject);
+	VkDeviceSize materialSize = sizeof(RvMaterialBufferObject);
 
 	//Setting size of uniform buffers vector to count of SwapChain's images.
-	uniformBuffers.resize(swapChainImages.size());
-	uniformBuffersMemory.resize(swapChainImages.size());
+	uniformBuffers.resize(swapChain->images.size());
+	uniformBuffersMemory.resize(swapChain->images.size());
 
-	materialBuffers.resize(swapChainImages.size());
-	materialBuffersMemory.resize(swapChainImages.size());
+	materialBuffers.resize(swapChain->images.size());
+	materialBuffersMemory.resize(swapChain->images.size());
 
-	for (size_t i = 0; i < swapChainImages.size(); i++) {
+	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
 		createBuffer(materialSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, materialBuffers[i], materialBuffersMemory[i]);
 	}
@@ -1596,7 +1385,7 @@ void Ravine::createTextureImage()
 
 void Ravine::createTextureImageView()
 {
-	textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+	textureImageView = vkTools::createImageView(device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 }
 
 void Ravine::createTextureSampler()
@@ -1731,12 +1520,12 @@ void Ravine::createDepthResources()
 	VkFormat depthFormat = findDepthFormat();
 	//Creating image for storing depth
 	createImage(
-		swapChainExtent.width, swapChainExtent.height, 1,
+		swapChain->extent.width, swapChain->extent.height, 1,
 		msaaSamples,
 		depthFormat,
 		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		depthImage, depthImageMemory);
-	depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	depthImageView = vkTools::createImageView(device, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 	transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 }
@@ -1767,10 +1556,10 @@ VkSampleCountFlagBits Ravine::getMaxUsableSampleCount()
 
 void Ravine::createMultiSamplingResources()
 {
-	VkFormat colorFormat = swapChainImageFormat;
+	VkFormat colorFormat = swapChain->imageFormat;
 
-	createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, msColorImage, msColorImageMemory);
-	msColorImageView = createImageView(msColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	createImage(swapChain->extent.width, swapChain->extent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, msColorImage, msColorImageMemory);
+	msColorImageView = vkTools::createImageView(device, msColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
 	transitionImageLayout(msColorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
 }
@@ -1844,7 +1633,7 @@ void Ravine::createCommandBuffers() {
 		renderPassInfo.renderPass = renderPass;
 		renderPassInfo.framebuffer = swapChainFramebuffers[i];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.renderArea.extent = swapChain->extent;
 
 		//Clearing values
 		std::array<VkClearValue, 2> clearValues = {};
@@ -1881,30 +1670,6 @@ void Ravine::createCommandBuffers() {
 
 }
 
-void Ravine::createSyncObjects()
-{
-	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-	VkSemaphoreCreateInfo semaphoreInfo = {};
-	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkFenceCreateInfo fenceInfo = {};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-	{
-		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-			vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
-
-			throw std::runtime_error("Failed to create synchronization objects for a frame!");
-		}
-	}
-}
-
 VkShaderModule Ravine::createShaderModule(const std::vector<char>& code) {
 
 	//Create shader module with data pointer (uint32_t ptr) and size (in bytes)
@@ -1925,7 +1690,7 @@ VkShaderModule Ravine::createShaderModule(const std::vector<char>& code) {
 
 void Ravine::createLogicalDevice()
 {
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(physicalDevice, surface);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
@@ -1998,6 +1763,8 @@ void Ravine::mainLoop() {
 
 void Ravine::drawFrame()
 {
+	//TODO: Move this to Swap Chain
+
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation
 	//Should perform the following operations:
 	//	- Acquire an image from the swap chain
@@ -2008,13 +1775,13 @@ void Ravine::drawFrame()
 	//semaphores are used to syncronize operations within or across command queues - thus our best fit.
 
 	//Wait for in-flight fences
-	vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device, 1, &inFlightFences[currentFrame]);
+	vkWaitForFences(device, 1, &swapChain->inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(device, 1, &swapChain->inFlightFences[currentFrame]);
 
 	//Acquiring an image from the swap chain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Acquiring_an_image_from_the_swap_chain
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(device, *swapChain, std::numeric_limits<uint64_t>::max(), swapChain->imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		recreateSwapChain();
 		return;
@@ -2023,14 +1790,18 @@ void Ravine::drawFrame()
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
+
+	//TODO: Receive this from above function
 	updateUniformBuffer(imageIndex);
+
+	//TODO: Move this to Swap Chain
 
 	//Submitting the command queue
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Submitting_the_command_buffer
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+	VkSemaphore waitSemaphores[] = { swapChain->imageAvailableSemaphores[currentFrame] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
@@ -2039,11 +1810,11 @@ void Ravine::drawFrame()
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
 
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
+	VkSemaphore signalSemaphores[] = { swapChain->renderFinishedSemaphores[currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, swapChain->inFlightFences[currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
 
@@ -2053,7 +1824,7 @@ void Ravine::drawFrame()
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 
-	VkSwapchainKHR swapChains[] = { swapChain };
+	VkSwapchainKHR swapChains[] = { *swapChain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 	presentInfo.pImageIndices = &imageIndex;
@@ -2069,7 +1840,7 @@ void Ravine::drawFrame()
 		throw std::runtime_error("Failed to present swap chain image!");
 	}
 
-	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	currentFrame = (currentFrame + 1) % swapChain->MAX_FRAMES_IN_FLIGHT;
 }
 
 void Ravine::setupFPSCam()
@@ -2098,7 +1869,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	A more efficient way to pass a small buffer of data to shaders are push constants.
 	Reference: https://vulkan-tutorial.com/Uniform_buffers/Descriptor_layout_and_buffer
 	*/
-	UniformBufferObject ubo = {};
+	RvUniformBufferObject ubo = {};
 
 #pragma region Inputs
 
@@ -2158,7 +1929,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	ubo.view = viewMatrix;
 
 	//Projection matrix with FOV of 45 degrees
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+	ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->extent.width / (float)swapChain->extent.height, 0.1f, 10.0f);
 
 	ubo.camPos = camPos;
 	ubo.objectColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -2174,7 +1945,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
 
 	//Material
-	MaterialBufferObject materialUbo = {};
+	RvMaterialBufferObject materialUbo = {};
 
 	materialUbo.customColor = glm::vec4(0.23f, 0.37f, 0.89f, 1.0f);
 
@@ -2209,10 +1980,7 @@ void Ravine::cleanupSwapChain() {
 	vkDestroyRenderPass(device, renderPass, nullptr);
 
 	//Destroy swap chain and all it's images
-	for (VkImageView imageView : swapChainImageViews) {
-		vkDestroyImageView(device, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(device, swapChain, nullptr);
+	swapChain->Clear();
 }
 
 
@@ -2230,7 +1998,7 @@ void Ravine::cleanup()
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
 	//Destroying uniform buffers
-	for (size_t i = 0; i < swapChainImages.size(); i++) {
+	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
 		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
 	}
@@ -2243,13 +2011,6 @@ void Ravine::cleanup()
 
 	//Free device memory from Vertex Buffer
 	vkFreeMemory(device, vertexBufferMemory, nullptr);
-
-	//Destroy Rendering Sync Objects
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-		vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-		vkDestroyFence(device, inFlightFences[i], nullptr);
-	}
 
 	//Destroy Command Buffer Pool
 	vkDestroyCommandPool(device, commandPool, nullptr);

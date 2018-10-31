@@ -10,7 +10,7 @@
 #include "RVSwapChain.h"
 #include "RVDevice.h"
 
-extern struct SwapChainSupportDetails;
+struct SwapChainSupportDetails;
 
 namespace vkTools
 {

@@ -30,6 +30,7 @@
 #include "RVDevice.h"
 #include "RVSwapChain.h"
 #include "RVGraphicsPipeline.h"
+#include "RVRenderPass.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -63,10 +64,12 @@ private:
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
 
-	//Device handle and related content
+	//Ravine objects
+	//MOVE TO: VULKAN APP
 	RvDevice* device;
 	RvSwapChain* swapChain;
 	RvGraphicsPipeline* graphicsPipeline;
+	RvRenderPass* renderPass;
 
 	//Mouse parameters
 	//MOVE TO: Input
@@ -101,10 +104,6 @@ private:
 	//Framebuffers
 	//MOVE TO: FRAMEBUFFER
 	std::vector<VkFramebuffer> swapChainFramebuffers;
-
-	//Pipeline related content
-	//MOVE TO: VULKAN APP
-	VkRenderPass renderPass;
 
 	//Descriptors related content
 	//MOVE TO: DESCRIPTOR
@@ -197,9 +196,6 @@ private:
 	//Recreate swap chain
 	void recreateSwapChain();
 
-	//Inform Vulkan of the framebuffers and their properties
-	void createRenderPass();
-
 	//Creating descriptor binding layouts (uniform layouts)
 	void createDescriptorSetLayout();
 
@@ -249,9 +245,6 @@ private:
 
 	//Creates command buffers array
 	void createCommandBuffers();
-
-	//Wrap shader code in shader module
-	VkShaderModule createShaderModule(const std::vector<char>& code);
 
 	//Create a Win32 Surface handler
 	void createSurface();
@@ -303,7 +296,6 @@ private:
 #pragma region Static
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 
-	static std::vector<char> readFile(const std::string& filename);
 
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 #pragma endregion

@@ -57,6 +57,9 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : phys
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 	vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
+
+	//TODO: This should be dynamically chosen
+	sampleCount = getMaxUsableSampleCount();
 }
 
 

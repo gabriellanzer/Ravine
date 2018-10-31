@@ -36,5 +36,7 @@ namespace vkTools
 
 	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
+	std::vector<char> readFile(const std::string& filename);
+
 };
 

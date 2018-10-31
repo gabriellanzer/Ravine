@@ -29,6 +29,7 @@
 //VK Wrappers
 #include "RVDevice.h"
 #include "RVSwapChain.h"
+#include "RVGraphicsPipeline.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -65,6 +66,7 @@ private:
 	//Device handle and related content
 	RvDevice* device;
 	RvSwapChain* swapChain;
+	RvGraphicsPipeline* graphicsPipeline;
 
 	//Mouse parameters
 	//MOVE TO: Input
@@ -100,17 +102,9 @@ private:
 	//MOVE TO: FRAMEBUFFER
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
-	//Shader Modules
-	//MOVE TO: GRAPHICS PIPELINE
-	VkShaderModule vertShaderModule;
-	VkShaderModule fragShaderModule;
-
 	//Pipeline related content
 	//MOVE TO: VULKAN APP
 	VkRenderPass renderPass;
-	//MOVE TO: GRAPHICS PIPELINE
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
 
 	//Descriptors related content
 	//MOVE TO: DESCRIPTOR
@@ -219,9 +213,6 @@ private:
 	//Creating descriptors sets (uniforms bindings)
 	void createDescriptorSets();
 
-	//Build graphics pipeline
-	void createGraphicsPipeline();
-
 	//Create framebuffers for drawing
 	void createFramebuffers();
 
@@ -265,9 +256,6 @@ private:
 
 	//Wrap shader code in shader module
 	VkShaderModule createShaderModule(const std::vector<char>& code);
-
-	//Create a logical GPU device interface for suitable physical device
-	void createLogicalDevice();
 
 	//Create a Win32 Surface handler
 	void createSurface();

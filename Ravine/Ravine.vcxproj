@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
+    <ClCompile Include="RVGraphicsPipeline.cpp" />
     <ClCompile Include="RVSwapChain.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_demo.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="RVConfig.h" />
     <ClInclude Include="RVDataTypes.h" />
     <ClInclude Include="Ravine.h" />
+    <ClInclude Include="RVGraphicsPipeline.h" />
     <ClInclude Include="RVSwapChain.h" />
     <ClInclude Include="SingleFileLibraries\imconfig.h" />
     <ClInclude Include="SingleFileLibraries\imgui.h" />

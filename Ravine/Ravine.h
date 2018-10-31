@@ -164,10 +164,6 @@ private:
 	VkDeviceMemory msColorImageMemory;
 	VkImageView msColorImageView;
 
-	//Current frame for swap chain and Semaphore access
-	//MOVE TO: VULKAN APP
-	size_t currentFrame = 0;
-
 	//Helper variable for changes on framebuffer
 	//MOVE TO: WINDOW
 	bool framebufferResized = false;

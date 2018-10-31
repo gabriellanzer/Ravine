@@ -50,7 +50,12 @@ struct RvSwapChain
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 
+	size_t currentFrame = 0;
+
+	bool framebufferResized = false;
+
 	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
+	~RvSwapChain();
 
 	void Clear();
 
@@ -60,7 +65,9 @@ struct RvSwapChain
 
 	void DestroySyncObjects();
 
-	~RvSwapChain();
+	bool AcquireNextFrame(uint32_t& frameIndex);
+	bool SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
+
 
 	VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 

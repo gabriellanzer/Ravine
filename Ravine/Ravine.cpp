@@ -1366,8 +1366,6 @@ void Ravine::mainLoop() {
 
 void Ravine::drawFrame()
 {
-	//TODO: Move this to Swap Chain
-
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation
 	//Should perform the following operations:
 	//	- Acquire an image from the swap chain
@@ -1377,73 +1375,15 @@ void Ravine::drawFrame()
 	//Fences are best fitted to syncronize the application itself with the renderization operations, while
 	//semaphores are used to syncronize operations within or across command queues - thus our best fit.
 
-	//Wait for in-flight fences
-	vkWaitForFences(*device, 1, &swapChain->inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(*device, 1, &swapChain->inFlightFences[currentFrame]);
-
-	//Acquiring an image from the swap chain
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Acquiring_an_image_from_the_swap_chain
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(*device, *swapChain, std::numeric_limits<uint64_t>::max(), swapChain->imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+	if (!swapChain->AcquireNextFrame(imageIndex)) {
 		recreateSwapChain();
-		return;
 	}
-	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-		throw std::runtime_error("Failed to acquire swap chain image!");
-	}
-
-
-	//TODO: Receive this from above function
 	updateUniformBuffer(imageIndex);
 
-	//TODO: Move this to Swap Chain
-
-	//Submitting the command queue
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Submitting_the_command_buffer
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	VkSemaphore waitSemaphores[] = { swapChain->imageAvailableSemaphores[currentFrame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
-
-	VkSemaphore signalSemaphores[] = { swapChain->renderFinishedSemaphores[currentFrame] };
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	if (vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, swapChain->inFlightFences[currentFrame]) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to submit draw command buffer!");
-	}
-
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = signalSemaphores;
-
-	VkSwapchainKHR swapChains[] = { *swapChain };
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
-
-	presentInfo.pResults = nullptr; // Optional
-
-	result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-		framebufferResized = false;
+	if (!swapChain->SubmitNextFrame(commandBuffers.data(), imageIndex)) {
 		recreateSwapChain();
 	}
-	else if (result != VK_SUCCESS) {
-		throw std::runtime_error("Failed to present swap chain image!");
-	}
-
-	currentFrame = (currentFrame + 1) % swapChain->MAX_FRAMES_IN_FLIGHT;
 }
 
 void Ravine::setupFPSCam()

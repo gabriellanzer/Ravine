@@ -153,6 +153,7 @@
     <ClCompile Include="RvDevice.cpp" />
     <ClCompile Include="RvGraphicsPipeline.cpp" />
     <ClCompile Include="RvSwapChain.cpp" />
+    <ClCompile Include="RvWindow.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_demo.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_draw.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="RvFramebufferAttachment.h" />
     <ClInclude Include="RvSwapChain.h" />
     <ClInclude Include="RvUniformTypes.h" />
+    <ClInclude Include="RvWindow.h" />
     <ClInclude Include="SingleFileLibraries\imconfig.h" />
     <ClInclude Include="SingleFileLibraries\imgui.h" />
     <ClInclude Include="SingleFileLibraries\imgui_impl_glfw.h" />

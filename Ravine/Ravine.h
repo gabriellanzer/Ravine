@@ -30,6 +30,7 @@
 #include "RvDevice.h"
 #include "RvSwapChain.h"
 #include "RvGraphicsPipeline.h"
+#include "RvWindow.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -64,6 +65,7 @@ private:
 	const int HEIGHT = 720;
 
 	//Ravine objects
+	RvWindow* window;
 	//MOVE TO: VULKAN APP
 	RvDevice* device;
 	RvSwapChain* swapChain;
@@ -85,11 +87,6 @@ private:
 	vector<string> texturesToLoad;
 
 #pragma region Attributes
-	//Window/Surface related contents
-	//MOVE TO: WINDOW
-	GLFWwindow * window;
-	//MOVE TO: WINDOW
-	VkSurfaceKHR surface;
 
 	//Vulkan Instance
 	//MOVE TO: VULKAN APP
@@ -135,9 +132,6 @@ private:
 	VkImageView textureImageView;
 	VkSampler textureSampler;
 
-	//Helper variable for changes on framebuffer
-	//MOVE TO: WINDOW
-	bool framebufferResized = false;
 #pragma endregion
 
 #pragma region Methods
@@ -208,9 +202,6 @@ private:
 
 	//Creates command buffers array
 	void createCommandBuffers();
-
-	//Create a Win32 Surface handler
-	void createSurface();
 
 	//Main application loop
 	void mainLoop();

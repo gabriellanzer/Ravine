@@ -47,8 +47,9 @@ void Ravine::run()
 //Static method because GLFW doesn't know how to call a member function with the "this" pointer to our Ravine instance.
 void Ravine::framebufferResizeCallback(GLFWwindow * window, int width, int height)
 {
-	auto app = reinterpret_cast<Ravine*>(glfwGetWindowUserPointer(window));
-	app->framebufferResized = true;
+	auto rvWindowTemp = reinterpret_cast<RvWindow*>(glfwGetWindowUserPointer(window));
+	rvWindowTemp->framebufferResized = true;
+	rvWindowTemp->extent = {(uint32_t)width, (uint32_t)height};
 }
 
 #pragma endregion
@@ -57,25 +58,18 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Ravine",
-		nullptr, //glfwGetPrimaryMonitor(), //Fullscreen
-		nullptr);
-	//Storing Ravine pointer inside window instance
-	glfwSetWindowUserPointer(window, this);
-	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, "Ravine Engine", false, framebufferResizeCallback);
 }
 
 void Ravine::initVulkan() {
 	//Core setup
 	createInstance();
 	rvDebug::setupDebugCallback(instance);
-	createSurface();
+	window->CreateSurface(instance);
 	pickPhysicalDevice();
 
 	//Rendering pipeline
-	swapChain = new RvSwapChain(*device, surface, WIDTH, HEIGHT, NULL);
+	swapChain = new RvSwapChain(*device, window->surface, window->extent.width, window->extent.height, NULL);
 	swapChain->CreateImageViews();
 	swapChain->CreateRenderPass();
 	createDescriptorSetLayout();
@@ -188,7 +182,7 @@ void Ravine::pickPhysicalDevice()
 
 	for (const auto& curPhysicalDevice : devices) {
 		if (isDeviceSuitable(curPhysicalDevice)) {
-			device = new RvDevice(curPhysicalDevice, surface);
+			device = new RvDevice(curPhysicalDevice, window->surface);
 			break;
 		}
 	}
@@ -205,13 +199,13 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	vkGetPhysicalDeviceProperties(device, &deviceProperties);
 	std::cout << "Checking device: " << deviceProperties.deviceName << "\n";
 
-	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(device, surface);
+	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(device, window->surface);
 
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = vkTools::querySupport(device, surface);
+		SwapChainSupportDetails swapChainSupport = vkTools::querySupport(device, window->surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
@@ -248,7 +242,8 @@ void Ravine::recreateSwapChain() {
 	//If the window is minimized, wait for it to come back to the foreground.
 	//TODO: We probably want to handle that another way, which we should probably discuss.
 	while (width == 0 || height == 0) {
-		glfwGetFramebufferSize(window, &width, &height);
+		width = window->extent.width;
+		height = window->extent.height;
 		glfwWaitEvents();
 	}
 
@@ -257,7 +252,7 @@ void Ravine::recreateSwapChain() {
 	//Storing handle
 	RvSwapChain *oldSwapchain = swapChain;
 
-	swapChain = new RvSwapChain(*device, surface, WIDTH, HEIGHT, oldSwapchain->handle);
+	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
 	swapChain->CreateImageViews();
 	swapChain->CreateRenderPass();
 	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, swapChain->renderPass);
@@ -1031,12 +1026,6 @@ void Ravine::createCommandBuffers() {
 
 }
 
-void Ravine::createSurface() {
-	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create window surface!");
-	}
-}
-
 void Ravine::mainLoop() {
 
 	std::string fpsTitle = "";
@@ -1044,10 +1033,10 @@ void Ravine::mainLoop() {
 	//Application
 	setupFPSCam();
 
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(*window)) {
 		Time::update();
 		fpsTitle = "Ravine - Milisseconds " + std::to_string(Time::deltaTime() * 1000.0);
-		glfwSetWindowTitle(window, fpsTitle.c_str());
+		glfwSetWindowTitle(*window, fpsTitle.c_str());
 		glfwPollEvents();
 		drawFrame();
 	}
@@ -1081,13 +1070,13 @@ void Ravine::drawFrame()
 void Ravine::setupFPSCam()
 {
 	//Enable caching of buttons pressed
-	glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+	glfwSetInputMode(*window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 
 	//Hide mouse cursor
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	//Update lastMousePos to avoid initial offset not null
-	glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
+	glfwGetCursorPos(*window, &lastMouseX, &lastMouseY);
 
 	//Initial rotations
 	camHorRot = 0;
@@ -1109,7 +1098,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 #pragma region Inputs
 
 	//Delta Mouse Positions
-	glfwGetCursorPos(window, &mouseX, &mouseY);
+	glfwGetCursorPos(*window, &mouseX, &mouseY);
 	double deltaX = mouseX - lastMouseX;
 	double deltaY = mouseY - lastMouseY;
 	lastMouseX = mouseX;
@@ -1129,26 +1118,26 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Calculate translation
 	glm::vec4 translation = glm::vec4(0);
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
 		translation.z -= 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
 		translation.x -= 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
 		translation.z += 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
 		translation.x += 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_Q) || glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+	if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 		translation.y -= 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_E) || glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+	if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		translation.y += 2.0 * Time::deltaTime();
 
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(*window, true);
 
 	camPos += lookRot * translation;
 
@@ -1248,10 +1237,10 @@ void Ravine::cleanup()
 	#endif
 
 	//Destroy VK surface and instance
-	vkDestroySurfaceKHR(instance, surface, nullptr);
+	delete window;
+
 	vkDestroyInstance(instance, nullptr);
 
 	//Finish GLFW
-	glfwDestroyWindow(window);
 	glfwTerminate();
 }

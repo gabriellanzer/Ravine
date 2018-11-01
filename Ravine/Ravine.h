@@ -115,7 +115,7 @@ private:
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
 
-	//Uniform buffers (per swap chain)
+	//Uniform buffers (per swap chain image)
 	//MOVE TO: UNIFORM
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
@@ -225,8 +225,6 @@ private:
 
 #pragma region Helpers
 
-	//Helper function for creating buffers
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
 	//Transfer buffer's data to an image
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);

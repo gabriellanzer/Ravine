@@ -75,6 +75,9 @@
     <ClCompile Include="RvWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RvBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -138,6 +141,9 @@
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="RvWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -304,7 +304,7 @@ void Ravine::createDescriptorSets()
 	//Configuring descriptor sets
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = uniformBuffers[i];
+		bufferInfo.buffer = uniformBuffers[0];
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(RvUniformBufferObject);
 
@@ -314,7 +314,7 @@ void Ravine::createDescriptorSets()
 		imageInfo.sampler = textureSampler;
 
 		VkDescriptorBufferInfo materialInfo = {};
-		materialInfo.buffer = materialBuffers[i];
+		materialInfo.buffer = materialBuffers[0];
 		materialInfo.offset = 0;
 		materialInfo.range = sizeof(RvMaterialBufferObject);
 
@@ -392,37 +392,6 @@ void Ravine::createDescriptorSetLayout()
 		throw std::runtime_error("Failed to create descriptor set layout!");
 	};
 
-}
-
-void Ravine::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
-{
-	//Defining buffer creation info
-	VkBufferCreateInfo bufferCreateInfo = {};
-	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferCreateInfo.size = size;
-	bufferCreateInfo.usage = usage;
-	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	//Creating buffer
-	if (vkCreateBuffer(*device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create buffer!");
-	}
-
-	//Allocating buffer memory
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(*device, buffer, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = device->findMemoryType(memRequirements.memoryTypeBits, properties);
-
-	if (vkAllocateMemory(*device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to allocate buffer memory!");
-	}
-
-	//Binding buffer memory
-	vkBindBufferMemory(*device, buffer, bufferMemory, 0);
 }
 
 void Ravine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
@@ -662,26 +631,7 @@ void Ravine::createVertexBuffer()
 	That's why we use a staging buffer to transfer vertex data to the vertex buffer.
 	*/
 
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	//Staging buffer is being used as the source in an a memory transfer operation
-	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-	//Fetching verteices data
-	void* data;
-	vkMapMemory(*device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, (void*)meshes[0].vertices, (size_t)bufferSize);
-	vkUnmapMemory(*device, stagingBufferMemory);
-
-	//Verter buffer is being used as the destination for such memory transfer operation
-	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-
-	//Transfering vertices to index buffer
-	copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-	//Clearing staging buffer
-	vkDestroyBuffer(*device, stagingBuffer, nullptr);
-	vkFreeMemory(*device, stagingBufferMemory, nullptr);
+	
 }
 
 void Ravine::createIndexBuffer()
@@ -1014,7 +964,7 @@ void Ravine::createCommandBuffers() {
 		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 		//Call drawing
 		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(meshes[0].index_count), 1, 0, 0, 0);
-
+		
 		//Finishing Render Pass
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
 		vkCmdEndRenderPass(commandBuffers[i]);

@@ -1,13 +1,22 @@
 #pragma once
 
-#include <vulkan\vulkan.h>
+//STD Includes
 #include <vector>
+
+//Vulkan Includes
+#include <vulkan\vulkan.h>
+
+//Ravine includes
+#include "RvPersistentBuffer.h"
 
 class RvDevice
 {
 private:
 	VkSurfaceKHR* surface;
 	void CreateCommandPool();
+
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
 public:
 	RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface);
 	~RvDevice();
@@ -34,6 +43,7 @@ public:
 	void Clear();
 
 	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory);
+	RvPersistentBuffer createPersistentBuffer(void* data, size_t bufferSize, size_t sizeOfDataType);
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);

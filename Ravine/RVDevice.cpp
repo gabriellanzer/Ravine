@@ -86,6 +86,37 @@ void RvDevice::CreateCommandPool()
 	}
 }
 
+void RvDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
+{
+	//Defining buffer creation info
+	VkBufferCreateInfo bufferCreateInfo = {};
+	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferCreateInfo.size = size;
+	bufferCreateInfo.usage = usage;
+	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	//Creating buffer
+	if (vkCreateBuffer(handle, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create buffer!");
+	}
+
+	//Allocating buffer memory
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(handle, buffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	if (vkAllocateMemory(handle, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate buffer memory!");
+	}
+
+	//Binding buffer memory
+	vkBindBufferMemory(handle, buffer, bufferMemory, 0);
+}
+
 void RvDevice::Clear()
 {
 	vkDestroyDevice(handle, nullptr);
@@ -129,6 +160,13 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 
 	//Binding image memory
 	vkBindImageMemory(handle, image, imageMemory, 0);
+}
+
+RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, size_t bufferSize, size_t sizeOfDataType)
+{
+	RvPersistentBuffer newBuffer;
+	newBuffer.SetData(data, bufferSize, sizeOfDataType);
+	return newBuffer;
 }
 
 uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)

@@ -75,7 +75,7 @@
     <ClCompile Include="RvWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RvBuffer.cpp">
+    <ClCompile Include="RvPersistentBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -143,7 +143,7 @@
     <ClInclude Include="RvWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RvBuffer.h">
+    <ClInclude Include="RvPersistentBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

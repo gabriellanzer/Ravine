@@ -8,10 +8,8 @@
 //Vulkan Includes
 #include <vulkan/vulkan.h>
 
-//Vulkan Tools
-#include "VulkanTools.h"
-
 //Ravine Includes
+#include "RvTools.h"
 #include "RvDevice.h"
 #include "RvFramebufferAttachment.h"
 

@@ -199,13 +199,13 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	vkGetPhysicalDeviceProperties(device, &deviceProperties);
 	std::cout << "Checking device: " << deviceProperties.deviceName << "\n";
 
-	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(device, window->surface);
+	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(device, window->surface);
 
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = vkTools::querySupport(device, window->surface);
+		SwapChainSupportDetails swapChainSupport = rvTools::querySupport(device, window->surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
@@ -304,7 +304,7 @@ void Ravine::createDescriptorSets()
 	//Configuring descriptor sets
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = uniformBuffers[0];
+		bufferInfo.buffer = uniformBuffers[i].buffer;
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(RvUniformBufferObject);
 
@@ -314,7 +314,7 @@ void Ravine::createDescriptorSets()
 		imageInfo.sampler = textureSampler;
 
 		VkDescriptorBufferInfo materialInfo = {};
-		materialInfo.buffer = materialBuffers[0];
+		materialInfo.buffer = materialBuffers[i].buffer;
 		materialInfo.offset = 0;
 		materialInfo.range = sizeof(RvMaterialBufferObject);
 
@@ -423,18 +423,6 @@ void Ravine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, u
 		1,
 		&region
 	);
-
-	device->endSingleTimeCommands(commandBuffer);
-}
-
-void Ravine::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-{
-
-	VkCommandBuffer commandBuffer = device->beginSingleTimeCommands();
-
-	VkBufferCopy copyRegion = {};
-	copyRegion.size = size;
-	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
 	device->endSingleTimeCommands(commandBuffer);
 }
@@ -629,8 +617,10 @@ void Ravine::createVertexBuffer()
 	The vertex buffer should use "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT",
 	which is a more optimal memory but it's not accessible by CPU.
 	That's why we use a staging buffer to transfer vertex data to the vertex buffer.
-	*/
+ 	*/
 
+	vertexBuffer = device->createPersistentBuffer(meshes[0].vertices, bufferSize, sizeof(RvVertex),
+		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	
 }
 
@@ -643,26 +633,29 @@ void Ravine::createIndexBuffer()
 	//	std::cout << "Vertex Id" << i << " = " << meshes[0].indices[i] << std::endl;
 	//}
 
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	//Creating staging buffer
-	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	//VkBuffer stagingBuffer;
+	//VkDeviceMemory stagingBufferMemory;
+	////Creating staging buffer
+	//createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-	//Feching indices data
-	void* data;
-	vkMapMemory(*device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, (void*)meshes[0].indices, (size_t)bufferSize);
-	vkUnmapMemory(*device, stagingBufferMemory);
+	////Feching indices data
+	//void* data;
+	//vkMapMemory(*device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	//memcpy(data, (void*)meshes[0].indices, (size_t)bufferSize);
+	//vkUnmapMemory(*device, stagingBufferMemory);
 
-	//Creating index buffer
-	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+	////Creating index buffer
+	//createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
 
-	//Transfering indices to index buffer
-	copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+	////Transfering indices to index buffer
+	//copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
-	//Clearing staging buffer
-	vkDestroyBuffer(*device, stagingBuffer, nullptr);
-	vkFreeMemory(*device, stagingBufferMemory, nullptr);
+	////Clearing staging buffer
+	//vkDestroyBuffer(*device, stagingBuffer, nullptr);
+	//vkFreeMemory(*device, stagingBufferMemory, nullptr);
+
+	indexBuffer = device->createPersistentBuffer(meshes[0].indices, bufferSize, sizeof(uint32_t),
+		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void Ravine::createUniformBuffers()
@@ -672,14 +665,12 @@ void Ravine::createUniformBuffers()
 
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	uniformBuffers.resize(swapChain->images.size());
-	uniformBuffersMemory.resize(swapChain->images.size());
 
 	materialBuffers.resize(swapChain->images.size());
-	materialBuffersMemory.resize(swapChain->images.size());
 
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
-		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
-		createBuffer(materialSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, materialBuffers[i], materialBuffersMemory[i]);
+		uniformBuffers[i] = device->createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		materialBuffers[i] = device->createDynamicBuffer(materialSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 	}
 }
 
@@ -704,15 +695,14 @@ void Ravine::createTextureImage()
 	}
 
 	//Staging buffer
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	RvDynamicBuffer stagingBuffer = device->createDynamicBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+	//createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	//Transfering image data
 	void* data;
-	vkMapMemory(*device, stagingBufferMemory, 0, imageSize, 0, &data);
+	vkMapMemory(*device, stagingBuffer.memory, 0, imageSize, 0, &data);
 	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(*device, stagingBufferMemory);
+	vkUnmapMemory(*device, stagingBuffer.memory);
 
 	stbi_image_free(pixels);
 
@@ -724,14 +714,14 @@ void Ravine::createTextureImage()
 		textureImage, textureImageMemory);
 
 	//Setting image layout for transfering to image object
-	vkTools::transitionImageLayout(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+	rvTools::transitionImageLayout(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 
 	//Transfering buffer data to image object
-	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+	copyBufferToImage(stagingBuffer.buffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
 	//Clearing staging buffer
-	vkDestroyBuffer(*device, stagingBuffer, nullptr);
-	vkFreeMemory(*device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(*device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(*device, stagingBuffer.memory, nullptr);
 
 	//Transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
 	generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, mipLevels);
@@ -739,7 +729,7 @@ void Ravine::createTextureImage()
 
 void Ravine::createTextureImageView()
 {
-	textureImageView = vkTools::createImageView(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+	textureImageView = rvTools::createImageView(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 }
 
 void Ravine::createTextureSampler()
@@ -955,10 +945,10 @@ void Ravine::createCommandBuffers() {
 		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
 
 		//Set Vertex Buffer for drawing
-		VkBuffer vertexBuffers[] = { vertexBuffer };
+		VkBuffer vertexBuffers[] = { vertexBuffer->buffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer->buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		//Binding descriptor sets (uniforms)
 		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
@@ -1114,9 +1104,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Transfering uniform data to uniform buffer
 	void* data;
-	vkMapMemory(*device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
+	vkMapMemory(*device, uniformBuffers[currentImage].memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(*device, uniformBuffersMemory[currentImage]);
+	vkUnmapMemory(*device, uniformBuffers[currentImage].memory);
 
 	//Material
 	RvMaterialBufferObject materialUbo = {};
@@ -1124,9 +1114,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	materialUbo.customColor = glm::vec4(0.23f, 0.37f, 0.89f, 1.0f);
 
 	void* materialData;
-	vkMapMemory(*device, materialBuffersMemory[currentImage], 0, sizeof(materialUbo), 0, &materialData);
+	vkMapMemory(*device, materialBuffers[currentImage].memory, 0, sizeof(materialUbo), 0, &materialData);
 	memcpy(materialData, &materialUbo, sizeof(materialUbo));
-	vkUnmapMemory(*device, materialBuffersMemory[currentImage]);
+	vkUnmapMemory(*device, materialBuffers[currentImage].memory);
 }
 
 void Ravine::cleanupSwapChain() {
@@ -1158,18 +1148,18 @@ void Ravine::cleanup()
 
 	//Destroying uniform buffers
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
-		vkDestroyBuffer(*device, uniformBuffers[i], nullptr);
-		vkFreeMemory(*device, uniformBuffersMemory[i], nullptr);
+		vkDestroyBuffer(*device, uniformBuffers[i].buffer, nullptr);
+		vkFreeMemory(*device, uniformBuffers[i].memory, nullptr);
 	}
 
 	//Destroy descriptor set layout (uniform bind)
 	vkDestroyDescriptorSetLayout(*device, descriptorSetLayout, nullptr);
 
 	//Destroy Vertex Buffer Object
-	vkDestroyBuffer(*device, vertexBuffer, nullptr);
+	vkDestroyBuffer(*device, vertexBuffer->buffer, nullptr);
 
 	//Free device memory from Vertex Buffer
-	vkFreeMemory(*device, vertexBufferMemory, nullptr);
+	vkFreeMemory(*device, vertexBuffer->memory, nullptr);
 
 	//Destroy Command Buffer Pool
 	//TODO: Destroy with device?

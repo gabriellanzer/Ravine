@@ -12,8 +12,6 @@
 //Vulkan Include
 #include <vulkan\vulkan.h>
 
-//Vulkan Tools
-#include "VulkanTools.h"
 
 //GLM includes
 #define GLM_FORCE_RADIANS
@@ -27,6 +25,7 @@
 #include "RvUniformTypes.h"
 
 //VK Wrappers
+#include "RvTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"
 #include "RvGraphicsPipeline.h"
@@ -107,22 +106,18 @@ private:
 
 	//Verter buffer
 	//MOVE TO: BUFFER
-	VkBuffer vertexBuffer;
-	VkDeviceMemory vertexBufferMemory;
+	RvPersistentBuffer* vertexBuffer;
 
 	//Index buffer
 	//MOVE TO: BUFFER
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
+	RvPersistentBuffer* indexBuffer;
 
 	//Uniform buffers (per swap chain image)
 	//MOVE TO: UNIFORM
-	std::vector<VkBuffer> uniformBuffers;
-	std::vector<VkDeviceMemory> uniformBuffersMemory;
+	std::vector<RvDynamicBuffer> uniformBuffers;
 
 	//MOVE TO: UNIFORM
-	std::vector<VkBuffer> materialBuffers;
-	std::vector<VkDeviceMemory> materialBuffersMemory;
+	std::vector<RvDynamicBuffer> materialBuffers;
 
 	//Texture related objects
 	//MOVE TO: TEXTURE (inherits from framebuffer?)
@@ -167,9 +162,6 @@ private:
 
 	//Creating descriptors sets (uniforms bindings)
 	void createDescriptorSets();
-
-	//Helper function to copy a buffer's content into another
-	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	//Load scene file and populates meshes vector
 	bool loadScene(const std::string& filePath);

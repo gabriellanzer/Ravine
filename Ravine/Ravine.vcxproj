@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
+    <ClCompile Include="RvDynamicBuffer.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
     <ClCompile Include="RvConfig.cpp" />
     <ClCompile Include="RvDebug.cpp" />
@@ -162,10 +163,11 @@
     <ClCompile Include="SingleFileLibraries\imgui_impl_vulkan.cpp" />
     <ClCompile Include="SingleFileLibraries\imgui_widgets.cpp" />
     <ClCompile Include="Time.cpp" />
-    <ClCompile Include="VulkanTools.cpp" />
+    <ClCompile Include="RvTools.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ravine.h" />
+    <ClInclude Include="RvDynamicBuffer.h" />
     <ClInclude Include="RvPersistentBuffer.h" />
     <ClInclude Include="RvConfig.h" />
     <ClInclude Include="RvDataTypes.h" />
@@ -186,7 +188,7 @@
     <ClInclude Include="SingleFileLibraries\imstb_truetype.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="Time.h" />
-    <ClInclude Include="VulkanTools.h" />
+    <ClInclude Include="RvTools.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\imgui.frag" />

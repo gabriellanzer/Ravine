@@ -8,6 +8,7 @@
 
 //Ravine includes
 #include "RvPersistentBuffer.h"
+#include "RvDynamicBuffer.h"
 
 class RvDevice
 {
@@ -43,7 +44,8 @@ public:
 	void Clear();
 
 	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory);
-	RvPersistentBuffer createPersistentBuffer(void* data, size_t bufferSize, size_t sizeOfDataType);
+	RvDynamicBuffer createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);
+	RvPersistentBuffer* createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);

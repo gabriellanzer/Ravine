@@ -6,12 +6,12 @@
 #include <iostream>
 
 //Ravine System Includes
-#include "VulkanTools.h"
+#include "RvTools.h"
 #include "RVConfig.h"
 
 RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : physicalDevice(physicalDevice), surface(&surface)
 {
-	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(physicalDevice, surface);
+	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(physicalDevice, surface);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
@@ -74,7 +74,7 @@ RvDevice::~RvDevice()
 
 void RvDevice::CreateCommandPool()
 {
-	vkTools::QueueFamilyIndices queueFamilyIndices = vkTools::findQueueFamilies(physicalDevice, *surface);
+	rvTools::QueueFamilyIndices queueFamilyIndices = rvTools::findQueueFamilies(physicalDevice, *surface);
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -162,10 +162,35 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 	vkBindImageMemory(handle, image, imageMemory, 0);
 }
 
-RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, size_t bufferSize, size_t sizeOfDataType)
+RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
 {
-	RvPersistentBuffer newBuffer;
-	newBuffer.SetData(data, bufferSize, sizeOfDataType);
+	RvDynamicBuffer newBuffer;
+	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.buffer, newBuffer.memory);
+	return newBuffer;
+}
+
+RvPersistentBuffer* RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
+{
+	// Staging Buffer
+	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+
+	// Copying data
+	void* stagingData;
+	vkMapMemory(handle, stagingBuffer.memory, 0, bufferSize, 0, &stagingData);
+	memcpy(stagingData, (void*)data, (size_t)bufferSize);
+	vkUnmapMemory(handle, stagingBuffer.memory);
+
+	// Persistent buffer
+	RvPersistentBuffer *newBuffer = new RvPersistentBuffer(bufferSize, sizeOfDataType);
+	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer->buffer, newBuffer->memory);
+
+	// Copying data to persistent buffer
+	rvTools::copyBuffer(*this, stagingBuffer.buffer, newBuffer->buffer, bufferSize);
+
+	////Clearing staging buffer
+	vkDestroyBuffer(handle, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(handle, stagingBuffer.memory, nullptr);
+
 	return newBuffer;
 }
 

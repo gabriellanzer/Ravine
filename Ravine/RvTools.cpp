@@ -1,9 +1,9 @@
-﻿#include "VulkanTools.h"
+﻿#include "RvTools.h"
 
 //STD Include
 #include <fstream>
 
-namespace vkTools {
+namespace rvTools {
 
 
 	bool hasStencilComponent(VkFormat format)
@@ -141,7 +141,7 @@ namespace vkTools {
 		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			if (vkTools::hasStencilComponent(format)) {
+			if (rvTools::hasStencilComponent(format)) {
 				barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 			}
 		}
@@ -209,6 +209,17 @@ namespace vkTools {
 			0, nullptr,
 			1, &barrier
 		);
+
+		device.endSingleTimeCommands(commandBuffer);
+	}
+
+	void copyBuffer(RvDevice& device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+	{
+		VkCommandBuffer commandBuffer = device.beginSingleTimeCommands();
+
+		VkBufferCopy copyRegion = {};
+		copyRegion.size = size;
+		vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
 		device.endSingleTimeCommands(commandBuffer);
 	}

@@ -54,9 +54,6 @@
     <ClCompile Include="Ravine.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="VulkanTools.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
     <ClCompile Include="RvDevice.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
@@ -77,6 +74,12 @@
     </ClCompile>
     <ClCompile Include="RvPersistentBuffer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RvDynamicBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RvTools.cpp">
+      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -113,9 +116,6 @@
     <ClInclude Include="Ravine.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="VulkanTools.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
     <ClInclude Include="RvDataTypes.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
@@ -145,6 +145,12 @@
     </ClInclude>
     <ClInclude Include="RvPersistentBuffer.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvDynamicBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTools.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

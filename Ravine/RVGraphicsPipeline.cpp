@@ -7,7 +7,7 @@
 #include "RVDataTypes.h"
 
 //Ravine Systems
-#include "VulkanTools.h"
+#include "RvTools.h"
 
 
 VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code) {
@@ -42,8 +42,8 @@ RvGraphicsPipeline::~RvGraphicsPipeline()
 
 void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass)
 {
-	std::vector<char> vertShaderCode = vkTools::readFile("../data/shaders/shader.vert.spv");
-	std::vector<char> fragShaderCode = vkTools::readFile("../data/shaders/shader.frag.spv");
+	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/shader.vert.spv");
+	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/shader.frag.spv");
 
 	vertModule = createShaderModule(*device, vertShaderCode);
 	fragModule = createShaderModule(*device, fragShaderCode);

@@ -12,7 +12,7 @@
 
 struct SwapChainSupportDetails;
 
-namespace vkTools
+namespace rvTools
 {
 
 	bool hasStencilComponent(VkFormat format);
@@ -39,6 +39,8 @@ namespace vkTools
 	std::vector<char> readFile(const std::string& filename);
 
 	void transitionImageLayout(RvDevice device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
+
+	void copyBuffer(RvDevice& device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 };
 

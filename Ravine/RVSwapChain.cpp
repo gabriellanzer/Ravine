@@ -14,7 +14,7 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	this->HEIGHT = HEIGHT;
 
 	//Check swap chain support
-	SwapChainSupportDetails swapChainSupport = vkTools::querySupport(device.physicalDevice, surface);
+	SwapChainSupportDetails swapChainSupport = rvTools::querySupport(device.physicalDevice, surface);
 
 	//Define swap chain setup data
 	VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
@@ -41,7 +41,7 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	//Define queue sharing modes based on ids comparison
-	vkTools::QueueFamilyIndices indices = vkTools::findQueueFamilies(device.physicalDevice, surface);
+	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(device.physicalDevice, surface);
 	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
 
 	if (indices.graphicsFamily != indices.presentFamily) {
@@ -155,7 +155,7 @@ void RvSwapChain::CreateImageViews()
 	imageViews.resize(images.size());
 	for (size_t i = 0; i < images.size(); i++)
 	{
-		imageViews[i] = vkTools::createImageView(*device, images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		imageViews[i] = rvTools::createImageView(*device, images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 }
 
@@ -267,9 +267,9 @@ void RvSwapChain::AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo cre
 		createInfo.usage,
 		createInfo.memoryProperties,
 		newAttachment.image, newAttachment.memory);
-	newAttachment.imageView = vkTools::createImageView(*device, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
+	newAttachment.imageView = rvTools::createImageView(*device, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
 
-	vkTools::transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
+	rvTools::transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
 
 	framebufferAttachments.push_back(newAttachment);
 }

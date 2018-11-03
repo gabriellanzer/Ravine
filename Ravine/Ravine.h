@@ -30,6 +30,7 @@
 #include "RvSwapChain.h"
 #include "RvGraphicsPipeline.h"
 #include "RvWindow.h"
+#include "RvTexture.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -59,28 +60,28 @@ public:
 
 private:
 
-	//MOVE TO: WINDOW
+	//Todo: Move to Window
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
 
 	//Ravine objects
 	RvWindow* window;
-	//MOVE TO: VULKAN APP
+	//Todo: Move to VULKAN APP
 	RvDevice* device;
 	RvSwapChain* swapChain;
 	RvGraphicsPipeline* graphicsPipeline;
 
 	//Mouse parameters
-	//MOVE TO: Input
+	//Todo: Move to INPUT
 	double lastMouseX = 0, lastMouseY = 0;
 	double mouseX, mouseY;
 
 	//Camera parameters
-	//MOVE TO: CAMERA
+	//Todo: Move to CAMERA
 	float camHorRot = 0, camVerRot = 0;
 	glm::vec4 camPos = glm::vec4(0,0,0,0);
 	
-	//MOVE TO: MESH
+	//Todo: Move to MESH
 	RvMeshData* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
@@ -88,43 +89,38 @@ private:
 #pragma region Attributes
 
 	//Vulkan Instance
-	//MOVE TO: VULKAN APP
+	//TODO: Move to VULKAN APP
 	VkInstance instance;
 
 	//Descriptors related content
-	//MOVE TO: DESCRIPTOR
+	//TODO: Move to DESCRIPTOR
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
 
 	//Commands Buffers and it's Pool
-	//MOVE TO: COMMAND BUFFER
+	//TODO: Move to COMMAND BUFFER
 	std::vector<VkCommandBuffer> commandBuffers;
 
 	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
 	//Reference: https://developer.nvidia.com/vulkan-memory-management
 
+	//TODO: Move vertex and index buffer in MESH class
 	//Verter buffer
-	//MOVE TO: BUFFER
-	RvPersistentBuffer* vertexBuffer;
-
+	RvPersistentBuffer vertexBuffer;
 	//Index buffer
-	//MOVE TO: BUFFER
-	RvPersistentBuffer* indexBuffer;
+	RvPersistentBuffer indexBuffer;
 
 	//Uniform buffers (per swap chain image)
-	//MOVE TO: UNIFORM
+	//TODO: Move to UNIFORM
 	std::vector<RvDynamicBuffer> uniformBuffers;
 
-	//MOVE TO: UNIFORM
+	//TODO: Move to UNIFORM
 	std::vector<RvDynamicBuffer> materialBuffers;
 
 	//Texture related objects
-	//MOVE TO: TEXTURE (inherits from framebuffer?)
 	uint32_t mipLevels;
-	VkImage textureImage;
-	VkDeviceMemory textureImageMemory;
-	VkImageView textureImageView;
+	RvTexture texture;
 	VkSampler textureSampler;
 
 #pragma endregion
@@ -178,13 +174,8 @@ private:
 	//Load image and upload into Vulkan Image Object
 	void createTextureImage();
 
-	//Creating image view to hold a texture object
-	void createTextureImageView();
-
 	//Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();
-
-	void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
 	//Create resources for depth testing
 	void createDepthResources();
@@ -212,15 +203,6 @@ private:
 
 	//Finalize
 	void cleanup();
-
-#pragma endregion
-
-#pragma region Helpers
-
-
-	//Transfer buffer's data to an image
-	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-
 
 #pragma endregion
 

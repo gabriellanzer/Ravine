@@ -119,6 +119,10 @@ void RvDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
 
 void RvDevice::Clear()
 {
+	//Destroy command pool actually destroys all CMD Buffers
+	vkDestroyCommandPool(handle, commandPool, nullptr);
+
+	//Cleanup all device data
 	vkDestroyDevice(handle, nullptr);
 }
 
@@ -169,7 +173,7 @@ RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferU
 	return newBuffer;
 }
 
-RvPersistentBuffer* RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
+RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
 {
 	// Staging Buffer
 	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
@@ -181,17 +185,22 @@ RvPersistentBuffer* RvDevice::createPersistentBuffer(void * data, VkDeviceSize b
 	vkUnmapMemory(handle, stagingBuffer.memory);
 
 	// Persistent buffer
-	RvPersistentBuffer *newBuffer = new RvPersistentBuffer(bufferSize, sizeOfDataType);
-	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer->buffer, newBuffer->memory);
+	RvPersistentBuffer newBuffer(bufferSize, sizeOfDataType);
+	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
 
 	// Copying data to persistent buffer
-	rvTools::copyBuffer(*this, stagingBuffer.buffer, newBuffer->buffer, bufferSize);
+	rvTools::copyBuffer(*this, stagingBuffer.buffer, newBuffer.handle, bufferSize);
 
-	////Clearing staging buffer
+	//Clearing staging buffer
 	vkDestroyBuffer(handle, stagingBuffer.buffer, nullptr);
 	vkFreeMemory(handle, stagingBuffer.memory, nullptr);
 
 	return newBuffer;
+}
+
+RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height)
+{
+	return rvTools::createTexture(this, pixels, width, height);
 }
 
 uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)

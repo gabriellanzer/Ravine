@@ -5,10 +5,12 @@
 
 //STD Includes
 #include <vector>
+#include <algorithm>
 
 //Ravine Includes
 #include "RvSwapChain.h"
 #include "RvDevice.h"
+#include "RvTexture.h"
 
 struct SwapChainSupportDetails;
 
@@ -16,6 +18,13 @@ namespace rvTools
 {
 
 	bool hasStencilComponent(VkFormat format);
+
+	RvTexture createTexture(RvDevice* device, void *pixels, uint32_t width, uint32_t height);
+
+	void generateMipmaps(RvDevice* device, VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+
+	//Transfer buffer's data to an image
+	void copyBufferToImage(RvDevice* device, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
 	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels = 0);
 

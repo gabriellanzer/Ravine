@@ -78,7 +78,6 @@ void Ravine::initVulkan() {
 	createDepthResources();
 	swapChain->CreateFramebuffers();
 	createTextureImage();
-	createTextureImageView();
 	createTextureSampler();
 	createVertexBuffer();
 	createIndexBuffer();
@@ -247,7 +246,7 @@ void Ravine::recreateSwapChain() {
 		glfwWaitEvents();
 	}
 
-	vkDeviceWaitIdle(*device);
+	vkDeviceWaitIdle(device->handle);
 
 	//Storing handle
 	RvSwapChain *oldSwapchain = swapChain;
@@ -281,7 +280,7 @@ void Ravine::createDescriptorPool()
 	poolInfo.pPoolSizes = poolSizes.data();
 	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size());
 
-	if (vkCreateDescriptorPool(*device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+	if (vkCreateDescriptorPool(device->handle, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
 	}
 }
@@ -297,7 +296,7 @@ void Ravine::createDescriptorSets()
 
 	// Setting descriptor sets vector to count of SwapChain images
 	descriptorSets.resize(swapChain->images.size());
-	if (vkAllocateDescriptorSets(*device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+	if (vkAllocateDescriptorSets(device->handle, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate descriptor sets!");
 	}
 
@@ -310,7 +309,7 @@ void Ravine::createDescriptorSets()
 
 		VkDescriptorImageInfo imageInfo = {};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = textureImageView;
+		imageInfo.imageView = texture.view;
 		imageInfo.sampler = textureSampler;
 
 		VkDescriptorBufferInfo materialInfo = {};
@@ -347,7 +346,7 @@ void Ravine::createDescriptorSets()
 		//Buffer Info
 		descriptorWrites[2].pBufferInfo = &materialInfo;
 
-		vkUpdateDescriptorSets(*device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 
 }
@@ -388,43 +387,10 @@ void Ravine::createDescriptorSetLayout()
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
-	if (vkCreateDescriptorSetLayout(*device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+	if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor set layout!");
 	};
 
-}
-
-void Ravine::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
-{
-	VkCommandBuffer commandBuffer = device->beginSingleTimeCommands();
-
-	VkBufferImageCopy region = {};
-	region.bufferOffset = 0;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
-
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = {
-		width,
-		height,
-		1
-	};
-
-	vkCmdCopyBufferToImage(
-		commandBuffer,
-		buffer,
-		image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1,
-		&region
-	);
-
-	device->endSingleTimeCommands(commandBuffer);
 }
 
 bool Ravine::loadScene(const std::string& filePath)
@@ -628,32 +594,6 @@ void Ravine::createIndexBuffer()
 {
 	VkDeviceSize bufferSize = sizeof(uint32_t) * meshes[0].index_count;
 
-	//for (size_t i = 0; i < meshes[0].index_count; i++)
-	//{
-	//	std::cout << "Vertex Id" << i << " = " << meshes[0].indices[i] << std::endl;
-	//}
-
-	//VkBuffer stagingBuffer;
-	//VkDeviceMemory stagingBufferMemory;
-	////Creating staging buffer
-	//createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-	////Feching indices data
-	//void* data;
-	//vkMapMemory(*device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	//memcpy(data, (void*)meshes[0].indices, (size_t)bufferSize);
-	//vkUnmapMemory(*device, stagingBufferMemory);
-
-	////Creating index buffer
-	//createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-
-	////Transfering indices to index buffer
-	//copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-	////Clearing staging buffer
-	//vkDestroyBuffer(*device, stagingBuffer, nullptr);
-	//vkFreeMemory(*device, stagingBufferMemory, nullptr);
-
 	indexBuffer = device->createPersistentBuffer(meshes[0].indices, bufferSize, sizeof(uint32_t),
 		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
@@ -679,57 +619,10 @@ void Ravine::createTextureImage()
 	//Loading image
 	int texWidth, texHeight, texChannels;
 	stbi_uc* pixels = stbi_load("../data/textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-	//Mip levels calculation
-	/*
-	Max - chooses biggest dimenstion
-	Log2 - get how many times it can be divided by 2(two)
-	Floor - handles case where the dimension is not power of 2
-	+1 - Add a mip level for the original level
-	*/
-	mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-
-	if (!pixels) {
-		throw std::runtime_error("Failed to load texture image!");
-	}
-
-	//Staging buffer
-	RvDynamicBuffer stagingBuffer = device->createDynamicBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-	//createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-	//Transfering image data
-	void* data;
-	vkMapMemory(*device, stagingBuffer.memory, 0, imageSize, 0, &data);
-	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(*device, stagingBuffer.memory);
+	texture = device->createTexture(pixels, texWidth, texHeight);
 
 	stbi_image_free(pixels);
-
-	//Creating new image
-	device->createImage(texWidth, texHeight, mipLevels,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		textureImage, textureImageMemory);
-
-	//Setting image layout for transfering to image object
-	rvTools::transitionImageLayout(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-
-	//Transfering buffer data to image object
-	copyBufferToImage(stagingBuffer.buffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-
-	//Clearing staging buffer
-	vkDestroyBuffer(*device, stagingBuffer.buffer, nullptr);
-	vkFreeMemory(*device, stagingBuffer.memory, nullptr);
-
-	//Transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
-	generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, mipLevels);
-}
-
-void Ravine::createTextureImageView()
-{
-	textureImageView = rvTools::createImageView(*device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 }
 
 void Ravine::createTextureSampler()
@@ -769,93 +662,9 @@ void Ravine::createTextureSampler()
 	samplerCreateInfo.maxLod = static_cast<float>(mipLevels);
 
 	//Creating sampler
-	if (vkCreateSampler(*device, &samplerCreateInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+	if (vkCreateSampler(device->handle, &samplerCreateInfo, nullptr, &textureSampler) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create texture sampler!");
 	}
-}
-
-void Ravine::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
-{
-	//Checking device support for linear blitting
-	VkFormatProperties formatProperties = device->getFormatProperties(imageFormat);
-
-	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-		throw std::runtime_error("Texture image format does not support linear blitting!");
-	}
-
-	VkCommandBuffer commandBuffer = device->beginSingleTimeCommands();
-
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.image = image;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-	barrier.subresourceRange.levelCount = 1;
-
-	int32_t mipWidth = texWidth;
-	int32_t mipHeight = texHeight;
-
-	//Starting at 1 because the level 0 is the texture image itself
-	for (uint32_t i = 1; i < mipLevels; i++) {
-		barrier.subresourceRange.baseMipLevel = i - 1;
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-		//Transition waits for level (i - 1) to be filled (from Blitting or vkCmdCopyBufferToImage)
-		vkCmdPipelineBarrier(commandBuffer,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier);
-
-		//Image blit object
-		VkImageBlit blit = {};
-		//Blit Source
-		blit.srcOffsets[0] = { 0, 0, 0 };
-		blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-		blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blit.srcSubresource.mipLevel = i - 1;
-		blit.srcSubresource.baseArrayLayer = 0;
-		blit.srcSubresource.layerCount = 1;
-		//Blit Dest
-		blit.dstOffsets[0] = { 0, 0, 0 };
-		blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-		blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blit.dstSubresource.mipLevel = i;
-		blit.dstSubresource.baseArrayLayer = 0;
-		blit.dstSubresource.layerCount = 1;
-
-		//Blit command
-		vkCmdBlitImage(commandBuffer,
-			image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &blit,
-			VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
-		//TODO: Change sampler filtering to variable
-
-		if (mipWidth > 1) mipWidth /= 2;
-		if (mipHeight > 1) mipHeight /= 2;
-	}
-
-	//Changing layout here because last mipLevel is never blitted from
-	barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-	vkCmdPipelineBarrier(commandBuffer,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier);
-
-	device->endSingleTimeCommands(commandBuffer);
 }
 
 void Ravine::createDepthResources()
@@ -906,7 +715,7 @@ void Ravine::createCommandBuffers() {
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-	if (vkAllocateCommandBuffers(*device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+	if (vkAllocateCommandBuffers(device->handle, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate command buffers!");
 	}
 
@@ -945,10 +754,10 @@ void Ravine::createCommandBuffers() {
 		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
 
 		//Set Vertex Buffer for drawing
-		VkBuffer vertexBuffers[] = { vertexBuffer->buffer };
+		VkBuffer vertexBuffers[] = { vertexBuffer.handle };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer->buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
 		//Binding descriptor sets (uniforms)
 		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
@@ -981,7 +790,7 @@ void Ravine::mainLoop() {
 		drawFrame();
 	}
 
-	vkDeviceWaitIdle(*device);
+	vkDeviceWaitIdle(device->handle);
 }
 
 
@@ -1104,9 +913,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Transfering uniform data to uniform buffer
 	void* data;
-	vkMapMemory(*device, uniformBuffers[currentImage].memory, 0, sizeof(ubo), 0, &data);
+	vkMapMemory(device->handle, uniformBuffers[currentImage].memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(*device, uniformBuffers[currentImage].memory);
+	vkUnmapMemory(device->handle, uniformBuffers[currentImage].memory);
 
 	//Material
 	RvMaterialBufferObject materialUbo = {};
@@ -1114,18 +923,18 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	materialUbo.customColor = glm::vec4(0.23f, 0.37f, 0.89f, 1.0f);
 
 	void* materialData;
-	vkMapMemory(*device, materialBuffers[currentImage].memory, 0, sizeof(materialUbo), 0, &materialData);
+	vkMapMemory(device->handle, materialBuffers[currentImage].memory, 0, sizeof(materialUbo), 0, &materialData);
 	memcpy(materialData, &materialUbo, sizeof(materialUbo));
-	vkUnmapMemory(*device, materialBuffers[currentImage].memory);
+	vkUnmapMemory(device->handle, materialBuffers[currentImage].memory);
 }
 
 void Ravine::cleanupSwapChain() {
 
-	vkFreeCommandBuffers(*device, device->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
 	//Destroy Graphics Pipeline and all it's components
-	vkDestroyPipeline(*device, *graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(*device, graphicsPipeline->pipelineLayout, nullptr);
+	vkDestroyPipeline(device->handle, *graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, graphicsPipeline->pipelineLayout, nullptr);
 
 	//Destroy swap chain and all it's images
 	swapChain->Clear();
@@ -1138,32 +947,31 @@ void Ravine::cleanup()
 	cleanupSwapChain();
 
 	//Cleaning up texture related objects
-	vkDestroySampler(*device, textureSampler, nullptr);
-	vkDestroyImageView(*device, textureImageView, nullptr);
-	vkDestroyImage(*device, textureImage, nullptr);
-	vkFreeMemory(*device, textureImageMemory, nullptr);
+	vkDestroySampler(device->handle, textureSampler, nullptr);
+	texture.Free();
 
 	//Destroy descriptor pool
-	vkDestroyDescriptorPool(*device, descriptorPool, nullptr);
+	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
 
 	//Destroying uniform buffers
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
-		vkDestroyBuffer(*device, uniformBuffers[i].buffer, nullptr);
-		vkFreeMemory(*device, uniformBuffers[i].memory, nullptr);
+		vkDestroyBuffer(device->handle, uniformBuffers[i].buffer, nullptr);
+		vkFreeMemory(device->handle, uniformBuffers[i].memory, nullptr);
+	}
+
+	for (size_t i = 0; i < swapChain->images.size(); i++) {
+		vkDestroyBuffer(device->handle, materialBuffers[i].buffer, nullptr);
+		vkFreeMemory(device->handle, materialBuffers[i].memory, nullptr);
 	}
 
 	//Destroy descriptor set layout (uniform bind)
-	vkDestroyDescriptorSetLayout(*device, descriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(device->handle, descriptorSetLayout, nullptr);
 
 	//Destroy Vertex Buffer Object
-	vkDestroyBuffer(*device, vertexBuffer->buffer, nullptr);
+	vkDestroyBuffer(device->handle, vertexBuffer.handle, nullptr);
 
 	//Free device memory from Vertex Buffer
-	vkFreeMemory(*device, vertexBuffer->memory, nullptr);
-
-	//Destroy Command Buffer Pool
-	//TODO: Destroy with device?
-	vkDestroyCommandPool(*device, device->commandPool, nullptr);
+	vkFreeMemory(device->handle, vertexBuffer.memory, nullptr);
 
 	//Destroy graphics pipeline
 	delete graphicsPipeline;

@@ -36,8 +36,8 @@ RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSa
 
 RvGraphicsPipeline::~RvGraphicsPipeline()
 {
-	vkDestroyShaderModule(*device, fragModule, nullptr);
-	vkDestroyShaderModule(*device, vertModule, nullptr);
+	vkDestroyShaderModule(device->handle, fragModule, nullptr);
+	vkDestroyShaderModule(device->handle, vertModule, nullptr);
 }
 
 void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass)
@@ -45,8 +45,8 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/shader.vert.spv");
 	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/shader.frag.spv");
 
-	vertModule = createShaderModule(*device, vertShaderCode);
-	fragModule = createShaderModule(*device, fragShaderCode);
+	vertModule = createShaderModule(device->handle, vertShaderCode);
+	fragModule = createShaderModule(device->handle, fragShaderCode);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -179,7 +179,7 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-	if (vkCreatePipelineLayout(*device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(device->handle, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create pipeline layout!");
 	}
 
@@ -226,7 +226,7 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 										//Settin depth/stencil state to pipeline
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
-	if (vkCreateGraphicsPipelines(*device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(device->handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline!");
 	}
 }

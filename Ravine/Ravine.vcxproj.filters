@@ -81,6 +81,12 @@
     <ClCompile Include="RvTools.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="RvCmdBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RvTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -151,6 +157,12 @@
     </ClInclude>
     <ClInclude Include="RvTools.h">
       <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvCmdBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTexture.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

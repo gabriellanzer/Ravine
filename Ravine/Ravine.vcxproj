@@ -148,7 +148,9 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
+    <ClCompile Include="RvCmdBuffer.cpp" />
     <ClCompile Include="RvDynamicBuffer.cpp" />
+    <ClCompile Include="RvTexture.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
     <ClCompile Include="RvConfig.cpp" />
     <ClCompile Include="RvDebug.cpp" />
@@ -167,7 +169,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ravine.h" />
+    <ClInclude Include="RvCmdBuffer.h" />
     <ClInclude Include="RvDynamicBuffer.h" />
+    <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />
     <ClInclude Include="RvConfig.h" />
     <ClInclude Include="RvDataTypes.h" />

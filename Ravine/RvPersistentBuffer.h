@@ -7,20 +7,15 @@
 struct RvPersistentBuffer
 {
 	//Buffer size in bytes (so it's the whole buffer)
+	RvPersistentBuffer();
 	RvPersistentBuffer(VkDeviceSize bufferSize, size_t sizeOfDataType);
 	~RvPersistentBuffer();
 
-	VkBuffer buffer;
+	VkBuffer handle;
 	VkDeviceMemory memory;
-
-	const size_t instancesCount;
-
-	RvPersistentBuffer& operator =(const RvPersistentBuffer& other) {
-		if (this != &other) {
-			buffer = other.buffer;
-			memory = other.memory;
-		}
-	}
+	VkDeviceSize bufferSize;
+	size_t sizeOfDataType;
+	size_t instancesCount;
 
 	//TODO: Implement someday hehe
 	// bool GetData(void* data, size_t offset, size_t);

@@ -67,14 +67,14 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	createInfo.oldSwapchain = oldSwapChain;
 
 	//Create swap chain with given information
-	if (vkCreateSwapchainKHR(*this->device, &createInfo, nullptr, &handle) != VK_SUCCESS) {
+	if (vkCreateSwapchainKHR(device.handle, &createInfo, nullptr, &handle) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create swap chain!");
 	}
 
 	//Populate swap chain images and hold it's details
-	vkGetSwapchainImagesKHR(*this->device, handle, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(device.handle, handle, &imageCount, nullptr);
 	images.resize(imageCount);
-	vkGetSwapchainImagesKHR(*this->device, handle, &imageCount, images.data());
+	vkGetSwapchainImagesKHR(device.handle, handle, &imageCount, images.data());
 	imageFormat = surfaceFormat.format;
 	this->extent = extent;
 }
@@ -132,21 +132,21 @@ void RvSwapChain::Clear()
 	//Destroy attachments
 	for (size_t i = 0; i < framebufferAttachments.size(); i++)
 	{
-	vkDestroyImageView(*device, framebufferAttachments[i].imageView, nullptr);
-	vkDestroyImage(*device, framebufferAttachments[i].image, nullptr);
-	vkFreeMemory(*device, framebufferAttachments[i].memory, nullptr);
+	vkDestroyImageView(device->handle, framebufferAttachments[i].imageView, nullptr);
+	vkDestroyImage(device->handle, framebufferAttachments[i].image, nullptr);
+	vkFreeMemory(device->handle, framebufferAttachments[i].memory, nullptr);
 	}
 
 	//Destroy FrameBuffers
 	for (VkFramebuffer framebuffer : framebuffers) {
-		vkDestroyFramebuffer(*device, framebuffer, nullptr);
+		vkDestroyFramebuffer(device->handle, framebuffer, nullptr);
 	}
 
-	vkDestroyRenderPass(*device, renderPass, nullptr);
+	vkDestroyRenderPass(device->handle, renderPass, nullptr);
 	for (VkImageView imageView : imageViews) {
-		vkDestroyImageView(*device, imageView, nullptr);
+		vkDestroyImageView(device->handle, imageView, nullptr);
 	}
-	vkDestroySwapchainKHR(*device, handle, nullptr);
+	vkDestroySwapchainKHR(device->handle, handle, nullptr);
 }
 
 void RvSwapChain::CreateImageViews()
@@ -155,7 +155,7 @@ void RvSwapChain::CreateImageViews()
 	imageViews.resize(images.size());
 	for (size_t i = 0; i < images.size(); i++)
 	{
-		imageViews[i] = rvTools::createImageView(*device, images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		imageViews[i] = rvTools::createImageView(device->handle, images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 }
 
@@ -253,7 +253,7 @@ void RvSwapChain::CreateRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (vkCreateRenderPass(*device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+	if (vkCreateRenderPass(device->handle, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create render pass!");
 	}
 }
@@ -267,7 +267,7 @@ void RvSwapChain::AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo cre
 		createInfo.usage,
 		createInfo.memoryProperties,
 		newAttachment.image, newAttachment.memory);
-	newAttachment.imageView = rvTools::createImageView(*device, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
+	newAttachment.imageView = rvTools::createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
 
 	rvTools::transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
 
@@ -301,7 +301,7 @@ void RvSwapChain::CreateFramebuffers()
 		framebufferInfo.height = extent.height;
 		framebufferInfo.layers = 1;
 
-		if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+		if (vkCreateFramebuffer(device->handle, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create framebuffer!");
 		}
 	}
@@ -322,9 +322,9 @@ void RvSwapChain::CreateSyncObjects()
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
-		if (vkCreateSemaphore(*device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-			vkCreateSemaphore(*device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-			vkCreateFence(*device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+		if (vkCreateSemaphore(device->handle, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(device->handle, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+			vkCreateFence(device->handle, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
 
 			throw std::runtime_error("Failed to create synchronization objects for a frame!");
 		}
@@ -334,21 +334,21 @@ void RvSwapChain::CreateSyncObjects()
 void RvSwapChain::DestroySyncObjects()
 {
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(*device, renderFinishedSemaphores[i], nullptr);
-		vkDestroySemaphore(*device, imageAvailableSemaphores[i], nullptr);
-		vkDestroyFence(*device, inFlightFences[i], nullptr);
+		vkDestroySemaphore(device->handle, renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(device->handle, imageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(device->handle, inFlightFences[i], nullptr);
 	}
 }
 
 bool RvSwapChain::AcquireNextFrame(uint32_t& frameIndex)
 {
 	//Wait for in-flight fences
-	vkWaitForFences(*device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(*device, 1, &inFlightFences[currentFrame]);
+	vkWaitForFences(device->handle, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(device->handle, 1, &inFlightFences[currentFrame]);
 
 	//Acquiring an image from the swap chain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Acquiring_an_image_from_the_swap_chain
-	VkResult result = vkAcquireNextImageKHR(*device, handle, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &frameIndex);
+	VkResult result = vkAcquireNextImageKHR(device->handle, handle, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &frameIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		return false;
 	}

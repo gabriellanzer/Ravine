@@ -62,7 +62,7 @@ struct RvVertex {
 
 struct RvMeshData
 {
-	RvVertex*		vertices;
+	RvVertex*	vertices;
 	uint32_t	vertex_count;
 
 	uint32_t*	indices;

@@ -58,7 +58,7 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	window = new RvWindow(WIDTH, HEIGHT, "Ravine Engine", false, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
 }
 
 void Ravine::initVulkan() {
@@ -559,25 +559,17 @@ bool Ravine::loadScene(const std::string& filePath)
 void Ravine::createVertexBuffer()
 {
 	//Assimp test
-	if (loadScene("../data/cube.fbx"))
+	std::string modelName = "cube.fbx";
+	if (loadScene("../data/" + modelName))
 	{
-		std::cout << "cube.fbx loaded!\n";
+		std::cout << modelName << " loaded!\n";
 	}
 	else
 	{
-		std::cout << "file not found at path " << "cube.fbx" << std::endl;
+		std::cout << "file not found at path " << modelName << std::endl;
 	}
 
 	VkDeviceSize bufferSize = sizeof(RvVertex) * meshes[0].vertex_count;
-
-	//for (size_t i = 0; i < meshes[0].vertex_count; i++)
-	//{
-	//	std::cout << "Vertex[" << i << "] = "
-	//		<< "{ " << meshes[0].vertices[i].pos.x << " "
-	//		<< ", " << meshes[0].vertices[i].pos.y << " "
-	//		<< ", " << meshes[0].vertices[i].pos.z << " }"
-	//		<< std::endl;
-	//}
 
 	/*
 	The vertex buffer should use "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT",
@@ -600,17 +592,13 @@ void Ravine::createIndexBuffer()
 
 void Ravine::createUniformBuffers()
 {
-	VkDeviceSize bufferSize = sizeof(RvUniformBufferObject);
-	VkDeviceSize materialSize = sizeof(RvMaterialBufferObject);
-
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	uniformBuffers.resize(swapChain->images.size());
-
 	materialBuffers.resize(swapChain->images.size());
 
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
-		uniformBuffers[i] = device->createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		materialBuffers[i] = device->createDynamicBuffer(materialSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		materialBuffers[i] = device->createDynamicBuffer(sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 	}
 }
 
@@ -828,8 +816,7 @@ void Ravine::setupFPSCam()
 	glfwGetCursorPos(*window, &lastMouseX, &lastMouseY);
 
 	//Initial rotations
-	camHorRot = 0;
-	camVerRot = 0;
+	camera = new RvCamera(glm::vec3(5.f, 0.f, 0.f), 90.f, 0.f);
 
 }
 
@@ -854,16 +841,16 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	lastMouseY = mouseY;
 
 	//Calculate look rotation update
-	camHorRot -= deltaX * 30.0 * Time::deltaTime();
-	camVerRot -= deltaY * 30.0 * Time::deltaTime();
+	camera->horRot -= deltaX * 30.0 * Time::deltaTime();
+	camera->verRot -= deltaY * 30.0 * Time::deltaTime();
 
 	//Limit vertical angle
-	camVerRot = f_max(f_min(89.9, camVerRot), -89.9);
+	camera->verRot = f_max(f_min(89.9, camera->verRot), -89.9);
 
 	//Define rotation quaternion starting form look rotation
 	glm::quat lookRot = glm::vec3(0, 0, 0);
-	lookRot = glm::rotate(lookRot, glm::radians(camHorRot), glm::vec3(0, 1, 0));
-	lookRot = glm::rotate(lookRot, glm::radians(camVerRot), glm::vec3(1, 0, 0));
+	lookRot = glm::rotate(lookRot, glm::radians(camera->horRot), glm::vec3(0, 1, 0));
+	lookRot = glm::rotate(lookRot, glm::radians(camera->verRot), glm::vec3(1, 0, 0));
 
 	//Calculate translation
 	glm::vec4 translation = glm::vec4(0);
@@ -888,7 +875,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(*window, true);
 
-	camPos += lookRot * translation;
+	camera->Translate(lookRot * translation);
 
 #pragma endregion
 
@@ -896,15 +883,12 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	//Make the view matrix
-	glm::mat4 viewMatrix = glm::mat4() * glm::lookAt(glm::vec3(camPos),
-		glm::vec3(camPos) + lookRot * glm::vec3(0, 0, -1),
-		glm::vec3(0, 1, 0));
-	ubo.view = viewMatrix;
+	ubo.view = camera->GetViewMatrix();
 
 	//Projection matrix with FOV of 45 degrees
 	ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->extent.width / (float)swapChain->extent.height, 0.1f, 10.0f);
 
-	ubo.camPos = camPos;
+	ubo.camPos = camera->pos;
 	ubo.objectColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	ubo.lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -926,6 +910,8 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	vkMapMemory(device->handle, materialBuffers[currentImage].memory, 0, sizeof(materialUbo), 0, &materialData);
 	memcpy(materialData, &materialUbo, sizeof(materialUbo));
 	vkUnmapMemory(device->handle, materialBuffers[currentImage].memory);
+
+	std::cout << camera->horRot << "; " << camera->verRot << std::endl;
 }
 
 void Ravine::cleanupSwapChain() {

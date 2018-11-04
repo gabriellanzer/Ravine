@@ -31,6 +31,7 @@
 #include "RvGraphicsPipeline.h"
 #include "RvWindow.h"
 #include "RvTexture.h"
+#include "RvCamera.h"
 
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -48,7 +49,6 @@ using std::vector;
 //Specific usages of ASSIMP library
 using Assimp::Importer;
 
-
 class Ravine
 {
 
@@ -63,6 +63,7 @@ private:
 	//Todo: Move to Window
 	const int WIDTH = 1280;
 	const int HEIGHT = 720;
+	const std::string WINDOW_NAME = "Ravine Engine";
 
 	//Ravine objects
 	RvWindow* window;
@@ -76,10 +77,8 @@ private:
 	double lastMouseX = 0, lastMouseY = 0;
 	double mouseX, mouseY;
 
-	//Camera parameters
-	//Todo: Move to CAMERA
-	float camHorRot = 0, camVerRot = 0;
-	glm::vec4 camPos = glm::vec4(0,0,0,0);
+	//Camera
+	RvCamera* camera;
 	
 	//Todo: Move to MESH
 	RvMeshData* meshes;

@@ -560,10 +560,12 @@ bool Ravine::loadScene(const std::string& filePath)
 		loadBones(i, mesh, meshes[i]);
 	}
 
-	ticksPerSecond = scene->mAnimations[0]->mTicksPerSecond != 0 ?
-		scene->mAnimations[0]->mTicksPerSecond : 25.0f;
-	animationDuration = scene->mAnimations[0]->mDuration;
-	animation = scene->mAnimations[0];
+	if (scene->mNumAnimations > 0) {
+		ticksPerSecond = scene->mAnimations[0]->mTicksPerSecond != 0 ?
+			scene->mAnimations[0]->mTicksPerSecond : 25.0f;
+		animationDuration = scene->mAnimations[0]->mDuration;
+		animation = scene->mAnimations[0];
+	}
 	rootNode = new aiNode(*scene->mRootNode);
 
 	//Return success
@@ -954,7 +956,7 @@ void Ravine::createCommandBuffers() {
 
 		//Clearing values
 		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.0f, 0.08f, 0.42f, 1.0f };
+		clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues[1].depthStencil = { 1.0f, 0 };	//Depth goes from [1,0] - being 1 the furthest possible
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
@@ -1025,7 +1027,9 @@ void Ravine::drawFrame()
 	if (!swapChain->AcquireNextFrame(imageIndex)) {
 		recreateSwapChain();
 	}
-	BoneTransform(Time::elapsedTime()*3, boneTransforms);
+	if (animation != nullptr) {
+		BoneTransform(Time::elapsedTime(), boneTransforms);
+	}
 	updateUniformBuffer(imageIndex);
 
 	if (!swapChain->SubmitNextFrame(commandBuffers.data(), imageIndex)) {
@@ -1100,6 +1104,11 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		translation.y += 2.0 * Time::deltaTime();
+
+	if (glfwGetKey(*window, GLFW_KEY_R) == GLFW_PRESS) {
+		camera->horRot = 90.0f;
+		camera->verRot = 0.0f;
+	}
 
 	if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(*window, true);

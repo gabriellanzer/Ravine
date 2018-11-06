@@ -676,8 +676,11 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 
 	if (boneMapping.find(NodeName) != boneMapping.end()) {
 		uint16_t BoneIndex = boneMapping[NodeName];
+		/*boneInfos[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation *
+			boneInfos[BoneIndex].BoneOffset;*/
 		boneInfos[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation *
 			boneInfos[BoneIndex].BoneOffset;
+		boneInfos[BoneIndex].FinalTransformation.Transpose();
 	}
 
 	for (uint16_t i = 0; i < pNode->mNumChildren; i++) {
@@ -1022,7 +1025,7 @@ void Ravine::drawFrame()
 	if (!swapChain->AcquireNextFrame(imageIndex)) {
 		recreateSwapChain();
 	}
-	BoneTransform(Time::elapsedTime(), boneTransforms);
+	BoneTransform(Time::elapsedTime()*3, boneTransforms);
 	updateUniformBuffer(imageIndex);
 
 	if (!swapChain->SubmitNextFrame(commandBuffers.data(), imageIndex)) {
@@ -1107,12 +1110,13 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Rotating object 90 degrees per second
 	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 	//Make the view matrix
 	ubo.view = camera->GetViewMatrix();
 
 	//Projection matrix with FOV of 45 degrees
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->extent.width / (float)swapChain->extent.height, 0.1f, 10.0f);
+	ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->extent.width / (float)swapChain->extent.height, 0.1f, 200.0f);
 
 	ubo.camPos = camera->pos;
 	ubo.objectColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);

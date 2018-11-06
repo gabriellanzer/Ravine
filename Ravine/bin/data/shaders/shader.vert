@@ -33,10 +33,11 @@ out gl_PerVertex {
 void main() {
 
 	mat4 BoneTransform = mat4(1.0);
-	BoneTransform += bones.boneTransforms[inBoneID[0]] * inBoneWeight[0];
-    BoneTransform += bones.boneTransforms[inBoneID[1]] * inBoneWeight[1];
-    BoneTransform += bones.boneTransforms[inBoneID[2]] * inBoneWeight[2];
-    BoneTransform += bones.boneTransforms[inBoneID[3]] * inBoneWeight[3];
+
+	for(int i = 0; i < 4; i++)
+	{
+		BoneTransform += bones.boneTransforms[inBoneID[i]] * inBoneWeight[i];
+	}
 
 	vec4 PosL = BoneTransform * vec4(inPosition, 1.0);
     gl_Position = ubo.proj * ubo.view * ubo.model * PosL;

@@ -19,7 +19,7 @@ layout(location = 3) in vec3 fragPos;
 
 layout(location = 0) out vec4 outColor;
 
-float ambientStrength = 0.1;
+float ambientStrength = 0.8;
 float specularStrength = 0.5;
 float specularFactor = 64;
 
@@ -48,7 +48,6 @@ void main() {
 
     outColor = vec4(fragColor * texture(texSampler, fragTexCoord).rgb, 1.0);
 	outColor *= vec4(result, 1.0);
-	outColor = vec4(fragNorm.rgb, 1.0);
 
 	//This line refers to the second uniform object
 	//outColor = material.customColor;

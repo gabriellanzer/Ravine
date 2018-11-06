@@ -10,10 +10,16 @@ layout(binding = 0) uniform UniformBufferObject {
 	vec4 camPos;
 } ubo;
 
+layout(binding = 2) uniform BonesBufferObject {
+	mat4 boneTransforms[100];
+} bones;
+
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNorm;
+layout(location = 4) in uvec4 inBoneID;
+layout(location = 5) in vec4 inBoneWeight;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
@@ -25,9 +31,17 @@ out gl_PerVertex {
 };
 
 void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
+
+	mat4 BoneTransform = mat4(1.0);
+	BoneTransform += bones.boneTransforms[inBoneID[0]] * inBoneWeight[0];
+    BoneTransform += bones.boneTransforms[inBoneID[1]] * inBoneWeight[1];
+    BoneTransform += bones.boneTransforms[inBoneID[2]] * inBoneWeight[2];
+    BoneTransform += bones.boneTransforms[inBoneID[3]] * inBoneWeight[3];
+
+	vec4 PosL = BoneTransform * vec4(inPosition, 1.0);
+    gl_Position = ubo.proj * ubo.view * ubo.model * PosL;
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 	fragNorm = mat3(transpose(inverse(ubo.model))) * inNorm;
-	fragPos = vec3(ubo.model * vec4(inPosition, 1.0));
+	fragPos = vec3(ubo.model * PosL);
 }

@@ -8,6 +8,7 @@
 #include <vector>
 #include <array>
 #include <unordered_set>
+#include <map>
 
 //Vulkan Include
 #include <vulkan\vulkan.h>
@@ -79,11 +80,22 @@ private:
 
 	//Camera
 	RvCamera* camera;
-	
+
+	const aiScene* scene;
 	//Todo: Move to MESH
 	RvMeshData* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
+	//ANIMATION STUFF
+	double ticksPerSecond;
+	double animationDuration;
+	aiMatrix4x4 animGlobalInverseTransform;
+	uint16_t numBones;
+	std::map<std::string, uint16_t> boneMapping;
+	std::vector<BoneInfo> boneInfos;
+	aiAnimation* animation;
+	aiNode* rootNode;
+	std::vector<glm::mat4x4> boneTransforms;
 
 #pragma region Attributes
 
@@ -106,9 +118,9 @@ private:
 
 	//TODO: Move vertex and index buffer in MESH class
 	//Verter buffer
-	RvPersistentBuffer vertexBuffer;
+	std::vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
-	RvPersistentBuffer indexBuffer;
+	std::vector<RvPersistentBuffer> indexBuffers;
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM
@@ -160,6 +172,15 @@ private:
 
 	//Load scene file and populates meshes vector
 	bool loadScene(const std::string& filePath);
+	void loadBones(uint16_t MeshIndex, const aiMesh* pMesh, RvMeshData& meshData);
+	void BoneTransform(double TimeInSeconds, vector<glm::mat4x4>& Transforms);
+	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
+	void CalcInterpolatedRotation(aiQuaternion& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedScale(aiVector3D& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedPosition(aiVector3D& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+	uint16_t FindRotation(double AnimationTime, const aiNodeAnim* pNodeAnim);
+	uint16_t FindScale(double AnimationTime, const aiNodeAnim* pNodeAnim);
+	uint16_t FindPosition(double AnimationTime, const aiNodeAnim* pNodeAnim);
 
 	//Create vertex buffer
 	void createVertexBuffer();

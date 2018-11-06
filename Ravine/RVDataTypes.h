@@ -5,12 +5,17 @@
 //GLM Includes
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 //STD Includes
 #include <array>
+#include <vector>
 
 //Vulkan Includes
 #include <vulkan/vulkan.h>
+
+//Assimp Includes
+#include <assimp\matrix4x4.h>
 
 
 struct RvVertex {
@@ -18,6 +23,8 @@ struct RvVertex {
 	glm::vec3 color;
 	glm::vec2 texCoord;
 	glm::vec3 normal;
+	glm::uvec4 boneIDs;
+	glm::vec4 boneWeights;
 
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription = {};
@@ -28,8 +35,8 @@ struct RvVertex {
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions = {};
 
 		//Position
 		attributeDescriptions[0].binding = 0;
@@ -55,8 +62,30 @@ struct RvVertex {
 		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[3].offset = offsetof(RvVertex, normal);
 
+		//BoneID
+		attributeDescriptions[4].binding = 0;
+		attributeDescriptions[4].location = 4;
+		attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_UINT;
+		attributeDescriptions[4].offset = offsetof(RvVertex, boneIDs);
+
+		//BoneWeight
+		attributeDescriptions[5].binding = 0;
+		attributeDescriptions[5].location = 5;
+		attributeDescriptions[5].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attributeDescriptions[5].offset = offsetof(RvVertex, boneWeights);
+
 		return attributeDescriptions;
 	}
+
+	void AddBoneData(uint16_t BoneID, float Weight) {
+		for (uint16_t i = 0; i < 4; i++) {
+			if (boneWeights[i] == 0.0) {
+				boneIDs[i] = BoneID;
+				boneWeights[i] = Weight;
+				return;
+			}
+		}
+	};
 
 };
 
@@ -70,6 +99,12 @@ struct RvMeshData
 
 	uint32_t*	textureIds;
 	uint32_t	textures_count;
+};
+
+struct BoneInfo
+{
+	aiMatrix4x4 BoneOffset;
+	aiMatrix4x4 FinalTransformation;
 };
 
 #endif

@@ -49,7 +49,7 @@ void Ravine::framebufferResizeCallback(GLFWwindow * window, int width, int heigh
 {
 	auto rvWindowTemp = reinterpret_cast<RvWindow*>(glfwGetWindowUserPointer(window));
 	rvWindowTemp->framebufferResized = true;
-	rvWindowTemp->extent = {(uint32_t)width, (uint32_t)height};
+	rvWindowTemp->extent = { (uint32_t)width, (uint32_t)height };
 }
 
 #pragma endregion
@@ -95,9 +95,9 @@ std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
 
 	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-	#ifdef VALIDATION_LAYERS_ENABLED
-		extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-	#endif
+#ifdef VALIDATION_LAYERS_ENABLED
+	extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif
 
 	return extensions;
 }
@@ -153,13 +153,13 @@ void Ravine::createInstance() {
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
 	//Add validation layer info
-	#ifdef VALIDATION_LAYERS_ENABLED
-		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
-		createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
-		std::cout << "!Enabling validation layers!" << std::endl;
-	#else
-		createInfo.enabledLayerCount = 0;
-	#endif
+#ifdef VALIDATION_LAYERS_ENABLED
+	createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
+	createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
+	std::cout << "!Enabling validation layers!" << std::endl;
+#else
+	createInfo.enabledLayerCount = 0;
+#endif
 
 	//Ask for an instance
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
@@ -315,7 +315,7 @@ void Ravine::createDescriptorSets()
 		VkDescriptorBufferInfo materialInfo = {};
 		materialInfo.buffer = materialBuffers[i].buffer;
 		materialInfo.offset = 0;
-		materialInfo.range = sizeof(RvMaterialBufferObject);
+		materialInfo.range = sizeof(RvBoneBufferObject);
 
 		std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
 
@@ -375,7 +375,7 @@ void Ravine::createDescriptorSetLayout()
 	materialLayoutBinding.binding = 2;
 	materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	materialLayoutBinding.descriptorCount = 1;
-	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	//Only relevant for image sampling related descriptors.
 	materialLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
@@ -396,7 +396,7 @@ void Ravine::createDescriptorSetLayout()
 bool Ravine::loadScene(const std::string& filePath)
 {
 	Importer importer;
-	const aiScene* scene = importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
+	importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
 		aiProcess_GenSmoothNormals | \
 		aiProcess_JoinIdenticalVertices | \
 		aiProcess_ImproveCacheLocality | \
@@ -411,6 +411,7 @@ bool Ravine::loadScene(const std::string& filePath)
 		aiProcess_ValidateDataStructure | \
 		aiProcess_OptimizeMeshes | \
 		0);
+	scene = importer.GetOrphanedScene();
 
 	// If the import failed, report it
 	if (!scene)
@@ -421,6 +422,8 @@ bool Ravine::loadScene(const std::string& filePath)
 	//Load mesh
 	meshesCount = scene->mNumMeshes;
 	meshes = new RvMeshData[scene->mNumMeshes];
+	animGlobalInverseTransform = scene->mRootNode->mTransformation;
+	animGlobalInverseTransform.Inverse();
 
 	//Load each mesh
 	for (uint32_t i = 0; i < meshesCount; i++)
@@ -550,16 +553,229 @@ bool Ravine::loadScene(const std::string& filePath)
 				}
 			}
 		}
+
+		//meshes[i].bones.resize(meshes[i].vertex_count);
+		loadBones(i, mesh, meshes[i]);
 	}
+
+	ticksPerSecond = scene->mAnimations[0]->mTicksPerSecond != 0 ?
+		scene->mAnimations[0]->mTicksPerSecond : 25.0f;
+	animationDuration = scene->mAnimations[0]->mDuration;
+	animation = scene->mAnimations[0];
+	rootNode = new aiNode(*scene->mRootNode);
 
 	//Return success
 	return true;
 }
 
+void Ravine::loadBones(uint16_t MeshIndex, const aiMesh* pMesh, RvMeshData& meshData)
+{
+	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
+		uint16_t BoneIndex = 0;
+		std::string BoneName(pMesh->mBones[i]->mName.data);
+
+		if (boneMapping.find(BoneName) == boneMapping.end()) {
+			BoneIndex = numBones;
+			numBones++;
+			BoneInfo bi;
+			boneInfos.push_back(bi);
+		}
+		else {
+			BoneIndex = boneMapping[BoneName];
+		}
+
+		boneMapping[BoneName] = BoneIndex;
+		boneInfos[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
+
+		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {
+			//m_Entries[MeshIndex].BaseVertex
+			uint16_t VertexID = 0 + pMesh->mBones[i]->mWeights[j].mVertexId;
+			float Weight = pMesh->mBones[i]->mWeights[j].mWeight;
+			meshData.vertices[VertexID].AddBoneData(BoneIndex, Weight);
+		}
+	}
+}
+
+static glm::mat4 AiToGLMMat4(aiMatrix4x4& in_mat)
+{
+	glm::mat4 tmp;
+	tmp[0][0] = in_mat.a1;
+	tmp[1][0] = in_mat.b1;
+	tmp[2][0] = in_mat.c1;
+	tmp[3][0] = in_mat.d1;
+
+	tmp[0][1] = in_mat.a2;
+	tmp[1][1] = in_mat.b2;
+	tmp[2][1] = in_mat.c2;
+	tmp[3][1] = in_mat.d2;
+
+	tmp[0][2] = in_mat.a3;
+	tmp[1][2] = in_mat.b3;
+	tmp[2][2] = in_mat.c3;
+	tmp[3][2] = in_mat.d3;
+
+	tmp[0][3] = in_mat.a4;
+	tmp[1][3] = in_mat.b4;
+	tmp[2][3] = in_mat.c4;
+	tmp[3][3] = in_mat.d4;
+	return tmp;
+}
+
+void Ravine::BoneTransform(double TimeInSeconds, vector<glm::mat4x4>& Transforms)
+{
+	float TimeInTicks = TimeInSeconds * ticksPerSecond;
+	float AnimationTime = std::fmod(TimeInTicks, animationDuration);
+	const aiMatrix4x4 identity = aiMatrix4x4::aiMatrix4x4t();
+	ReadNodeHeirarchy(AnimationTime, rootNode, identity);
+
+	Transforms.resize(numBones);
+
+	for (uint16_t i = 0; i < numBones; i++) {
+		Transforms[i] = AiToGLMMat4(boneInfos[i].FinalTransformation);
+	}
+}
+
+void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const aiMatrix4x4& ParentTransform)
+{
+	std::string NodeName(pNode->mName.data);
+	aiString aiNodeName(pNode->mName.data);
+
+	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
+	aiNodeAnim* pNodeAnim = nullptr;
+	for (size_t i = 0; i < animation->mNumChannels; i++)
+	{
+		if (animation->mChannels[i]->mNodeName == aiNodeName) {
+			pNodeAnim = animation->mChannels[i];
+			break;
+		}
+	}
+
+	if (pNodeAnim) {
+		// Interpolate scaling and generate scaling transformation matrix
+		aiVector3D Scaling;
+		CalcInterpolatedScale(Scaling, AnimationTime, pNodeAnim);
+		aiMatrix4x4 ScalingM;
+		aiMatrix4x4::Scaling(aiVector3D(Scaling.x, Scaling.y, Scaling.z), ScalingM);
+
+		// Interpolate rotation and generate rotation transformation matrix
+		aiQuaternion RotationQ;
+		CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
+		aiMatrix4x4 RotationM = aiMatrix4x4(RotationQ.GetMatrix());
+
+		// Interpolate translation and generate translation transformation matrix
+		aiVector3D Translation;
+		CalcInterpolatedPosition(Translation, AnimationTime, pNodeAnim);
+		aiMatrix4x4 TranslationM;
+		aiMatrix4x4::Translation(aiVector3D(Translation.x, Translation.y, Translation.z), TranslationM);
+
+		// Combine the above transformations
+		NodeTransformation = TranslationM * RotationM * ScalingM;
+	}
+
+	aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
+
+	if (boneMapping.find(NodeName) != boneMapping.end()) {
+		uint16_t BoneIndex = boneMapping[NodeName];
+		boneInfos[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation *
+			boneInfos[BoneIndex].BoneOffset;
+	}
+
+	for (uint16_t i = 0; i < pNode->mNumChildren; i++) {
+		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
+	}
+}
+
+void Ravine::CalcInterpolatedRotation(aiQuaternion & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
+{
+	// we need at least two values to interpolate...
+	if (pNodeAnim->mNumRotationKeys == 1) {
+		Out = pNodeAnim->mRotationKeys[0].mValue;
+		return;
+	}
+
+	uint16_t RotationIndex = FindRotation(AnimationTime, pNodeAnim);
+	uint16_t NextRotationIndex = (RotationIndex + 1);
+	assert(NextRotationIndex < pNodeAnim->mNumRotationKeys);
+	float DeltaTime = pNodeAnim->mRotationKeys[NextRotationIndex].mTime - pNodeAnim->mRotationKeys[RotationIndex].mTime;
+	float Factor = (AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime) / DeltaTime;
+	assert(Factor >= 0.0f && Factor <= 1.0f);
+	const aiQuaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
+	const aiQuaternion& EndRotationQ = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
+	aiQuaternion::Interpolate(Out, StartRotationQ, EndRotationQ, Factor);
+	Out = Out.Normalize();
+}
+
+aiVector3D Interpolate(aiVector3D n, aiVector3D m, float t) {
+	return n + ((m - n) * t);
+}
+
+void Ravine::CalcInterpolatedScale(aiVector3D & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
+{
+	if (pNodeAnim->mNumScalingKeys == 1) {
+		Out = pNodeAnim->mScalingKeys[0].mValue;
+		return;
+	}
+
+	uint16_t ScaleIndex = FindScale(AnimationTime, pNodeAnim);
+	uint16_t NextScaleIndex = (ScaleIndex + 1);
+	assert(NextScaleIndex < pNodeAnim->mNumScalingKeys);
+	float DeltaTime = pNodeAnim->mScalingKeys[NextScaleIndex].mTime - pNodeAnim->mScalingKeys[ScaleIndex].mTime;
+	float Factor = (AnimationTime - (float)pNodeAnim->mScalingKeys[ScaleIndex].mTime) / DeltaTime;
+	assert(Factor >= 0.0f && Factor <= 1.0f);
+	const aiVector3D& StartScale = pNodeAnim->mScalingKeys[ScaleIndex].mValue;
+	const aiVector3D& EndScale = pNodeAnim->mScalingKeys[NextScaleIndex].mValue;
+	Out = Interpolate(StartScale, EndScale, Factor);
+}
+
+void Ravine::CalcInterpolatedPosition(aiVector3D & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
+{
+	if (pNodeAnim->mNumPositionKeys == 1) {
+		Out = pNodeAnim->mPositionKeys[0].mValue;
+		return;
+	}
+
+	uint16_t PosIndex = FindPosition(AnimationTime, pNodeAnim);
+	uint16_t NextPosIndex = (PosIndex + 1);
+	assert(NextPosIndex < pNodeAnim->mNumPositionKeys);
+	float DeltaTime = pNodeAnim->mPositionKeys[NextPosIndex].mTime - pNodeAnim->mPositionKeys[PosIndex].mTime;
+	float Factor = (AnimationTime - (float)pNodeAnim->mPositionKeys[PosIndex].mTime) / DeltaTime;
+	assert(Factor >= 0.0f && Factor <= 1.0f);
+	const aiVector3D& StartPos = pNodeAnim->mPositionKeys[PosIndex].mValue;
+	const aiVector3D& EndPos = pNodeAnim->mPositionKeys[NextPosIndex].mValue;
+	Out = Interpolate(StartPos, EndPos, Factor);
+}
+
+uint16_t Ravine::FindRotation(double AnimationTime, const aiNodeAnim * pNodeAnim)
+{
+	for (uint16_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
+		if (AnimationTime < (float)pNodeAnim->mRotationKeys[i + 1].mTime) {
+			return i;
+		}
+	}
+}
+
+uint16_t Ravine::FindScale(double AnimationTime, const aiNodeAnim * pNodeAnim)
+{
+	for (uint16_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
+		if (AnimationTime < (float)pNodeAnim->mScalingKeys[i + 1].mTime) {
+			return i;
+		}
+	}
+}
+
+uint16_t Ravine::FindPosition(double AnimationTime, const aiNodeAnim * pNodeAnim)
+{
+	for (uint16_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
+		if (AnimationTime < (float)pNodeAnim->mPositionKeys[i + 1].mTime) {
+			return i;
+		}
+	}
+}
+
 void Ravine::createVertexBuffer()
 {
 	//Assimp test
-	std::string modelName = "cube.fbx";
+	std::string modelName = "fish.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -569,25 +785,30 @@ void Ravine::createVertexBuffer()
 		std::cout << "file not found at path " << modelName << std::endl;
 	}
 
-	VkDeviceSize bufferSize = sizeof(RvVertex) * meshes[0].vertex_count;
-
 	/*
 	The vertex buffer should use "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT",
 	which is a more optimal memory but it's not accessible by CPU.
 	That's why we use a staging buffer to transfer vertex data to the vertex buffer.
- 	*/
+	*/
+	vertexBuffers.reserve(meshesCount);
+	for (size_t i = 0; i < meshesCount; i++)
+	{
+		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvVertex) * meshes[i].vertex_count, sizeof(RvVertex),
+			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		);
+	}
 
-	vertexBuffer = device->createPersistentBuffer(meshes[0].vertices, bufferSize, sizeof(RvVertex),
-		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	
 }
 
 void Ravine::createIndexBuffer()
 {
-	VkDeviceSize bufferSize = sizeof(uint32_t) * meshes[0].index_count;
-
-	indexBuffer = device->createPersistentBuffer(meshes[0].indices, bufferSize, sizeof(uint32_t),
-		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	indexBuffers.reserve(meshesCount);
+	for (size_t i = 0; i < meshesCount; i++)
+	{
+		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
+			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		);
+	}
 }
 
 void Ravine::createUniformBuffers()
@@ -598,7 +819,7 @@ void Ravine::createUniformBuffers()
 
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		materialBuffers[i] = device->createDynamicBuffer(sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		materialBuffers[i] = device->createDynamicBuffer(sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 	}
 }
 
@@ -741,17 +962,21 @@ void Ravine::createCommandBuffers() {
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
 		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
 
+		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 		//Set Vertex Buffer for drawing
-		VkBuffer vertexBuffers[] = { vertexBuffer.handle };
+		//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
 		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
 		//Binding descriptor sets (uniforms)
-		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 		//Call drawing
-		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(meshes[0].index_count), 1, 0, 0, 0);
-		
+
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(commandBuffers[i], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
+		}
+
 		//Finishing Render Pass
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
 		vkCmdEndRenderPass(commandBuffers[i]);
@@ -797,6 +1022,7 @@ void Ravine::drawFrame()
 	if (!swapChain->AcquireNextFrame(imageIndex)) {
 		recreateSwapChain();
 	}
+	BoneTransform(Time::elapsedTime(), boneTransforms);
 	updateUniformBuffer(imageIndex);
 
 	if (!swapChain->SubmitNextFrame(commandBuffers.data(), imageIndex)) {
@@ -880,7 +1106,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 #pragma endregion
 
 	//Rotating object 90 degrees per second
-	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	//Make the view matrix
 	ubo.view = camera->GetViewMatrix();
@@ -901,15 +1127,19 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(device->handle, uniformBuffers[currentImage].memory);
 
-	//Material
-	RvMaterialBufferObject materialUbo = {};
+#pragma region Bones
+	RvBoneBufferObject bonesUbo = {};
 
-	materialUbo.customColor = glm::vec4(0.23f, 0.37f, 0.89f, 1.0f);
+	for (size_t i = 0; i < boneTransforms.size(); i++)
+	{
+		bonesUbo.transformMatrixes[i] = boneTransforms[i];
+	}
 
-	void* materialData;
-	vkMapMemory(device->handle, materialBuffers[currentImage].memory, 0, sizeof(materialUbo), 0, &materialData);
-	memcpy(materialData, &materialUbo, sizeof(materialUbo));
+	void* bonesData;
+	vkMapMemory(device->handle, materialBuffers[currentImage].memory, 0, sizeof(bonesUbo), 0, &bonesData);
+	memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
 	vkUnmapMemory(device->handle, materialBuffers[currentImage].memory);
+#pragma endregion
 
 	std::cout << camera->horRot << "; " << camera->verRot << std::endl;
 }
@@ -953,11 +1183,14 @@ void Ravine::cleanup()
 	//Destroy descriptor set layout (uniform bind)
 	vkDestroyDescriptorSetLayout(device->handle, descriptorSetLayout, nullptr);
 
-	//Destroy Vertex Buffer Object
-	vkDestroyBuffer(device->handle, vertexBuffer.handle, nullptr);
-
-	//Free device memory from Vertex Buffer
-	vkFreeMemory(device->handle, vertexBuffer.memory, nullptr);
+	//TODO: FIX HERE!
+	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	{
+		//Destroy Vertex Buffer Object
+		vkDestroyBuffer(device->handle, vertexBuffers[meshIndex].handle, nullptr);
+		//Free device memory from Vertex Buffer
+		vkFreeMemory(device->handle, vertexBuffers[meshIndex].memory, nullptr);
+	}
 
 	//Destroy graphics pipeline
 	delete graphicsPipeline;
@@ -966,9 +1199,9 @@ void Ravine::cleanup()
 	device->Clear();
 	delete device;
 
-	#ifdef VALIDATION_LAYERS_ENABLED
-		rvDebug::DestroyDebugReportCallbackEXT(instance, rvDebug::callback, nullptr);
-	#endif
+#ifdef VALIDATION_LAYERS_ENABLED
+	rvDebug::DestroyDebugReportCallbackEXT(instance, rvDebug::callback, nullptr);
+#endif
 
 	//Destroy VK surface and instance
 	delete window;

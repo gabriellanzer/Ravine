@@ -19,4 +19,8 @@ struct RvMaterialBufferObject {
 	glm::vec4 customColor;
 };
 
+struct RvBoneBufferObject {
+	glm::mat4 transformMatrixes[100];
+};
+
 #endif

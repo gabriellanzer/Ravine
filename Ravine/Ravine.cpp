@@ -59,6 +59,8 @@ void Ravine::initWindow() {
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
+
+	stbi_set_flip_vertically_on_load(true);
 }
 
 void Ravine::initVulkan() {
@@ -403,7 +405,7 @@ bool Ravine::loadScene(const std::string& filePath)
 		aiProcess_LimitBoneWeights | \
 		aiProcess_RemoveRedundantMaterials | \
 		aiProcess_Triangulate | \
-		aiProcess_GenUVCoords | \
+		/*aiProcess_GenUVCoords | \*/
 		aiProcess_SortByPType | \
 		aiProcess_FindDegenerates | \
 		aiProcess_FindInvalidData | \
@@ -676,8 +678,6 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 
 	if (boneMapping.find(NodeName) != boneMapping.end()) {
 		uint16_t BoneIndex = boneMapping[NodeName];
-		/*boneInfos[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation *
-			boneInfos[BoneIndex].BoneOffset;*/
 		boneInfos[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation *
 			boneInfos[BoneIndex].BoneOffset;
 		boneInfos[BoneIndex].FinalTransformation.Transpose();
@@ -778,7 +778,7 @@ uint16_t Ravine::FindPosition(double AnimationTime, const aiNodeAnim * pNodeAnim
 void Ravine::createVertexBuffer()
 {
 	//Assimp test
-	std::string modelName = "fish.fbx";
+	std::string modelName = "turtle.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -830,7 +830,7 @@ void Ravine::createTextureImage()
 {
 	//Loading image
 	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load("../data/textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	stbi_uc* pixels = stbi_load("../data/textures/turtle.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 	texture = device->createTexture(pixels, texWidth, texHeight);
 
@@ -954,7 +954,7 @@ void Ravine::createCommandBuffers() {
 
 		//Clearing values
 		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		clearValues[0].color = { 0.0f, 0.08f, 0.42f, 1.0f };
 		clearValues[1].depthStencil = { 1.0f, 0 };	//Depth goes from [1,0] - being 1 the furthest possible
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();

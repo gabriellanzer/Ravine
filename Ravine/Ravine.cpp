@@ -418,7 +418,7 @@ static glm::mat4 AiToGLMMat4(aiMatrix4x4& in_mat)
 	tmp[1][3] = in_mat.b4;
 	tmp[2][3] = in_mat.c4;
 	tmp[3][3] = in_mat.d4;
-
+	tmp = glm::transpose(tmp);
 	return tmp;
 }
 
@@ -662,7 +662,7 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 		glm::vec3 Scaling;
 		CalcInterpolatedScale(Scaling, AnimationTime, pNodeAnim);
 		glm::mat4x4 ScalingM;
-		glm::scale(ScalingM, Scaling);
+		ScalingM = glm::scale(ScalingM, Scaling);
 
 		// Interpolate rotation and generate rotation transformation matrix
 		glm::quat RotationQ;
@@ -673,7 +673,7 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 		glm::vec3 Translation;
 		CalcInterpolatedPosition(Translation, AnimationTime, pNodeAnim);
 		glm::mat4x4 TranslationM;
-		glm::translate(TranslationM, Translation);
+		TranslationM = glm::translate(TranslationM, Translation);
 
 		// Combine the above transformations
 		NodeTransformation = TranslationM * RotationM * ScalingM;

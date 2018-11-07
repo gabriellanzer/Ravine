@@ -20,6 +20,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 //Types dependencies
 #include "RvDataTypes.h"
@@ -89,7 +90,7 @@ private:
 	//ANIMATION STUFF
 	double ticksPerSecond;
 	double animationDuration;
-	aiMatrix4x4 animGlobalInverseTransform;
+	glm::mat4 animGlobalInverseTransform;
 	uint16_t numBones;
 	std::map<std::string, uint16_t> boneMapping;
 	std::vector<BoneInfo> boneInfos;
@@ -174,10 +175,10 @@ private:
 	bool loadScene(const std::string& filePath);
 	void loadBones(uint16_t MeshIndex, const aiMesh* pMesh, RvMeshData& meshData);
 	void BoneTransform(double TimeInSeconds, vector<glm::mat4x4>& Transforms);
-	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
-	void CalcInterpolatedRotation(aiQuaternion& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
-	void CalcInterpolatedScale(aiVector3D& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
-	void CalcInterpolatedPosition(aiVector3D& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const glm::mat4x4& ParentTransform);
+	void CalcInterpolatedRotation(glm::quat& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedScale(glm::vec3& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedPosition(glm::vec3& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint16_t FindRotation(double AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint16_t FindScale(double AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint16_t FindPosition(double AnimationTime, const aiNodeAnim* pNodeAnim);

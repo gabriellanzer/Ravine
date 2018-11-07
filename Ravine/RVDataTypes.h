@@ -6,6 +6,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
 
 //STD Includes
 #include <array>
@@ -127,8 +128,8 @@ struct RvMeshData
 
 struct BoneInfo
 {
-	aiMatrix4x4 BoneOffset;
-	aiMatrix4x4 FinalTransformation;
+	glm::mat4x4 BoneOffset;
+	glm::mat4x4 FinalTransformation;
 };
 
 #endif

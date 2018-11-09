@@ -426,20 +426,20 @@ bool Ravine::loadScene(const std::string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
-		aiProcess_GenSmoothNormals | \
-		aiProcess_JoinIdenticalVertices | \
-		aiProcess_ImproveCacheLocality | \
-		aiProcess_LimitBoneWeights | \
-		aiProcess_RemoveRedundantMaterials | \
-		aiProcess_Triangulate | \
-		aiProcess_GenUVCoords | \
-		aiProcess_SortByPType | \
-		aiProcess_FindDegenerates | \
-		aiProcess_FindInvalidData | \
-		aiProcess_FindInstances | \
-		aiProcess_ValidateDataStructure | \
-		aiProcess_OptimizeMeshes | \
-		0);
+					  aiProcess_GenSmoothNormals | \
+					  aiProcess_JoinIdenticalVertices | \
+					  aiProcess_ImproveCacheLocality | \
+					  aiProcess_LimitBoneWeights | \
+					  aiProcess_RemoveRedundantMaterials | \
+					  aiProcess_Triangulate | \
+					  aiProcess_GenUVCoords | \
+					  aiProcess_SortByPType | \
+					  aiProcess_FindDegenerates | \
+					  aiProcess_FindInvalidData | \
+					  aiProcess_FindInstances | \
+					  aiProcess_ValidateDataStructure | \
+					  aiProcess_OptimizeMeshes | \
+					  0);
 	scene = importer.GetOrphanedScene();
 
 	// If the import failed, report it
@@ -932,28 +932,38 @@ void Ravine::createMultiSamplingResources()
 
 void Ravine::createCommandBuffers() {
 
-	commandBuffers.resize(swapChain->framebuffers.size());
-
 	//Allocate command buffers
+	primaryCmdBuffers.resize(swapChain->framebuffers.size());
+	secondayCmdBuffers.resize(swapChain->framebuffers.size());
+
+	//Primary Command Buffers
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = device->commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+	allocInfo.commandBufferCount = (uint32_t)primaryCmdBuffers.size();
+	if (vkAllocateCommandBuffers(device->handle, &allocInfo, primaryCmdBuffers.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate command buffers!");
+	}
 
-	if (vkAllocateCommandBuffers(device->handle, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+	//Secondary Command Buffers
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+	if (vkAllocateCommandBuffers(device->handle, &allocInfo, secondayCmdBuffers.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate command buffers!");
 	}
 
 	//Begining Command Buffer Recording
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
-	for (size_t i = 0; i < commandBuffers.size(); i++) {
+	for (size_t i = 0; i < secondayCmdBuffers.size(); i++) {
+
+	#pragma region Secondary Command Buffers
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		beginInfo.pInheritanceInfo = nullptr; // Optional
 
-		if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS) {
+		//Begin recording Command Buffer
+		if (vkBeginCommandBuffer(secondayCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to begin recording command buffer!");
 		}
 
@@ -973,33 +983,51 @@ void Ravine::createCommandBuffers() {
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(secondayCmdBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		//Basic Drawing Commands
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
+		vkCmdBindPipeline(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
 
-		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+		vkCmdBindDescriptorSets(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 		//Set Vertex Buffer for drawing
 		//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
 		VkDeviceSize offsets[] = { 0 };
 
 		//Binding descriptor sets (uniforms)
 		//Call drawing
-
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
-			vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(commandBuffers[i], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
+			vkCmdBindVertexBuffers(secondayCmdBuffers[i], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondayCmdBuffers[i], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondayCmdBuffers[i], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
 		}
 
 		//Finishing Render Pass
 		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
-		vkCmdEndRenderPass(commandBuffers[i]);
-		if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
+		vkCmdEndRenderPass(secondayCmdBuffers[i]);
+
+		//Stop recording Command Buffer
+		if (vkEndCommandBuffer(secondayCmdBuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to record command buffer!");
 		}
+	#pragma endregion
+
+	#pragma region Primary Command Buffers
+
+		//Begin recording command buffer
+		if (vkBeginCommandBuffer(primaryCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to begin recording command buffer!");
+		}
+
+		//Execute Secondary Command Buffer
+		vkCmdExecuteCommands(primaryCmdBuffers[i], 1, &secondayCmdBuffers[i]);
+
+		//Stop recording Command Buffer
+		if (vkEndCommandBuffer(primaryCmdBuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to record command buffer!");
+		}
+	#pragma endregion
 
 	}
 
@@ -1044,7 +1072,7 @@ void Ravine::drawFrame()
 	}
 	updateUniformBuffer(imageIndex);
 
-	if (!swapChain->SubmitNextFrame(commandBuffers.data(), imageIndex)) {
+	if (!swapChain->SubmitNextFrame(primaryCmdBuffers.data(), imageIndex)) {
 		recreateSwapChain();
 	}
 }
@@ -1171,7 +1199,8 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 void Ravine::cleanupSwapChain() {
 
-	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(primaryCmdBuffers.size()), primaryCmdBuffers.data());
+	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(secondayCmdBuffers.size()), secondayCmdBuffers.data());
 
 	//Destroy Graphics Pipeline and all it's components
 	vkDestroyPipeline(device->handle, *graphicsPipeline, nullptr);

@@ -112,7 +112,8 @@ private:
 
 	//Commands Buffers and it's Pool
 	//TODO: Move to COMMAND BUFFER
-	std::vector<VkCommandBuffer> commandBuffers;
+	std::vector<VkCommandBuffer> primaryCmdBuffers;
+	std::vector<VkCommandBuffer> secondayCmdBuffers;
 
 	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
 	//Reference: https://developer.nvidia.com/vulkan-memory-management

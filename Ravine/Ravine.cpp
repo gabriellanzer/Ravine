@@ -70,6 +70,18 @@ void Ravine::initVulkan() {
 	window->CreateSurface(instance);
 	pickPhysicalDevice();
 
+	//Load Scene
+	std::string modelName = "turtle.fbx";
+	if (loadScene("../data/" + modelName))
+	{
+		std::cout << modelName << " loaded!\n";
+	}
+	else
+	{
+		std::cout << "file not found at path " << modelName << std::endl;
+		return;
+	}
+
 	//Rendering pipeline
 	swapChain = new RvSwapChain(*device, window->surface, window->extent.width, window->extent.height, NULL);
 	swapChain->CreateImageViews();
@@ -79,7 +91,7 @@ void Ravine::initVulkan() {
 	createMultiSamplingResources();
 	createDepthResources();
 	swapChain->CreateFramebuffers();
-	createTextureImage();
+	loadTextureImages();
 	createTextureSampler();
 	createVertexBuffer();
 	createIndexBuffer();
@@ -272,7 +284,7 @@ void Ravine::createDescriptorPool()
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size()*RV_IMAGES_COUNT);
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
@@ -309,10 +321,13 @@ void Ravine::createDescriptorSets()
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(RvUniformBufferObject);
 
-		VkDescriptorImageInfo imageInfo = {};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = texture.view;
-		imageInfo.sampler = textureSampler;
+		VkDescriptorImageInfo imageInfo[RV_IMAGES_COUNT];
+		for (uint32_t j = 0; j < RV_IMAGES_COUNT; j++)
+		{
+			imageInfo[j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo[j].imageView = textures[j%texturesSize].view; //TODO Fix this later!
+			imageInfo[j].sampler = textureSampler;
+		}
 
 		VkDescriptorBufferInfo materialInfo = {};
 		materialInfo.buffer = materialBuffers[i].buffer;
@@ -321,31 +336,31 @@ void Ravine::createDescriptorSets()
 
 		std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
 
+		//Buffer Info
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = descriptorSets[i];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
-		//Buffer Info
 		descriptorWrites[0].pBufferInfo = &bufferInfo;
 
+		//Image Info
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[1].dstSet = descriptorSets[i];
 		descriptorWrites[1].dstBinding = 1;
 		descriptorWrites[1].dstArrayElement = 0;
 		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		//Image Info
-		descriptorWrites[1].pImageInfo = &imageInfo;
+		descriptorWrites[1].descriptorCount = RV_IMAGES_COUNT;
+		descriptorWrites[1].pImageInfo = imageInfo;
 
+		//Buffer Info
 		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[2].dstSet = descriptorSets[i];
 		descriptorWrites[2].dstBinding = 2;
 		descriptorWrites[2].dstArrayElement = 0;
 		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[2].descriptorCount = 1;
-		//Buffer Info
 		descriptorWrites[2].pBufferInfo = &materialInfo;
 
 		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
@@ -367,7 +382,7 @@ void Ravine::createDescriptorSetLayout()
 	//Texture Sampler layout
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
 	samplerLayoutBinding.binding = 1;
-	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorCount = RV_IMAGES_COUNT;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -555,7 +570,7 @@ bool Ravine::loadScene(const std::string& filePath)
 		{
 			if (mat->GetTexture(aiTextureType_DIFFUSE, tId, &aiTexPath) == AI_SUCCESS)
 			{
-				int textureId = -1;
+				int textureId = 0;
 				string texPath = aiTexPath.C_Str();
 
 				//Check if the texture is listed and set it's list id
@@ -583,8 +598,7 @@ bool Ravine::loadScene(const std::string& filePath)
 			}
 		}
 
-		//meshes[i].bones.resize(meshes[i].vertex_count);
-		loadBones(i, mesh, meshes[i]);
+		loadBones(mesh, meshes[i]);
 	}
 
 	if (scene->mNumAnimations > 0) {
@@ -599,7 +613,7 @@ bool Ravine::loadScene(const std::string& filePath)
 	return true;
 }
 
-void Ravine::loadBones(uint16_t MeshIndex, const aiMesh* pMesh, RvMeshData& meshData)
+void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
 {
 	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
 		uint16_t BoneIndex = 0;
@@ -791,17 +805,6 @@ uint16_t Ravine::FindPosition(double AnimationTime, const aiNodeAnim * pNodeAnim
 
 void Ravine::createVertexBuffer()
 {
-	//Assimp test
-	std::string modelName = "turtle.fbx";
-	if (loadScene("../data/" + modelName))
-	{
-		std::cout << modelName << " loaded!\n";
-	}
-	else
-	{
-		std::cout << "file not found at path " << modelName << std::endl;
-	}
-
 	/*
 	The vertex buffer should use "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT",
 	which is a more optimal memory but it's not accessible by CPU.
@@ -840,15 +843,35 @@ void Ravine::createUniformBuffers()
 	}
 }
 
-void Ravine::createTextureImage()
+void Ravine::loadTextureImages()
 {
-	//Loading image
-	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load("../data/textures/turtle.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	//Allocate RvTexture(s)
+	texturesSize = 1;
+	texturesSize += texturesToLoad.size(); //Normal plus undefined texture
+	textures = new RvTexture[texturesSize];
 
-	texture = device->createTexture(pixels, texWidth, texHeight);
+	//Generate Pink 2x2 image for missing texture
+	char* pinkTexture = new char[16]; //2x2 = 4 pixels <= 4 * RGBA = 4 * 4 char = 32 char
+	for (uint32_t i = 0; i < 4; i++)
+	{
+		pinkTexture[i * 4 + 0] = 255;	//Red
+		pinkTexture[i * 4 + 1] = 0;		//Green
+		pinkTexture[i * 4 + 2] = 144;	//Blue
+		pinkTexture[i * 4 + 3] = 255;	//Alpha
+	}
+	textures[0] = device->createTexture(pinkTexture, 2, 2);
 
-	stbi_image_free(pixels);
+	for (uint32_t i = 1; i < texturesSize; i++)
+	{
+		//Loading image
+		int texWidth, texHeight, texChannels;
+		std::cout << texturesToLoad[i] << std::endl;
+		stbi_uc* pixels = stbi_load(("../data/"+texturesToLoad[i]).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+		textures[i] = device->createTexture(pixels, texWidth, texHeight);
+
+		stbi_image_free(pixels);
+	}
 }
 
 void Ravine::createTextureSampler()
@@ -1218,7 +1241,12 @@ void Ravine::cleanup()
 
 	//Cleaning up texture related objects
 	vkDestroySampler(device->handle, textureSampler, nullptr);
-	texture.Free();
+	for (uint32_t i = 0; i < texturesSize; i++)
+	{
+		textures[i].Free();
+	}
+	delete[] textures;
+	texturesSize = 0;
 
 	//Destroy descriptor pool
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);

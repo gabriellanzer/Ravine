@@ -146,6 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="crc32.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
     <ClCompile Include="RvCamera.cpp" />

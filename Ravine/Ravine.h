@@ -133,7 +133,9 @@ private:
 
 	//Texture related objects
 	uint32_t mipLevels;
-	RvTexture texture;
+	RvTexture *textures;
+#define RV_IMAGES_COUNT 32
+	uint32_t texturesSize;
 	VkSampler textureSampler;
 
 #pragma endregion
@@ -174,7 +176,7 @@ private:
 
 	//Load scene file and populates meshes vector
 	bool loadScene(const std::string& filePath);
-	void loadBones(uint16_t MeshIndex, const aiMesh* pMesh, RvMeshData& meshData);
+	void loadBones(const aiMesh* pMesh, RvMeshData& meshData);
 	void BoneTransform(double TimeInSeconds, vector<glm::mat4x4>& Transforms);
 	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const glm::mat4x4& ParentTransform);
 	void CalcInterpolatedRotation(glm::quat& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
@@ -194,7 +196,7 @@ private:
 	void createUniformBuffers();
 
 	//Load image and upload into Vulkan Image Object
-	void createTextureImage();
+	void loadTextureImages();
 
 	//Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();

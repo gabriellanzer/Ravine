@@ -90,6 +90,9 @@
     <ClCompile Include="RvCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="crc32.cpp">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">

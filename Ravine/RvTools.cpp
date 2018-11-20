@@ -14,6 +14,8 @@ namespace rvTools {
 	{
 		//Create ravine texture instance
 		RvTexture texture;
+		texture.extent.width = width;
+		texture.extent.height = height;
 
 		//TODO: Change to a proper Log operation and return null
 		if (!pixels) {

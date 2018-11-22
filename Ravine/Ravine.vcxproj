@@ -94,6 +94,9 @@
       <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -108,6 +111,9 @@
       <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -126,6 +132,9 @@
       <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -144,8 +153,12 @@
       <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="C:\Users\1570 LITE\Desktop\gradient.c" />
     <ClCompile Include="crc32.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />

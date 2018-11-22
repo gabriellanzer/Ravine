@@ -46,7 +46,7 @@ void main() {
 
     vec3 result = (ambient + diffuse + specular) * ubo.objectColor.rgb;
 
-    outColor = vec4(fragColor * texture(texSampler[1], fragTexCoord).rgb, 1.0);
+    outColor = vec4(fragColor * texture(texSampler[0], fragTexCoord).rgb, 1.0);
 	outColor *= vec4(result, 1.0);
 
 	//This line refers to the second uniform object

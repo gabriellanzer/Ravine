@@ -1,7 +1,7 @@
 for /r %%a in (*.vert) do (
-  .\..\compilers\glslangValidator.exe -V %%~nxa -o %%~nxa.spv
+  %~dp0..\compilers\glslangValidator.exe -V %~dp0%%~nxa -o %~dp0%%~nxa.spv
 )
 for /r %%a in (*.frag) do (
-  .\..\compilers\glslangValidator.exe -V %%~nxa -o %%~nxa.spv
+  %~dp0..\compilers\glslangValidator.exe -V %~dp0%%~nxa -o %~dp0%%~nxa.spv
 )
 pause

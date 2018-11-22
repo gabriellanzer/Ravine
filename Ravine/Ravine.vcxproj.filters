@@ -72,6 +72,9 @@
     <ClCompile Include="crc32.cpp">
       <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\1570 LITE\Desktop\gradient.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">

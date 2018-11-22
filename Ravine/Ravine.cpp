@@ -71,7 +71,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	std::string modelName = "fly.fbx";
+	std::string modelName = "dragon.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -976,7 +976,7 @@ void Ravine::loadTextureImages()
 {
 	//Allocate RvTexture(s)
 	texturesSize = 1;
-	texturesSize += texturesToLoad.size(); //Normal plus undefined texture
+	//texturesSize += texturesToLoad.size(); //Normal plus undefined texture
 	textures = new RvTexture[texturesSize];
 
 	//Generate Pink 2x2 image for missing texture

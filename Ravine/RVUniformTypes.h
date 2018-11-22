@@ -20,7 +20,7 @@ struct RvMaterialBufferObject {
 };
 
 struct RvBoneBufferObject {
-	glm::mat4 transformMatrixes[100];
+	glm::mat4 transformMatrixes[128];
 };
 
 #endif

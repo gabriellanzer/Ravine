@@ -90,13 +90,13 @@ private:
 	//ANIMATION STUFF
 	double ticksPerSecond;
 	double animationDuration;
-	glm::mat4 animGlobalInverseTransform;
+	aiMatrix4x4 animGlobalInverseTransform;
 	uint16_t numBones;
 	std::map<std::string, uint16_t> boneMapping;
-	std::vector<BoneInfo> boneInfos;
+	std::vector<BoneInfo> boneInfo;
 	aiAnimation* animation;
 	aiNode* rootNode;
-	std::vector<glm::mat4x4> boneTransforms;
+	std::vector<aiMatrix4x4> boneTransforms;
 
 #pragma region Attributes
 
@@ -177,8 +177,8 @@ private:
 	//Load scene file and populates meshes vector
 	bool loadScene(const std::string& filePath);
 	void loadBones(const aiMesh* pMesh, RvMeshData& meshData);
-	void BoneTransform(double TimeInSeconds, vector<glm::mat4x4>& Transforms);
-	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const glm::mat4x4& ParentTransform);
+	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
+	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
 	void CalcInterpolatedRotation(glm::quat& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
 	void CalcInterpolatedScale(glm::vec3& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
 	void CalcInterpolatedPosition(glm::vec3& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);

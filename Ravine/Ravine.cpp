@@ -71,7 +71,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	std::string modelName = "turtle.fbx";
+	std::string modelName = "fly.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -466,8 +466,8 @@ bool Ravine::loadScene(const std::string& filePath)
 	//Load mesh
 	meshesCount = scene->mNumMeshes;
 	meshes = new RvMeshData[scene->mNumMeshes];
-	animGlobalInverseTransform = AiToGLMMat4(scene->mRootNode->mTransformation);
-	animGlobalInverseTransform = glm::inverse(animGlobalInverseTransform);
+	animGlobalInverseTransform = scene->mRootNode->mTransformation;
+	animGlobalInverseTransform.Inverse();
 
 	//Load each mesh
 	for (uint32_t i = 0; i < meshesCount; i++)
@@ -623,14 +623,14 @@ void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
 			BoneIndex = numBones;
 			numBones++;
 			BoneInfo bi;
-			boneInfos.push_back(bi);
+			boneInfo.push_back(bi);
 		}
 		else {
 			BoneIndex = boneMapping[BoneName];
 		}
 
 		boneMapping[BoneName] = BoneIndex;
-		boneInfos[BoneIndex].BoneOffset = AiToGLMMat4(pMesh->mBones[i]->mOffsetMatrix);
+		boneInfo[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
 
 		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {
 			//m_Entries[MeshIndex].BaseVertex
@@ -641,69 +641,177 @@ void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
 	}
 }
 
-void Ravine::BoneTransform(double TimeInSeconds, vector<glm::mat4x4>& Transforms)
+void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms)
 {
 	float TimeInTicks = TimeInSeconds * ticksPerSecond;
 	float AnimationTime = std::fmod(TimeInTicks, animationDuration);
-	const glm::mat4x4 identity;
+	const aiMatrix4x4 identity;
 	ReadNodeHeirarchy(AnimationTime, rootNode, identity);
 
 	Transforms.resize(numBones);
 
 	for (uint16_t i = 0; i < numBones; i++) {
-		Transforms[i] = boneInfos[i].FinalTransformation;
+		Transforms[i] = boneInfo[i].FinalTransformation;
 	}
 }
 
-void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const glm::mat4x4& ParentTransform)
-{
-	std::string NodeName(pNode->mName.data);
-	aiString aiNodeName(pNode->mName.data);
 
-	aiMatrix4x4 NodeTransAiMat = pNode->mTransformation;
-	glm::mat4x4 NodeTransformation = AiToGLMMat4(NodeTransAiMat);
-	aiNodeAnim* pNodeAnim = nullptr;
-	for (size_t i = 0; i < animation->mNumChannels; i++)
+// Returns a 4x4 matrix with interpolated translation between current and next frame
+aiMatrix4x4 interpolateTranslation(float time, const aiNodeAnim* pNodeAnim)
+{
+	aiVector3D translation;
+
+	if (pNodeAnim->mNumPositionKeys == 1)
 	{
-		if (animation->mChannels[i]->mNodeName == aiNodeName) {
-			pNodeAnim = animation->mChannels[i];
-			break;
+		translation = pNodeAnim->mPositionKeys[0].mValue;
+	}
+	else
+	{
+		uint32_t frameIndex = 0;
+		for (uint32_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++)
+		{
+			if (time < (float)pNodeAnim->mPositionKeys[i + 1].mTime)
+			{
+				frameIndex = i;
+				break;
+			}
+		}
+
+		aiVectorKey currentFrame = pNodeAnim->mPositionKeys[frameIndex];
+		aiVectorKey nextFrame = pNodeAnim->mPositionKeys[(frameIndex + 1) % pNodeAnim->mNumPositionKeys];
+
+		float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+
+		const aiVector3D& start = currentFrame.mValue;
+		const aiVector3D& end = nextFrame.mValue;
+
+		translation = (start + delta * (end - start));
+	}
+
+	aiMatrix4x4 mat;
+	aiMatrix4x4::Translation(translation, mat);
+	return mat;
+}
+
+// Returns a 4x4 matrix with interpolated rotation between current and next frame
+aiMatrix4x4 interpolateRotation(float time, const aiNodeAnim* pNodeAnim)
+{
+	aiQuaternion rotation;
+
+	if (pNodeAnim->mNumRotationKeys == 1)
+	{
+		rotation = pNodeAnim->mRotationKeys[0].mValue;
+	}
+	else
+	{
+		uint32_t frameIndex = 0;
+		for (uint32_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++)
+		{
+			if (time < (float)pNodeAnim->mRotationKeys[i + 1].mTime)
+			{
+				frameIndex = i;
+				break;
+			}
+		}
+
+		aiQuatKey currentFrame = pNodeAnim->mRotationKeys[frameIndex];
+		aiQuatKey nextFrame = pNodeAnim->mRotationKeys[(frameIndex + 1) % pNodeAnim->mNumRotationKeys];
+
+		float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+
+		const aiQuaternion& start = currentFrame.mValue;
+		const aiQuaternion& end = nextFrame.mValue;
+
+		aiQuaternion::Interpolate(rotation, start, end, delta);
+		rotation.Normalize();
+	}
+
+	aiMatrix4x4 mat(rotation.GetMatrix());
+	return mat;
+}
+
+
+// Returns a 4x4 matrix with interpolated scaling between current and next frame
+aiMatrix4x4 interpolateScale(float time, const aiNodeAnim* pNodeAnim)
+{
+	aiVector3D scale;
+
+	if (pNodeAnim->mNumScalingKeys == 1)
+	{
+		scale = pNodeAnim->mScalingKeys[0].mValue;
+	}
+	else
+	{
+		uint32_t frameIndex = 0;
+		for (uint32_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++)
+		{
+			if (time < (float)pNodeAnim->mScalingKeys[i + 1].mTime)
+			{
+				frameIndex = i;
+				break;
+			}
+		}
+
+		aiVectorKey currentFrame = pNodeAnim->mScalingKeys[frameIndex];
+		aiVectorKey nextFrame = pNodeAnim->mScalingKeys[(frameIndex + 1) % pNodeAnim->mNumScalingKeys];
+
+		float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+
+		const aiVector3D& start = currentFrame.mValue;
+		const aiVector3D& end = nextFrame.mValue;
+
+		scale = (start + delta * (end - start));
+	}
+
+	aiMatrix4x4 mat;
+	aiMatrix4x4::Scaling(scale, mat);
+	return mat;
+}
+
+// Find animation for a given node
+const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName)
+{
+	for (uint32_t i = 0; i < animation->mNumChannels; i++)
+	{
+		const aiNodeAnim* nodeAnim = animation->mChannels[i];
+		if (std::string(nodeAnim->mNodeName.data) == nodeName)
+		{
+			return nodeAnim;
 		}
 	}
+	return nullptr;
+}
 
-	if (pNodeAnim) {
-		// Interpolate scaling and generate scaling transformation matrix
-		glm::vec3 Scaling;
-		CalcInterpolatedScale(Scaling, AnimationTime, pNodeAnim);
-		glm::mat4x4 ScalingM;
-		ScalingM = glm::scale(ScalingM, Scaling);
+void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const aiMatrix4x4& ParentTransform)
+{
+std::string NodeName(pNode->mName.data);
 
-		// Interpolate rotation and generate rotation transformation matrix
-		glm::quat RotationQ;
-		CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
-		glm::mat4x4 RotationM = glm::toMat4(RotationQ);
+		aiMatrix4x4 NodeTransformation(pNode->mTransformation);
 
-		// Interpolate translation and generate translation transformation matrix
-		glm::vec3 Translation;
-		CalcInterpolatedPosition(Translation, AnimationTime, pNodeAnim);
-		glm::mat4x4 TranslationM;
-		TranslationM = glm::translate(TranslationM, Translation);
+		const aiNodeAnim* pNodeAnim = findNodeAnim(animation, NodeName);
 
-		// Combine the above transformations
-		NodeTransformation = TranslationM * RotationM * ScalingM;
-	}
+		if (pNodeAnim)
+		{
+			// Get interpolated matrices between current and next frame
+			aiMatrix4x4 matScale = interpolateScale(AnimationTime, pNodeAnim);
+			aiMatrix4x4 matRotation = interpolateRotation(AnimationTime, pNodeAnim);
+			aiMatrix4x4 matTranslation = interpolateTranslation(AnimationTime, pNodeAnim);
 
-	glm::mat4x4 GlobalTransformation = ParentTransform * NodeTransformation;
+			NodeTransformation = matTranslation * matRotation * matScale;
+		}
 
-	if (boneMapping.find(NodeName) != boneMapping.end()) {
-		uint16_t BoneIndex = boneMapping[NodeName];
-		boneInfos[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation *
-			boneInfos[BoneIndex].BoneOffset;
-	}
+		aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
 
-	for (uint16_t i = 0; i < pNode->mNumChildren; i++) {
-		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
-	}
+		if (boneMapping.find(NodeName) != boneMapping.end())
+		{
+			uint32_t BoneIndex = boneMapping[NodeName];
+			boneInfo[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation * boneInfo[BoneIndex].BoneOffset;
+		}
+
+		for (uint32_t i = 0; i < pNode->mNumChildren; i++)
+		{
+			ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
+		}
 }
 
 void Ravine::CalcInterpolatedRotation(glm::quat & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
@@ -721,7 +829,14 @@ void Ravine::CalcInterpolatedRotation(glm::quat & Out, double AnimationTime, con
 	assert(NextRotationIndex < pNodeAnim->mNumRotationKeys);
 	float DeltaTime = pNodeAnim->mRotationKeys[NextRotationIndex].mTime - pNodeAnim->mRotationKeys[RotationIndex].mTime;
 	float Factor = (AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime) / DeltaTime;
-	assert(Factor >= 0.0f && Factor <= 1.0f);
+	assert(Factor <= 1.0f);
+	if (Factor < 0) {
+		aiQuaternion assimp_val = pNodeAnim->mRotationKeys[0].mValue;
+		glm::quat val(assimp_val.w, assimp_val.x, assimp_val.y, assimp_val.z);
+		Out = val;
+		return;
+	}
+
 	const aiQuaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
 	const aiQuaternion& EndRotationQ = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
 	glm::quat r1(StartRotationQ.w, StartRotationQ.x, StartRotationQ.y, StartRotationQ.z);
@@ -744,7 +859,14 @@ void Ravine::CalcInterpolatedScale(glm::vec3 & Out, double AnimationTime, const 
 	assert(NextScaleIndex < pNodeAnim->mNumScalingKeys);
 	float DeltaTime = pNodeAnim->mScalingKeys[NextScaleIndex].mTime - pNodeAnim->mScalingKeys[ScaleIndex].mTime;
 	float Factor = (AnimationTime - (float)pNodeAnim->mScalingKeys[ScaleIndex].mTime) / DeltaTime;
-	assert(Factor >= 0.0f && Factor <= 1.0f);
+	assert(Factor <= 1.0f);
+	if (Factor < 0) {
+		aiVector3D assimp_val = pNodeAnim->mScalingKeys[0].mValue;
+		glm::vec3 val(assimp_val.x, assimp_val.y, assimp_val.z);
+		Out = val;
+		return;
+	}
+
 	const aiVector3D& StartScale = pNodeAnim->mScalingKeys[ScaleIndex].mValue;
 	const aiVector3D& EndScale = pNodeAnim->mScalingKeys[NextScaleIndex].mValue;
 	glm::vec3 p1(StartScale.x, StartScale.y, StartScale.z);
@@ -767,7 +889,14 @@ void Ravine::CalcInterpolatedPosition(glm::vec3 & Out, double AnimationTime, con
 	assert(NextPosIndex < pNodeAnim->mNumPositionKeys);
 	float DeltaTime = pNodeAnim->mPositionKeys[NextPosIndex].mTime - pNodeAnim->mPositionKeys[PosIndex].mTime;
 	float Factor = (AnimationTime - (float)pNodeAnim->mPositionKeys[PosIndex].mTime) / DeltaTime;
-	assert(Factor >= 0.0f && Factor <= 1.0f);
+	assert(Factor <= 1.0f);
+	if (Factor < 0) {
+		aiVector3D assimp_val = pNodeAnim->mPositionKeys[0].mValue;
+		glm::vec3 val(assimp_val.x, assimp_val.y, assimp_val.z);
+		Out = val;
+		return;
+	}
+
 	const aiVector3D& StartPos = pNodeAnim->mPositionKeys[PosIndex].mValue;
 	const aiVector3D& EndPos = pNodeAnim->mPositionKeys[NextPosIndex].mValue;
 	glm::vec3 p1(StartPos.x, StartPos.y, StartPos.z);
@@ -865,8 +994,8 @@ void Ravine::loadTextureImages()
 	{
 		//Loading image
 		int texWidth, texHeight, texChannels;
-		std::cout << texturesToLoad[i] << std::endl;
-		stbi_uc* pixels = stbi_load(("../data/"+texturesToLoad[i]).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		std::cout << texturesToLoad[i - 1] << std::endl;
+		stbi_uc* pixels = stbi_load(("../data/" + texturesToLoad[i - 1]).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 		textures[i] = device->createTexture(pixels, texWidth, texHeight);
 
@@ -1181,8 +1310,8 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 #pragma endregion
 
 	//Rotating object 90 degrees per second
-	ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
+	//ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
 
 	//Make the view matrix
 	ubo.view = camera->GetViewMatrix();
@@ -1208,7 +1337,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	for (size_t i = 0; i < boneTransforms.size(); i++)
 	{
-		bonesUbo.transformMatrixes[i] = boneTransforms[i];
+		bonesUbo.transformMatrixes[i] = glm::transpose(glm::make_mat4(&boneTransforms[i].a1));
 	}
 
 	void* bonesData;
@@ -1217,7 +1346,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	vkUnmapMemory(device->handle, materialBuffers[currentImage].memory);
 #pragma endregion
 
-	std::cout << camera->horRot << "; " << camera->verRot << std::endl;
+	//std::cout << camera->horRot << "; " << camera->verRot << std::endl;
 }
 
 void Ravine::cleanupSwapChain() {

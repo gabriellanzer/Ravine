@@ -25,9 +25,7 @@ struct RvVertex {
 	glm::vec2 texCoord;
 	glm::vec3 normal;
 	glm::uvec4 boneIDs;
-	glm::uvec4 boneIDs2;
 	glm::vec4 boneWeights;
-	glm::vec4 boneWeights2;
 
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription = {};
@@ -38,8 +36,8 @@ struct RvVertex {
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 8> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 8> attributeDescriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions = {};
 
 		//Position
 		attributeDescriptions[0].binding = 0;
@@ -71,23 +69,11 @@ struct RvVertex {
 		attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_UINT;
 		attributeDescriptions[4].offset = offsetof(RvVertex, boneIDs);
 
-		//BoneID2
+		//BoneWeight
 		attributeDescriptions[5].binding = 0;
 		attributeDescriptions[5].location = 5;
-		attributeDescriptions[5].format = VK_FORMAT_R32G32B32A32_UINT;
-		attributeDescriptions[5].offset = offsetof(RvVertex, boneIDs2);
-
-		//BoneWeight
-		attributeDescriptions[6].binding = 0;
-		attributeDescriptions[6].location = 6;
-		attributeDescriptions[6].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		attributeDescriptions[6].offset = offsetof(RvVertex, boneWeights);
-
-		//BoneWeight
-		attributeDescriptions[7].binding = 0;
-		attributeDescriptions[7].location = 7;
-		attributeDescriptions[7].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		attributeDescriptions[7].offset = offsetof(RvVertex, boneWeights2);
+		attributeDescriptions[5].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attributeDescriptions[5].offset = offsetof(RvVertex, boneWeights);
 
 		return attributeDescriptions;
 	}
@@ -99,15 +85,6 @@ struct RvVertex {
 				boneIDs[i] = BoneID;
 				boneWeights[i] = Weight;
 				break;
-			}
-		}
-
-		//Checking second vec
-		for (uint16_t i = 0; i < 4; i++) {
-			if (boneWeights2[i] == 0.0) {
-				boneIDs2[i] = BoneID;
-				boneWeights2[i] = Weight;
-				return;
 			}
 		}
 	};
@@ -128,8 +105,8 @@ struct RvMeshData
 
 struct BoneInfo
 {
-	glm::mat4x4 BoneOffset;
-	glm::mat4x4 FinalTransformation;
+	aiMatrix4x4 BoneOffset;
+	aiMatrix4x4 FinalTransformation;
 };
 
 #endif

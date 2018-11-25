@@ -657,10 +657,10 @@ void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
 
 void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms)
 {
-	float TimeInTicks = TimeInSeconds * ticksPerSecond[curAnimId];
-	float AnimationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
+	//float TimeInTicks = TimeInSeconds * ticksPerSecond[curAnimId];
+	//float AnimationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
 	const aiMatrix4x4 identity;
-	ReadNodeHeirarchy(AnimationTime, rootNode, identity);
+	ReadNodeHeirarchy(0.0f, rootNode, identity);
 
 	Transforms.resize(numBones);
 
@@ -707,6 +707,69 @@ aiMatrix4x4 interpolateTranslation(float time, const aiNodeAnim* pNodeAnim)
 	return mat;
 }
 
+aiMatrix4x4 Ravine::interpolateTranslation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
+{
+	aiVector3D translation;
+	aiVector3D othertranslation;
+
+	if (pNodeAnim->mNumPositionKeys == 1)
+	{
+		translation = pNodeAnim->mPositionKeys[0].mValue;
+		aiMatrix4x4 mat;
+		aiMatrix4x4::Translation(translation, mat);
+		return mat;
+	}
+
+	if (otherNodeAnim->mNumPositionKeys == 1)
+	{
+		othertranslation = otherNodeAnim->mPositionKeys[0].mValue;
+		aiMatrix4x4 mat;
+		aiMatrix4x4::Translation(othertranslation, mat);
+		return mat;
+	}
+
+	uint32_t frameIndex = 0;
+	for (uint32_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++)
+	{
+		if (time < (float)pNodeAnim->mPositionKeys[i + 1].mTime)
+		{
+			frameIndex = i;
+			break;
+		}
+	}
+
+	uint32_t otherframeIndex = 0;
+	for (uint32_t i = 0; i < otherNodeAnim->mNumPositionKeys - 1; i++)
+	{
+		if (othertime < (float)otherNodeAnim->mPositionKeys[i + 1].mTime)
+		{
+			otherframeIndex = i;
+			break;
+		}
+	}
+
+	aiVectorKey currentFrame = pNodeAnim->mPositionKeys[frameIndex];
+	aiVectorKey nextFrame = pNodeAnim->mPositionKeys[(frameIndex + 1) % pNodeAnim->mNumPositionKeys];
+	float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+	const aiVector3D& start = currentFrame.mValue;
+	const aiVector3D& end = nextFrame.mValue;
+	translation = (start + delta * (end - start));
+
+	aiVectorKey othercurrentFrame = otherNodeAnim->mPositionKeys[otherframeIndex];
+	aiVectorKey othernextFrame = otherNodeAnim->mPositionKeys[(otherframeIndex + 1) % otherNodeAnim->mNumPositionKeys];
+	float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
+	const aiVector3D& otherstart = othercurrentFrame.mValue;
+	const aiVector3D& otherend = othernextFrame.mValue;
+	othertranslation = (otherstart + otherdelta * (otherend - otherstart));
+
+	aiVector3D mixTranslation = (translation + animInterpolation * (othertranslation - translation));
+
+	aiMatrix4x4 mat;
+	aiMatrix4x4::Translation(mixTranslation, mat);
+
+	return mat;
+}
+
 // Returns a 4x4 matrix with interpolated rotation between current and next frame
 aiMatrix4x4 interpolateRotation(float time, const aiNodeAnim* pNodeAnim)
 {
@@ -741,6 +804,66 @@ aiMatrix4x4 interpolateRotation(float time, const aiNodeAnim* pNodeAnim)
 	}
 
 	aiMatrix4x4 mat(rotation.GetMatrix());
+	return mat;
+}
+
+aiMatrix4x4 Ravine::interpolateRotation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
+{
+	aiQuaternion rotation;
+	aiQuaternion otherrotation;
+
+	if (pNodeAnim->mNumRotationKeys == 1)
+	{
+		rotation = pNodeAnim->mRotationKeys[0].mValue;
+		aiMatrix4x4 mat(rotation.GetMatrix());
+		return mat;
+	}
+	if (otherNodeAnim->mNumRotationKeys == 1)
+	{
+		rotation = otherNodeAnim->mRotationKeys[0].mValue;
+		aiMatrix4x4 mat(rotation.GetMatrix());
+		return mat;
+	}
+
+	uint32_t frameIndex = 0;
+	for (uint32_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++)
+	{
+		if (time < (float)pNodeAnim->mRotationKeys[i + 1].mTime)
+		{
+			frameIndex = i;
+			break;
+		}
+	}
+	uint32_t otherframeIndex = 0;
+	for (uint32_t i = 0; i < otherNodeAnim->mNumRotationKeys - 1; i++)
+	{
+		if (othertime < (float)otherNodeAnim->mRotationKeys[i + 1].mTime)
+		{
+			otherframeIndex = i;
+			break;
+		}
+	}
+
+	aiQuatKey currentFrame = pNodeAnim->mRotationKeys[frameIndex];
+	aiQuatKey nextFrame = pNodeAnim->mRotationKeys[(frameIndex + 1) % pNodeAnim->mNumRotationKeys];
+	float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+	const aiQuaternion& start = currentFrame.mValue;
+	const aiQuaternion& end = nextFrame.mValue;
+	aiQuaternion::Interpolate(rotation, start, end, delta);
+	rotation.Normalize();
+
+	aiQuatKey othercurrentFrame = otherNodeAnim->mRotationKeys[otherframeIndex];
+	aiQuatKey othernextFrame = otherNodeAnim->mRotationKeys[(otherframeIndex + 1) % otherNodeAnim->mNumRotationKeys];
+	float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
+	const aiQuaternion& otherstart = othercurrentFrame.mValue;
+	const aiQuaternion& otherend = othernextFrame.mValue;
+	aiQuaternion::Interpolate(otherrotation, otherstart, otherend, otherdelta);
+	otherrotation.Normalize();
+
+	aiQuaternion mixQuaternion;
+	aiQuaternion::Interpolate(mixQuaternion, rotation, otherrotation, animInterpolation);
+
+	aiMatrix4x4 mat(mixQuaternion.GetMatrix());
 	return mat;
 }
 
@@ -782,6 +905,66 @@ aiMatrix4x4 interpolateScale(float time, const aiNodeAnim* pNodeAnim)
 	return mat;
 }
 
+aiMatrix4x4 Ravine::interpolateScale(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
+{
+	aiVector3D scale;
+	aiVector3D otherscale;
+
+	if (pNodeAnim->mNumScalingKeys == 1)
+	{
+		scale = pNodeAnim->mScalingKeys[0].mValue;
+		aiMatrix4x4 mat;
+		aiMatrix4x4::Scaling(scale, mat);
+		return mat;
+	}
+	if (otherNodeAnim->mNumScalingKeys == 1)
+	{
+		scale = otherNodeAnim->mScalingKeys[0].mValue;
+		aiMatrix4x4 mat;
+		aiMatrix4x4::Scaling(scale, mat);
+		return mat;
+	}
+
+	uint32_t frameIndex = 0;
+	for (uint32_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++)
+	{
+		if (time < (float)pNodeAnim->mScalingKeys[i + 1].mTime)
+		{
+			frameIndex = i;
+			break;
+		}
+	}
+	uint32_t otherframeIndex = 0;
+	for (uint32_t i = 0; i < otherNodeAnim->mNumScalingKeys - 1; i++)
+	{
+		if (othertime < (float)otherNodeAnim->mScalingKeys[i + 1].mTime)
+		{
+			otherframeIndex = i;
+			break;
+		}
+	}
+
+	aiVectorKey currentFrame = pNodeAnim->mScalingKeys[frameIndex];
+	aiVectorKey nextFrame = pNodeAnim->mScalingKeys[(frameIndex + 1) % pNodeAnim->mNumScalingKeys];
+	float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+	const aiVector3D& start = currentFrame.mValue;
+	const aiVector3D& end = nextFrame.mValue;
+	scale = (start + delta * (end - start));
+
+	aiVectorKey othercurrentFrame = otherNodeAnim->mScalingKeys[otherframeIndex];
+	aiVectorKey othernextFrame = otherNodeAnim->mScalingKeys[(otherframeIndex + 1) % otherNodeAnim->mNumScalingKeys];
+	float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
+	const aiVector3D& otherstart = othercurrentFrame.mValue;
+	const aiVector3D& otherend = othernextFrame.mValue;
+	otherscale = (otherstart + otherdelta * (otherend - otherstart));
+
+	aiVector3D mixScale = (scale + animInterpolation * (otherscale - scale));
+
+	aiMatrix4x4 mat;
+	aiMatrix4x4::Scaling(mixScale, mat);
+	return mat;
+}
+
 // Find animation for a given node
 const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName)
 {
@@ -802,14 +985,23 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 
 	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
 
+	uint16_t otherindex = (curAnimId + 1) % animationsCount;
 	const aiNodeAnim* pNodeAnim = findNodeAnim(&animations[curAnimId], NodeName);
+	const aiNodeAnim* otherNodeAnim = findNodeAnim(&animations[otherindex], NodeName);
+
+	float elapsedTime = Time::elapsedTime();
+	float TimeInTicks = elapsedTime * ticksPerSecond[curAnimId];
+	float animationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
+
+	float otherTimeInTicks = elapsedTime * ticksPerSecond[otherindex];
+	float otherAnimationTime = std::fmod(otherTimeInTicks, animationDuration[otherindex]);
 
 	if (pNodeAnim)
 	{
 		// Get interpolated matrices between current and next frame
-		aiMatrix4x4 matScale = interpolateScale(AnimationTime, pNodeAnim);
-		aiMatrix4x4 matRotation = interpolateRotation(AnimationTime, pNodeAnim);
-		aiMatrix4x4 matTranslation = interpolateTranslation(AnimationTime, pNodeAnim);
+		aiMatrix4x4 matScale = interpolateScale(animationTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+		aiMatrix4x4 matRotation = interpolateRotation(animationTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+		aiMatrix4x4 matTranslation = interpolateTranslation(animationTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
 
 		NodeTransformation = matTranslation * matRotation * matScale;
 	}
@@ -826,97 +1018,6 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 	{
 		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
 	}
-}
-
-void Ravine::CalcInterpolatedRotation(glm::quat & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
-{
-	// we need at least two values to interpolate...
-	if (pNodeAnim->mNumRotationKeys == 1) {
-		aiQuaternion assimp_val = pNodeAnim->mRotationKeys[0].mValue;
-		glm::quat val(assimp_val.w, assimp_val.x, assimp_val.y, assimp_val.z);
-		Out = val;
-		return;
-	}
-
-	uint16_t RotationIndex = FindRotation(AnimationTime, pNodeAnim);
-	uint16_t NextRotationIndex = (RotationIndex + 1);
-	assert(NextRotationIndex < pNodeAnim->mNumRotationKeys);
-	float DeltaTime = pNodeAnim->mRotationKeys[NextRotationIndex].mTime - pNodeAnim->mRotationKeys[RotationIndex].mTime;
-	float Factor = (AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime) / DeltaTime;
-	assert(Factor <= 1.0f);
-	if (Factor < 0) {
-		aiQuaternion assimp_val = pNodeAnim->mRotationKeys[0].mValue;
-		glm::quat val(assimp_val.w, assimp_val.x, assimp_val.y, assimp_val.z);
-		Out = val;
-		return;
-	}
-
-	const aiQuaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
-	const aiQuaternion& EndRotationQ = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
-	glm::quat r1(StartRotationQ.w, StartRotationQ.x, StartRotationQ.y, StartRotationQ.z);
-	glm::quat r2(EndRotationQ.w, EndRotationQ.x, EndRotationQ.y, EndRotationQ.z);
-	glm::quat val = glm::slerp(r1, r2, Factor);
-	Out = val;
-}
-
-void Ravine::CalcInterpolatedScale(glm::vec3 & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
-{
-	if (pNodeAnim->mNumScalingKeys == 1) {
-		aiVector3D assimp_val = pNodeAnim->mScalingKeys[0].mValue;
-		glm::vec3 val(assimp_val.x, assimp_val.y, assimp_val.z);
-		Out = val;
-		return;
-	}
-
-	uint16_t ScaleIndex = FindScale(AnimationTime, pNodeAnim);
-	uint16_t NextScaleIndex = (ScaleIndex + 1);
-	assert(NextScaleIndex < pNodeAnim->mNumScalingKeys);
-	float DeltaTime = pNodeAnim->mScalingKeys[NextScaleIndex].mTime - pNodeAnim->mScalingKeys[ScaleIndex].mTime;
-	float Factor = (AnimationTime - (float)pNodeAnim->mScalingKeys[ScaleIndex].mTime) / DeltaTime;
-	assert(Factor <= 1.0f);
-	if (Factor < 0) {
-		aiVector3D assimp_val = pNodeAnim->mScalingKeys[0].mValue;
-		glm::vec3 val(assimp_val.x, assimp_val.y, assimp_val.z);
-		Out = val;
-		return;
-	}
-
-	const aiVector3D& StartScale = pNodeAnim->mScalingKeys[ScaleIndex].mValue;
-	const aiVector3D& EndScale = pNodeAnim->mScalingKeys[NextScaleIndex].mValue;
-	glm::vec3 p1(StartScale.x, StartScale.y, StartScale.z);
-	glm::vec3 p2(EndScale.x, EndScale.y, EndScale.z);
-	glm::vec3 val = glm::mix(p1, p2, Factor);
-	Out = val;
-}
-
-void Ravine::CalcInterpolatedPosition(glm::vec3 & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
-{
-	if (pNodeAnim->mNumPositionKeys == 1) {
-		aiVector3D assimp_val = pNodeAnim->mPositionKeys[0].mValue;
-		glm::vec3 val(assimp_val.x, assimp_val.y, assimp_val.z);
-		Out = val;
-		return;
-	}
-
-	uint16_t PosIndex = FindPosition(AnimationTime, pNodeAnim);
-	uint16_t NextPosIndex = (PosIndex + 1);
-	assert(NextPosIndex < pNodeAnim->mNumPositionKeys);
-	float DeltaTime = pNodeAnim->mPositionKeys[NextPosIndex].mTime - pNodeAnim->mPositionKeys[PosIndex].mTime;
-	float Factor = (AnimationTime - (float)pNodeAnim->mPositionKeys[PosIndex].mTime) / DeltaTime;
-	assert(Factor <= 1.0f);
-	if (Factor < 0) {
-		aiVector3D assimp_val = pNodeAnim->mPositionKeys[0].mValue;
-		glm::vec3 val(assimp_val.x, assimp_val.y, assimp_val.z);
-		Out = val;
-		return;
-	}
-
-	const aiVector3D& StartPos = pNodeAnim->mPositionKeys[PosIndex].mValue;
-	const aiVector3D& EndPos = pNodeAnim->mPositionKeys[NextPosIndex].mValue;
-	glm::vec3 p1(StartPos.x, StartPos.y, StartPos.z);
-	glm::vec3 p2(EndPos.x, EndPos.y, EndPos.z);
-	glm::vec3 val = glm::mix(p1, p2, Factor);
-	Out = val;
 }
 
 uint16_t Ravine::FindRotation(double AnimationTime, const aiNodeAnim * pNodeAnim)
@@ -1316,21 +1417,34 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 		camera->verRot = 0.0f;
 	}
 
-	//Key Up
-	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS && keyUpPressed == false) {
+	// ANIM INTERPOL
+	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS) {
+		animInterpolation += 0.01f;
+		if (animInterpolation > 1.0f) {
+			animInterpolation = 1.0f;
+		}
+		std::cout << animInterpolation << std::endl;
+	}
+	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		animInterpolation -= 0.01f;
+		if (animInterpolation < 0.0f) {
+			animInterpolation = 0.0f;
+		}
+		std::cout << animInterpolation << std::endl;
+	}
+	// SWAP ANIMATIONS
+	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && keyUpPressed == false) {
 		keyUpPressed = true;
 		curAnimId = (curAnimId + 1) % animationsCount;
 	}
-	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_RELEASE) {
+	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE) {
 		keyUpPressed = false;
 	}
-
-	//Key Down
-	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_PRESS && keyDownPressed == false) {
+	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && keyDownPressed == false) {
 		keyDownPressed = true;
 		curAnimId = (curAnimId - 1) % animationsCount;
 	}
-	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_RELEASE) {
+	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_RELEASE) {
 		keyDownPressed = false;
 	}
 

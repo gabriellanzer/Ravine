@@ -100,6 +100,9 @@ private:
 	aiNode* rootNode;
 	std::vector<aiMatrix4x4> boneTransforms;
 
+	// Animation interpolation helper
+	float animInterpolation = 0.0f;
+
 	// Helper for keyboard input
 	bool keyUpPressed = false;
 	bool keyDownPressed = false;
@@ -185,9 +188,11 @@ private:
 	void loadBones(const aiMesh* pMesh, RvMeshData& meshData);
 	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
 	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
-	void CalcInterpolatedRotation(glm::quat& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
-	void CalcInterpolatedScale(glm::vec3& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
-	void CalcInterpolatedPosition(glm::vec3& Out, double AnimationTime, const aiNodeAnim* pNodeAnim);
+
+	aiMatrix4x4 interpolateTranslation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
+	aiMatrix4x4 interpolateRotation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
+	aiMatrix4x4 interpolateScale(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
+
 	uint16_t FindRotation(double AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint16_t FindScale(double AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint16_t FindPosition(double AnimationTime, const aiNodeAnim* pNodeAnim);

@@ -102,6 +102,7 @@ private:
 
 	// Animation interpolation helper
 	float animInterpolation = 0.0f;
+	float runTime = 0.0f;
 
 	// Helper for keyboard input
 	bool keyUpPressed = false;

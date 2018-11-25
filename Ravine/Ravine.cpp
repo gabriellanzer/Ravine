@@ -655,12 +655,15 @@ void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
 	}
 }
 
+float walkTime = 0.0f;
 void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms)
 {
 	//float TimeInTicks = TimeInSeconds * ticksPerSecond[curAnimId];
 	//float AnimationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
 	const aiMatrix4x4 identity;
-	ReadNodeHeirarchy(0.0f, rootNode, identity);
+	uint16_t otherindex = (curAnimId + 1) % animationsCount;
+	runTime += Time::deltaTime() * (animationDuration[curAnimId]/animationDuration[otherindex] * animInterpolation + 1.0f * (1.0f - animInterpolation));
+	ReadNodeHeirarchy(runTime, rootNode, identity);
 
 	Transforms.resize(numBones);
 
@@ -989,11 +992,12 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 	const aiNodeAnim* pNodeAnim = findNodeAnim(&animations[curAnimId], NodeName);
 	const aiNodeAnim* otherNodeAnim = findNodeAnim(&animations[otherindex], NodeName);
 
-	float elapsedTime = Time::elapsedTime();
-	float TimeInTicks = elapsedTime * ticksPerSecond[curAnimId];
+	float otherAnimTime = runTime * animationDuration[otherindex] / animationDuration[curAnimId];
+
+	float TimeInTicks = runTime * ticksPerSecond[curAnimId];
 	float animationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
 
-	float otherTimeInTicks = elapsedTime * ticksPerSecond[otherindex];
+	float otherTimeInTicks = otherAnimTime * ticksPerSecond[otherindex];
 	float otherAnimationTime = std::fmod(otherTimeInTicks, animationDuration[otherindex]);
 
 	if (pNodeAnim)
@@ -1419,14 +1423,14 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	// ANIM INTERPOL
 	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS) {
-		animInterpolation += 0.01f;
+		animInterpolation += 0.001f;
 		if (animInterpolation > 1.0f) {
 			animInterpolation = 1.0f;
 		}
 		std::cout << animInterpolation << std::endl;
 	}
 	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-		animInterpolation -= 0.01f;
+		animInterpolation -= 0.001f;
 		if (animInterpolation < 0.0f) {
 			animInterpolation = 0.0f;
 		}

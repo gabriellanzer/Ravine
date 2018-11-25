@@ -3,6 +3,7 @@
 std::chrono::high_resolution_clock::time_point Time::startTime;
 std::chrono::high_resolution_clock::time_point Time::lastFrameTime;
 std::chrono::high_resolution_clock::time_point Time::currentFrameTime;
+double Time::_deltaTime;
 
 void Time::initialize()
 {
@@ -14,6 +15,7 @@ void Time::update()
 {
 	lastFrameTime = currentFrameTime;
 	currentFrameTime = std::chrono::high_resolution_clock::now();
+	_deltaTime = std::chrono::duration<double, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
 }
 
 double Time::elapsedTime()
@@ -23,7 +25,7 @@ double Time::elapsedTime()
 
 double Time::deltaTime()
 {
-	return std::chrono::duration<double, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
+	return _deltaTime;
 }
 
 Time::Time()

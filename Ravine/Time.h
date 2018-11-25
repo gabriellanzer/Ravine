@@ -3,6 +3,9 @@
 //STD Includes
 #include <chrono>
 
+//GLFW Include
+#include <glfw\glfw3.h>
+
 class Time
 {
 public:
@@ -16,9 +19,10 @@ public:
 
 	static double elapsedTime();
 	static double deltaTime();
-
-
+	
 private:
 	Time();
 	~Time();
+
+	static double _deltaTime;
 };

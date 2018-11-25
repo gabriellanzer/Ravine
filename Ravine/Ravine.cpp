@@ -71,7 +71,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	std::string modelName = "stormtrooper.fbx";
+	std::string modelName = "walker.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -441,20 +441,20 @@ bool Ravine::loadScene(const std::string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
-					  aiProcess_GenSmoothNormals | \
-					  aiProcess_JoinIdenticalVertices | \
-					  aiProcess_ImproveCacheLocality | \
-					  aiProcess_LimitBoneWeights | \
-					  aiProcess_RemoveRedundantMaterials | \
-					  aiProcess_Triangulate | \
-					  aiProcess_GenUVCoords | \
-					  aiProcess_SortByPType | \
-					  aiProcess_FindDegenerates | \
-					  aiProcess_FindInvalidData | \
-					  aiProcess_FindInstances | \
-					  aiProcess_ValidateDataStructure | \
-					  aiProcess_OptimizeMeshes | \
-					  0);
+		aiProcess_GenSmoothNormals | \
+		aiProcess_JoinIdenticalVertices | \
+		aiProcess_ImproveCacheLocality | \
+		aiProcess_LimitBoneWeights | \
+		aiProcess_RemoveRedundantMaterials | \
+		aiProcess_Triangulate | \
+		aiProcess_GenUVCoords | \
+		aiProcess_SortByPType | \
+		aiProcess_FindDegenerates | \
+		aiProcess_FindInvalidData | \
+		aiProcess_FindInstances | \
+		aiProcess_ValidateDataStructure | \
+		aiProcess_OptimizeMeshes | \
+		0);
 	scene = importer.GetOrphanedScene();
 
 	// If the import failed, report it
@@ -603,6 +603,7 @@ bool Ravine::loadScene(const std::string& filePath)
 
 	std::cout << "Loaded file with " << scene->mNumAnimations << " animations.\n";
 
+	animationsCount = scene->mNumAnimations;
 	if (scene->mNumAnimations > 0)
 	{
 		//Record animation parameters
@@ -1121,7 +1122,7 @@ void Ravine::createCommandBuffers() {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
 	for (size_t i = 0; i < secondayCmdBuffers.size(); i++) {
 
-	#pragma region Secondary Command Buffers
+#pragma region Secondary Command Buffers
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -1176,9 +1177,9 @@ void Ravine::createCommandBuffers() {
 		if (vkEndCommandBuffer(secondayCmdBuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to record command buffer!");
 		}
-	#pragma endregion
+#pragma endregion
 
-	#pragma region Primary Command Buffers
+#pragma region Primary Command Buffers
 
 		//Begin recording command buffer
 		if (vkBeginCommandBuffer(primaryCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
@@ -1192,7 +1193,7 @@ void Ravine::createCommandBuffers() {
 		if (vkEndCommandBuffer(primaryCmdBuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to record command buffer!");
 		}
-	#pragma endregion
+#pragma endregion
 
 	}
 
@@ -1315,6 +1316,24 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 		camera->verRot = 0.0f;
 	}
 
+	//Key Up
+	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS && keyUpPressed == false) {
+		keyUpPressed = true;
+		curAnimId = (curAnimId + 1) % animationsCount;
+	}
+	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		keyUpPressed = false;
+	}
+
+	//Key Down
+	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_PRESS && keyDownPressed == false) {
+		keyDownPressed = true;
+		curAnimId = (curAnimId - 1) % animationsCount;
+	}
+	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_RELEASE) {
+		keyDownPressed = false;
+	}
+
 	if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(*window, true);
 
@@ -1324,7 +1343,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Rotating object 90 degrees per second
 	//ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	//ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
 
 	//Make the view matrix
 	ubo.view = camera->GetViewMatrix();

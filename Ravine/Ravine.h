@@ -88,6 +88,7 @@ private:
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
 	//ANIMATION STUFF
+	uint32_t animationsCount;
 	aiAnimation* animations;
 	double* ticksPerSecond;
 	double* animationDuration;
@@ -98,6 +99,10 @@ private:
 	uint32_t curAnimId;
 	aiNode* rootNode;
 	std::vector<aiMatrix4x4> boneTransforms;
+
+	// Helper for keyboard input
+	bool keyUpPressed = false;
+	bool keyDownPressed = false;
 
 #pragma region Attributes
 

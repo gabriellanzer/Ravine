@@ -71,7 +71,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	std::string modelName = "dragon.fbx";
+	std::string modelName = "stormtrooper.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -601,11 +601,24 @@ bool Ravine::loadScene(const std::string& filePath)
 		loadBones(mesh, meshes[i]);
 	}
 
-	if (scene->mNumAnimations > 0) {
-		ticksPerSecond = scene->mAnimations[0]->mTicksPerSecond != 0 ?
-			scene->mAnimations[0]->mTicksPerSecond : 25.0f;
-		animationDuration = scene->mAnimations[0]->mDuration;
-		animation = scene->mAnimations[0];
+	std::cout << "Loaded file with " << scene->mNumAnimations << " animations.\n";
+
+	if (scene->mNumAnimations > 0)
+	{
+		//Record animation parameters
+		animations = new aiAnimation[scene->mNumAnimations];
+		ticksPerSecond = new double[scene->mNumAnimations];
+		animationDuration = new double[scene->mNumAnimations];
+		for (uint32_t i = 0; i < scene->mNumAnimations; i++)
+		{
+			animations[i] = *scene->mAnimations[i];
+			ticksPerSecond[i] = scene->mAnimations[i]->mTicksPerSecond != 0 ?
+				scene->mAnimations[i]->mTicksPerSecond : 25.0f;
+			animationDuration[i] = scene->mAnimations[i]->mDuration;
+		}
+
+		//Set current animation
+		curAnimId = 0;
 	}
 	rootNode = new aiNode(*scene->mRootNode);
 
@@ -643,8 +656,8 @@ void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
 
 void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms)
 {
-	float TimeInTicks = TimeInSeconds * ticksPerSecond;
-	float AnimationTime = std::fmod(TimeInTicks, animationDuration);
+	float TimeInTicks = TimeInSeconds * ticksPerSecond[curAnimId];
+	float AnimationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
 	const aiMatrix4x4 identity;
 	ReadNodeHeirarchy(AnimationTime, rootNode, identity);
 
@@ -784,34 +797,34 @@ const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string n
 
 void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const aiMatrix4x4& ParentTransform)
 {
-std::string NodeName(pNode->mName.data);
+	std::string NodeName(pNode->mName.data);
 
-		aiMatrix4x4 NodeTransformation(pNode->mTransformation);
+	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
 
-		const aiNodeAnim* pNodeAnim = findNodeAnim(animation, NodeName);
+	const aiNodeAnim* pNodeAnim = findNodeAnim(&animations[curAnimId], NodeName);
 
-		if (pNodeAnim)
-		{
-			// Get interpolated matrices between current and next frame
-			aiMatrix4x4 matScale = interpolateScale(AnimationTime, pNodeAnim);
-			aiMatrix4x4 matRotation = interpolateRotation(AnimationTime, pNodeAnim);
-			aiMatrix4x4 matTranslation = interpolateTranslation(AnimationTime, pNodeAnim);
+	if (pNodeAnim)
+	{
+		// Get interpolated matrices between current and next frame
+		aiMatrix4x4 matScale = interpolateScale(AnimationTime, pNodeAnim);
+		aiMatrix4x4 matRotation = interpolateRotation(AnimationTime, pNodeAnim);
+		aiMatrix4x4 matTranslation = interpolateTranslation(AnimationTime, pNodeAnim);
 
-			NodeTransformation = matTranslation * matRotation * matScale;
-		}
+		NodeTransformation = matTranslation * matRotation * matScale;
+	}
 
-		aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
+	aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
 
-		if (boneMapping.find(NodeName) != boneMapping.end())
-		{
-			uint32_t BoneIndex = boneMapping[NodeName];
-			boneInfo[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation * boneInfo[BoneIndex].BoneOffset;
-		}
+	if (boneMapping.find(NodeName) != boneMapping.end())
+	{
+		uint32_t BoneIndex = boneMapping[NodeName];
+		boneInfo[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation * boneInfo[BoneIndex].BoneOffset;
+	}
 
-		for (uint32_t i = 0; i < pNode->mNumChildren; i++)
-		{
-			ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
-		}
+	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
+	{
+		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
+	}
 }
 
 void Ravine::CalcInterpolatedRotation(glm::quat & Out, double AnimationTime, const aiNodeAnim * pNodeAnim)
@@ -1219,7 +1232,7 @@ void Ravine::drawFrame()
 	if (!swapChain->AcquireNextFrame(imageIndex)) {
 		recreateSwapChain();
 	}
-	if (animation != nullptr) {
+	if (animations != nullptr) {
 		BoneTransform(Time::elapsedTime(), boneTransforms);
 	}
 	updateUniformBuffer(imageIndex);
@@ -1311,7 +1324,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Rotating object 90 degrees per second
 	//ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
+	//ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
 
 	//Make the view matrix
 	ubo.view = camera->GetViewMatrix();

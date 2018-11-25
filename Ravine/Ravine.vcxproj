@@ -158,7 +158,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="C:\Users\1570 LITE\Desktop\gradient.c" />
     <ClCompile Include="crc32.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />

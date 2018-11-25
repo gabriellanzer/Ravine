@@ -88,13 +88,14 @@ private:
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
 	//ANIMATION STUFF
-	double ticksPerSecond;
-	double animationDuration;
+	aiAnimation* animations;
+	double* ticksPerSecond;
+	double* animationDuration;
 	aiMatrix4x4 animGlobalInverseTransform;
 	uint16_t numBones;
 	std::map<std::string, uint16_t> boneMapping;
 	std::vector<BoneInfo> boneInfo;
-	aiAnimation* animation;
+	uint32_t curAnimId;
 	aiNode* rootNode;
 	std::vector<aiMatrix4x4> boneTransforms;
 

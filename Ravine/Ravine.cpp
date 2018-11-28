@@ -763,8 +763,12 @@ aiMatrix4x4 Ravine::interpolateTranslation(float time, float othertime, const ai
 	float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
 	const aiVector3D& otherstart = othercurrentFrame.mValue;
 	const aiVector3D& otherend = othernextFrame.mValue;
+	if (otherstart == otherend) {
+		aiMatrix4x4 mat;
+		aiMatrix4x4::Translation(translation, mat);
+		return mat;
+	}
 	othertranslation = (otherstart + otherdelta * (otherend - otherstart));
-
 	aiVector3D mixTranslation = (translation + animInterpolation * (othertranslation - translation));
 
 	aiMatrix4x4 mat;
@@ -860,6 +864,11 @@ aiMatrix4x4 Ravine::interpolateRotation(float time, float othertime, const aiNod
 	float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
 	const aiQuaternion& otherstart = othercurrentFrame.mValue;
 	const aiQuaternion& otherend = othernextFrame.mValue;
+	if (otherstart == otherend) {
+		aiMatrix4x4 mat(rotation.GetMatrix());
+		return mat;
+	}
+
 	aiQuaternion::Interpolate(otherrotation, otherstart, otherend, otherdelta);
 	otherrotation.Normalize();
 
@@ -959,8 +968,12 @@ aiMatrix4x4 Ravine::interpolateScale(float time, float othertime, const aiNodeAn
 	float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
 	const aiVector3D& otherstart = othercurrentFrame.mValue;
 	const aiVector3D& otherend = othernextFrame.mValue;
+	if (otherstart == otherend) {
+		aiMatrix4x4 mat;
+		aiMatrix4x4::Scaling(scale, mat);
+		return mat;
+	}
 	otherscale = (otherstart + otherdelta * (otherend - otherstart));
-
 	aiVector3D mixScale = (scale + animInterpolation * (otherscale - scale));
 
 	aiMatrix4x4 mat;
@@ -1095,7 +1108,7 @@ void Ravine::loadTextureImages()
 {
 	//Allocate RvTexture(s)
 	texturesSize = 1;
-	//texturesSize += texturesToLoad.size(); //Normal plus undefined texture
+	texturesSize += texturesToLoad.size(); //Normal plus undefined texture
 	textures = new RvTexture[texturesSize];
 
 	//Generate Pink 2x2 image for missing texture

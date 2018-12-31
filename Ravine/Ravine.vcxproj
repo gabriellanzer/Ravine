@@ -159,6 +159,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="crc32.cpp" />
+    <ClCompile Include="ImGUI.cpp" />
+    <ClCompile Include="imgui_demo.cpp" />
+    <ClCompile Include="imgui_draw.cpp" />
+    <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
     <ClCompile Include="RvCamera.cpp" />
@@ -176,6 +180,11 @@
     <ClCompile Include="RvTools.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="imgui.h" />
+    <ClInclude Include="imgui_internal.h" />
+    <ClInclude Include="imstb_rectpack.h" />
+    <ClInclude Include="imstb_textedit.h" />
+    <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="Ravine.h" />
     <ClInclude Include="RvCamera.h" />
     <ClInclude Include="RvCmdBuffer.h" />

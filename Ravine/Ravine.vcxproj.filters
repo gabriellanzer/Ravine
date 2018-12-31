@@ -22,6 +22,9 @@
     <Filter Include="Source Files\Ravine System">
       <UniqueIdentifier>{669ad292-3ec7-44c0-98d8-3345b57b2eac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ImGUI">
+      <UniqueIdentifier>{399e4d1c-e983-4fb4-a289-001f9b98a561}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -71,6 +74,18 @@
     </ClCompile>
     <ClCompile Include="crc32.cpp">
       <Filter>Header Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI.cpp">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>Header Files\ImGUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -127,6 +142,21 @@
     </ClInclude>
     <ClInclude Include="RvCamera.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

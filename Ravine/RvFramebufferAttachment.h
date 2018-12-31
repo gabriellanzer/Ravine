@@ -19,6 +19,7 @@ struct RvFramebufferAttachmentCreateInfo {
 	VkImageUsageFlags usage;
 	VkMemoryPropertyFlagBits memoryProperties;
 	VkImageAspectFlagBits aspectFlag;
+	VkImageCreateFlagBits createFlag;
 
 	VkImageLayout initialLayout;
 	VkImageLayout finalLayout;

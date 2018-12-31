@@ -10,27 +10,9 @@
 #include "RvTools.h"
 
 
-VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code) {
-
-	//Create shader module with data pointer (uint32_t ptr) and size (in bytes)
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.codeSize = code.size();
-	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-	//Proper creation
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create shader module!");
-	}
-
-	return shaderModule;
-}
-
-
-RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass) : device(&device)
+RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass) : device(&device)
 {
-	Init(extent, sampleCount, descriptorSetLayout, renderPass);
+	Init(extent, sampleCount, descriptorSetLayout, pushConstantRange, renderPass);
 }
 
 
@@ -40,13 +22,21 @@ RvGraphicsPipeline::~RvGraphicsPipeline()
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);
 }
 
-void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass)
+void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstanteRange, VkRenderPass renderPass)
 {
-	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/shader.vert.spv");
-	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/shader.frag.spv");
+	//Loading shaders
+	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/skinned_shader.vert.spv");
+	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/tex_skinned_shader.frag.spv");
+	vertModule = rvTools::createShaderModule(device->handle, vertShaderCode);
+	fragModule = rvTools::createShaderModule(device->handle, fragShaderCode);
 
-	vertModule = createShaderModule(device->handle, vertShaderCode);
-	fragModule = createShaderModule(device->handle, fragShaderCode);
+	//Create Pipeline cache
+	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
+	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+	if (vkCreatePipelineCache(device->handle, &pipelineCacheCreateInfo, nullptr, &pipelineCache) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create Pipeline Cache!");
+	}
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -120,8 +110,8 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	rasterizer.depthBiasClamp = 0.0f; // Optional
 	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 
-											//Multisampling (anti-aliasing: combines the fragment shader results of multiple polygons that rasterize to the same pixel)
-											//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Multisampling
+	//Multisampling (anti-aliasing: combines the fragment shader results of multiple polygons that rasterize to the same pixel)
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Multisampling
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.sampleShadingEnable = VK_TRUE; // Enable sample shading in the pipeline
@@ -131,12 +121,12 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
-											   //Depth and stencil testing (configuration of these auxiliar buffers)
-											   //Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Depth_and_stencil_testing
-											   //NOT UTILIZED IN THIS TUTORIAL
+	//Depth and stencil testing (configuration of these auxiliar buffers)
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Depth_and_stencil_testing
+	//NOT UTILIZED IN THIS TUTORIAL
 
-											   //Color Blending (combines the fragment's output with the color that is already in the framebuffer)
-											   //Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Color_blending
+	//Color Blending (combines the fragment's output with the color that is already in the framebuffer)
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Color_blending
 	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	colorBlendAttachment.blendEnable = VK_FALSE;
@@ -158,8 +148,8 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	colorBlending.blendConstants[2] = 0.0f; // Optional
 	colorBlending.blendConstants[3] = 0.0f; // Optional
 
-											//Dynamic State (Defines the states that can be changed without recreating the graphics pipeline)
-											//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
+	//Dynamic State (Defines the states that can be changed without recreating the graphics pipeline)
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
 	VkDynamicState dynamicStates[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_LINE_WIDTH
@@ -176,8 +166,8 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+	pipelineLayoutInfo.pushConstantRangeCount = 1;
+	pipelineLayoutInfo.pPushConstantRanges = &pushConstanteRange;
 
 	if (vkCreatePipelineLayout(device->handle, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create pipeline layout!");
@@ -200,7 +190,7 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // Optional
 
-										  //The uniforms layout
+	//The uniforms layout
 	pipelineInfo.layout = pipelineLayout;
 
 	//Reference render pass and define current subpass index
@@ -211,19 +201,19 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 	pipelineInfo.basePipelineIndex = -1; // Optional
 
-										 //Depth/Stencil state
+	//Depth/Stencil state
 	VkPipelineDepthStencilStateCreateInfo depthStencil = {};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthTestEnable = VK_TRUE;
 	depthStencil.depthWriteEnable = VK_TRUE;
 	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;	//Depth compare function
 
-														//Creates bounds for depth
+	//Creates bounds for depth
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.minDepthBounds = 0.0f; // Optional
 	depthStencil.maxDepthBounds = 1.0f; // Optional
 
-										//Settin depth/stencil state to pipeline
+	//Settin depth/stencil state to pipeline
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
 	if (vkCreateGraphicsPipelines(device->handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {

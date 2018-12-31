@@ -44,8 +44,8 @@ public:
 	//Should be used instead of destroying in destructor
 	void Clear();
 
-	RvTexture createTexture(void *pixels, size_t width, size_t height);
-	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory);
+	RvTexture createTexture(void *pixels, size_t width, size_t heigh, VkFormat format);
+	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory);
 	
 	RvDynamicBuffer createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);
 	RvPersistentBuffer createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);

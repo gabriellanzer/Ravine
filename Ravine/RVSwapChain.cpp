@@ -132,9 +132,9 @@ void RvSwapChain::Clear()
 	//Destroy attachments
 	for (size_t i = 0; i < framebufferAttachments.size(); i++)
 	{
-	vkDestroyImageView(device->handle, framebufferAttachments[i].imageView, nullptr);
-	vkDestroyImage(device->handle, framebufferAttachments[i].image, nullptr);
-	vkFreeMemory(device->handle, framebufferAttachments[i].memory, nullptr);
+		vkDestroyImageView(device->handle, framebufferAttachments[i].imageView, nullptr);
+		vkDestroyImage(device->handle, framebufferAttachments[i].image, nullptr);
+		vkFreeMemory(device->handle, framebufferAttachments[i].memory, nullptr);
 	}
 
 	//Destroy FrameBuffers
@@ -147,6 +147,8 @@ void RvSwapChain::Clear()
 		vkDestroyImageView(device->handle, imageView, nullptr);
 	}
 	vkDestroySwapchainKHR(device->handle, handle, nullptr);
+
+	DestroySyncObjects();
 }
 
 void RvSwapChain::CreateImageViews()
@@ -266,6 +268,7 @@ void RvSwapChain::AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo cre
 		createInfo.tilling,
 		createInfo.usage,
 		createInfo.memoryProperties,
+		createInfo.createFlag,
 		newAttachment.image, newAttachment.memory);
 	newAttachment.imageView = rvTools::createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
 
@@ -359,7 +362,7 @@ bool RvSwapChain::AcquireNextFrame(uint32_t& frameIndex)
 	return true;
 }
 
-bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers,  uint32_t frameIndex)
+bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex)
 {
 	//Submitting the command queue
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Submitting_the_command_buffer

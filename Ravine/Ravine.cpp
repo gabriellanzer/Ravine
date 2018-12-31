@@ -71,7 +71,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	std::string modelName = "walker.fbx";
+	std::string modelName = "guard.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		std::cout << modelName << " loaded!\n";
@@ -264,8 +264,8 @@ void Ravine::recreateSwapChain() {
 
 	//Storing handle
 	RvSwapChain *oldSwapchain = swapChain;
-
 	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
+	swapChain->CreateSyncObjects();
 	swapChain->CreateImageViews();
 	swapChain->CreateRenderPass();
 	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, swapChain->renderPass);
@@ -275,6 +275,7 @@ void Ravine::recreateSwapChain() {
 	createCommandBuffers();
 
 	//Deleting old swapchain
+	oldSwapchain->Clear();
 	delete oldSwapchain;
 }
 
@@ -1087,7 +1088,7 @@ void Ravine::createIndexBuffer()
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 	}
 }
@@ -1238,16 +1239,59 @@ void Ravine::createCommandBuffers() {
 
 	//Begining Command Buffer Recording
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
-	for (size_t i = 0; i < secondayCmdBuffers.size(); i++) {
+	for (size_t i = 0; i < primaryCmdBuffers.size(); i++) {
 
-#pragma region Secondary Command Buffers
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-		beginInfo.pInheritanceInfo = nullptr; // Optional
+
+#pragma region Secondary Command Buffers
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+
+		//Setup inheritance information to provide access modifiers from RenderPass
+		VkCommandBufferInheritanceInfo inheritanceInfo = {};
+		inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+		inheritanceInfo.renderPass = swapChain->renderPass;
+		inheritanceInfo.subpass = 0;
+		inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+		inheritanceInfo.framebuffer = swapChain->framebuffers[i];
+		inheritanceInfo.pipelineStatistics = 0;
+		beginInfo.pInheritanceInfo = &inheritanceInfo;
 
 		//Begin recording Command Buffer
 		if (vkBeginCommandBuffer(secondayCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to begin recording command buffer!");
+		}
+
+		//Basic Drawing Commands
+		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
+		vkCmdBindPipeline(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
+
+		vkCmdBindDescriptorSets(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+
+		//Set Vertex Buffer for drawing
+		//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
+		VkDeviceSize offsets[] = { 0 };
+
+		//Binding descriptor sets (uniforms)
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			vkCmdBindVertexBuffers(secondayCmdBuffers[i], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondayCmdBuffers[i], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondayCmdBuffers[i], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
+		}
+
+		//Stop recording Command Buffer
+		if (vkEndCommandBuffer(secondayCmdBuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to record command buffer!");
+		}
+#pragma endregion
+
+#pragma region Primary Command Buffers
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+		//Begin recording command buffer
+		if (vkBeginCommandBuffer(primaryCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to begin recording command buffer!");
 		}
 
@@ -1267,45 +1311,14 @@ void Ravine::createCommandBuffers() {
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		vkCmdBeginRenderPass(secondayCmdBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		//Basic Drawing Commands
-		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-		vkCmdBindPipeline(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
-
-		vkCmdBindDescriptorSets(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
-		//Set Vertex Buffer for drawing
-		//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
-		VkDeviceSize offsets[] = { 0 };
-
-		//Binding descriptor sets (uniforms)
-		//Call drawing
-		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
-		{
-			vkCmdBindVertexBuffers(secondayCmdBuffers[i], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondayCmdBuffers[i], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondayCmdBuffers[i], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
-		}
-
-		//Finishing Render Pass
-		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
-		vkCmdEndRenderPass(secondayCmdBuffers[i]);
-
-		//Stop recording Command Buffer
-		if (vkEndCommandBuffer(secondayCmdBuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to record command buffer!");
-		}
-#pragma endregion
-
-#pragma region Primary Command Buffers
-
-		//Begin recording command buffer
-		if (vkBeginCommandBuffer(primaryCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to begin recording command buffer!");
-		}
+		vkCmdBeginRenderPass(primaryCmdBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
 		//Execute Secondary Command Buffer
 		vkCmdExecuteCommands(primaryCmdBuffers[i], 1, &secondayCmdBuffers[i]);
+
+		//Finishing Render Pass
+		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
+		vkCmdEndRenderPass(primaryCmdBuffers[i]);
 
 		//Stop recording Command Buffer
 		if (vkEndCommandBuffer(primaryCmdBuffers[i]) != VK_SUCCESS) {
@@ -1529,6 +1542,10 @@ void Ravine::cleanupSwapChain() {
 
 void Ravine::cleanup()
 {
+	//Hold number of swapchain images
+	uint32_t swapImagesCount = swapChain->images.size();
+
+	//Cleanup swap-chain related data
 	cleanupSwapChain();
 
 	//Cleaning up texture related objects
@@ -1544,12 +1561,13 @@ void Ravine::cleanup()
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
 
 	//Destroying uniform buffers
-	for (size_t i = 0; i < swapChain->images.size(); i++) {
+	for (size_t i = 0; i < swapImagesCount; i++) {
 		vkDestroyBuffer(device->handle, uniformBuffers[i].buffer, nullptr);
 		vkFreeMemory(device->handle, uniformBuffers[i].memory, nullptr);
 	}
 
-	for (size_t i = 0; i < swapChain->images.size(); i++) {
+	//Destroying swap chain images
+	for (size_t i = 0; i < swapImagesCount; i++) {
 		vkDestroyBuffer(device->handle, materialBuffers[i].buffer, nullptr);
 		vkFreeMemory(device->handle, materialBuffers[i].memory, nullptr);
 	}
@@ -1560,10 +1578,13 @@ void Ravine::cleanup()
 	//TODO: FIX HERE!
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
-		//Destroy Vertex Buffer Object
+		//Destroy Vertex and Index Buffer Objects
 		vkDestroyBuffer(device->handle, vertexBuffers[meshIndex].handle, nullptr);
-		//Free device memory from Vertex Buffer
+		vkDestroyBuffer(device->handle, indexBuffers[meshIndex].handle, nullptr);
+
+		//Free device memory for Vertex and Index Buffers
 		vkFreeMemory(device->handle, vertexBuffers[meshIndex].memory, nullptr);
+		vkFreeMemory(device->handle, indexBuffers[meshIndex].memory, nullptr);
 	}
 
 	//Destroy graphics pipeline

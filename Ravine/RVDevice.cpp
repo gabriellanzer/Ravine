@@ -126,7 +126,7 @@ void RvDevice::Clear()
 	vkDestroyDevice(handle, nullptr);
 }
 
-void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & imageMemory)
+void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory)
 {
 	//Defining image creation info
 	VkImageCreateInfo imageCreateInfo = {};
@@ -143,6 +143,7 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 	imageCreateInfo.usage = usage;
 	imageCreateInfo.samples = numSamples;
 	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCreateInfo.flags = createFlagBits;
 
 	//Creating image
 	if (vkCreateImage(handle, &imageCreateInfo, nullptr, &image) != VK_SUCCESS) {
@@ -162,7 +163,7 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 		throw std::runtime_error("Failed to allocate image memory!");
 	}
 
-	//Binding image memory
+	//Binding image and memory
 	vkBindImageMemory(handle, image, imageMemory, 0);
 }
 
@@ -198,9 +199,9 @@ RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bu
 	return newBuffer;
 }
 
-RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height)
+RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM)
 {
-	return rvTools::createTexture(this, pixels, width, height);
+	return rvTools::createTexture(this, pixels, width, height, format);
 }
 
 uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)

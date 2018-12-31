@@ -6,12 +6,11 @@
 
 //Ravine Systems
 #include "RvDevice.h"
-#include "RvTools.h"
 #include "RvDataTypes.h"
 
 struct RvGUIPipeline
 {
-	RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass);
+	RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass);
 	~RvGUIPipeline();
 
 	RvDevice* device;
@@ -20,10 +19,8 @@ struct RvGUIPipeline
 	VkShaderModule vertModule;
 	VkShaderModule fragModule;
 
-	VkPipelineLayout pipelineLayout;
-	VkRenderPass renderPass;
-
-	void Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass);
+	VkPipelineLayout layout;
+	VkPipelineCache pipelineCache;
 
 	operator VkPipeline() {
 		return handle;

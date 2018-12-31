@@ -159,7 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="crc32.cpp" />
-    <ClCompile Include="ImGUI.cpp" />
+    <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
     <ClCompile Include="imgui_widgets.cpp" />
@@ -168,6 +168,8 @@
     <ClCompile Include="RvCamera.cpp" />
     <ClCompile Include="RvCmdBuffer.cpp" />
     <ClCompile Include="RvDynamicBuffer.cpp" />
+    <ClCompile Include="RvGUI.cpp" />
+    <ClCompile Include="RvGUIPipeline.cpp" />
     <ClCompile Include="RvTexture.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
     <ClCompile Include="RvConfig.cpp" />
@@ -189,6 +191,8 @@
     <ClInclude Include="RvCamera.h" />
     <ClInclude Include="RvCmdBuffer.h" />
     <ClInclude Include="RvDynamicBuffer.h" />
+    <ClInclude Include="RvGUI.h" />
+    <ClInclude Include="RvGUIPipeline.h" />
     <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />
     <ClInclude Include="RvConfig.h" />
@@ -205,10 +209,11 @@
     <ClInclude Include="RvTools.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="bin\data\shaders\imgui.frag" />
-    <None Include="bin\data\shaders\imgui.vert" />
-    <None Include="bin\data\shaders\shader.frag" />
-    <None Include="bin\data\shaders\shader.vert" />
+    <None Include="bin\data\shaders\gui.frag" />
+    <None Include="bin\data\shaders\gui.vert" />
+    <None Include="bin\data\shaders\skinned_shader.frag" />
+    <None Include="bin\data\shaders\skinned_shader.vert" />
+    <None Include="bin\data\shaders\tex_skinned_shader.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

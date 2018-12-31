@@ -10,33 +10,14 @@
 #include "RvTools.h"
 
 
-RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass) : device(&device)
-{
-	Init(extent, sampleCount, descriptorSetLayout, pushConstantRange, renderPass);
-}
-
-
-RvGraphicsPipeline::~RvGraphicsPipeline()
-{
-	vkDestroyShaderModule(device->handle, fragModule, nullptr);
-	vkDestroyShaderModule(device->handle, vertModule, nullptr);
-}
-
-void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstanteRange, VkRenderPass renderPass)
+RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass) : device(&device)
 {
 	//Loading shaders
 	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/skinned_shader.vert.spv");
 	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/tex_skinned_shader.frag.spv");
-	vertModule = rvTools::createShaderModule(device->handle, vertShaderCode);
-	fragModule = rvTools::createShaderModule(device->handle, fragShaderCode);
 
-	//Create Pipeline cache
-	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
-	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-	if (vkCreatePipelineCache(device->handle, &pipelineCacheCreateInfo, nullptr, &pipelineCache) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Failed to create Pipeline Cache!");
-	}
+	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
+	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -166,10 +147,10 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstanteRange;
+	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-	if (vkCreatePipelineLayout(device->handle, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(device.handle, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create pipeline layout!");
 	}
 
@@ -191,11 +172,10 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	pipelineInfo.pDynamicState = nullptr; // Optional
 
 	//The uniforms layout
-	pipelineInfo.layout = pipelineLayout;
+	pipelineInfo.layout = layout;
 
 	//Reference render pass and define current subpass index
 	pipelineInfo.renderPass = renderPass;
-	pipelineInfo.subpass = 0;
 
 	//Pipeline inheritence
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
@@ -216,7 +196,14 @@ void RvGraphicsPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCou
 	//Settin depth/stencil state to pipeline
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
-	if (vkCreateGraphicsPipelines(device->handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(device.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline!");
 	}
+}
+
+
+RvGraphicsPipeline::~RvGraphicsPipeline()
+{
+	vkDestroyShaderModule(device->handle, fragModule, nullptr);
+	vkDestroyShaderModule(device->handle, vertModule, nullptr);
 }

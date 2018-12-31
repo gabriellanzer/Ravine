@@ -75,9 +75,6 @@
     <ClCompile Include="crc32.cpp">
       <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="ImGUI.cpp">
-      <Filter>Header Files\ImGUI</Filter>
-    </ClCompile>
     <ClCompile Include="imgui_demo.cpp">
       <Filter>Header Files\ImGUI</Filter>
     </ClCompile>
@@ -86,6 +83,15 @@
     </ClCompile>
     <ClCompile Include="imgui_widgets.cpp">
       <Filter>Header Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui.cpp">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGUIPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGUI.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -158,18 +164,27 @@
     <ClInclude Include="imstb_truetype.h">
       <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
+    <ClInclude Include="RvGUI.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGUIPipeline.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="bin\data\shaders\shader.frag">
+    <None Include="bin\data\shaders\gui.frag">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="bin\data\shaders\shader.vert">
+    <None Include="bin\data\shaders\gui.vert">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="bin\data\shaders\imgui.frag">
+    <None Include="bin\data\shaders\skinned_shader.frag">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="bin\data\shaders\imgui.vert">
+    <None Include="bin\data\shaders\skinned_shader.vert">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="bin\data\shaders\tex_skinned_shader.frag">
       <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>

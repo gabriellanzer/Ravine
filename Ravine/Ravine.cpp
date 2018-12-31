@@ -39,10 +39,7 @@ void Ravine::run()
 	cleanup();
 }
 
-
 #pragma region Static Methods
-
-
 
 //Static method because GLFW doesn't know how to call a member function with the "this" pointer to our Ravine instance.
 void Ravine::framebufferResizeCallback(GLFWwindow * window, int width, int height)
@@ -98,8 +95,12 @@ void Ravine::initVulkan() {
 	createUniformBuffers();
 	createDescriptorPool();
 	createDescriptorSets();
-	createCommandBuffers();
+	allocateCommandBuffers();
 	swapChain->CreateSyncObjects();
+
+	//GUI Management
+	gui = new RvGUI(*device, *swapChain, *window);
+	gui->Init(device->getMaxUsableSampleCount());
 }
 
 std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
@@ -272,7 +273,7 @@ void Ravine::recreateSwapChain() {
 	createMultiSamplingResources();
 	createDepthResources();
 	swapChain->CreateFramebuffers();
-	createCommandBuffers();
+	allocateCommandBuffers();
 
 	//Deleting old swapchain
 	oldSwapchain->Clear();
@@ -411,7 +412,6 @@ void Ravine::createDescriptorSetLayout()
 
 }
 
-
 static glm::mat4 AiToGLMMat4(aiMatrix4x4& in_mat)
 {
 	glm::mat4 tmp;
@@ -442,20 +442,20 @@ bool Ravine::loadScene(const std::string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
-		aiProcess_GenSmoothNormals | \
-		aiProcess_JoinIdenticalVertices | \
-		aiProcess_ImproveCacheLocality | \
-		aiProcess_LimitBoneWeights | \
-		aiProcess_RemoveRedundantMaterials | \
-		aiProcess_Triangulate | \
-		aiProcess_GenUVCoords | \
-		aiProcess_SortByPType | \
-		aiProcess_FindDegenerates | \
-		aiProcess_FindInvalidData | \
-		aiProcess_FindInstances | \
-		aiProcess_ValidateDataStructure | \
-		aiProcess_OptimizeMeshes | \
-		0);
+					  aiProcess_GenSmoothNormals | \
+					  aiProcess_JoinIdenticalVertices | \
+					  aiProcess_ImproveCacheLocality | \
+					  aiProcess_LimitBoneWeights | \
+					  aiProcess_RemoveRedundantMaterials | \
+					  aiProcess_Triangulate | \
+					  aiProcess_GenUVCoords | \
+					  aiProcess_SortByPType | \
+					  aiProcess_FindDegenerates | \
+					  aiProcess_FindInvalidData | \
+					  aiProcess_FindInstances | \
+					  aiProcess_ValidateDataStructure | \
+					  aiProcess_OptimizeMeshes | \
+					  0);
 	scene = importer.GetOrphanedScene();
 
 	// If the import failed, report it
@@ -663,7 +663,7 @@ void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms
 	//float AnimationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
 	const aiMatrix4x4 identity;
 	uint16_t otherindex = (curAnimId + 1) % animationsCount;
-	runTime += Time::deltaTime() * (animationDuration[curAnimId]/animationDuration[otherindex] * animInterpolation + 1.0f * (1.0f - animInterpolation));
+	runTime += Time::deltaTime() * (animationDuration[curAnimId] / animationDuration[otherindex] * animInterpolation + 1.0f * (1.0f - animInterpolation));
 	ReadNodeHeirarchy(runTime, rootNode, identity);
 
 	Transforms.resize(numBones);
@@ -672,7 +672,6 @@ void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms
 		Transforms[i] = boneInfo[i].FinalTransformation;
 	}
 }
-
 
 // Returns a 4x4 matrix with interpolated translation between current and next frame
 aiMatrix4x4 interpolateTranslation(float time, const aiNodeAnim* pNodeAnim)
@@ -879,7 +878,6 @@ aiMatrix4x4 Ravine::interpolateRotation(float time, float othertime, const aiNod
 	aiMatrix4x4 mat(mixQuaternion.GetMatrix());
 	return mat;
 }
-
 
 // Returns a 4x4 matrix with interpolated scaling between current and next frame
 aiMatrix4x4 interpolateScale(float time, const aiNodeAnim* pNodeAnim)
@@ -1088,7 +1086,7 @@ void Ravine::createIndexBuffer()
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 	}
 }
@@ -1214,8 +1212,7 @@ void Ravine::createMultiSamplingResources()
 	swapChain->AddFramebufferAttachment(createInfo);
 }
 
-
-void Ravine::createCommandBuffers() {
+void Ravine::allocateCommandBuffers() {
 
 	//Allocate command buffers
 	primaryCmdBuffers.resize(swapChain->framebuffers.size());
@@ -1236,98 +1233,99 @@ void Ravine::createCommandBuffers() {
 	if (vkAllocateCommandBuffers(device->handle, &allocInfo, secondayCmdBuffers.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate command buffers!");
 	}
+}
 
+void Ravine::recordCommandBuffers(uint32_t currentFrame)
+{
 	//Begining Command Buffer Recording
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
-	for (size_t i = 0; i < primaryCmdBuffers.size(); i++) {
 
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-#pragma region Secondary Command Buffers
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+	#pragma region Secondary Command Buffers
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
 
-		//Setup inheritance information to provide access modifiers from RenderPass
-		VkCommandBufferInheritanceInfo inheritanceInfo = {};
-		inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-		inheritanceInfo.renderPass = swapChain->renderPass;
-		inheritanceInfo.subpass = 0;
-		inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-		inheritanceInfo.framebuffer = swapChain->framebuffers[i];
-		inheritanceInfo.pipelineStatistics = 0;
-		beginInfo.pInheritanceInfo = &inheritanceInfo;
+	//Setup inheritance information to provide access modifiers from RenderPass
+	VkCommandBufferInheritanceInfo inheritanceInfo = {};
+	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+	inheritanceInfo.renderPass = swapChain->renderPass;
+	//inheritanceInfo.subpass = 0;
+	inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+	inheritanceInfo.framebuffer = swapChain->framebuffers[currentFrame];
+	inheritanceInfo.pipelineStatistics = 0;
+	beginInfo.pInheritanceInfo = &inheritanceInfo;
 
-		//Begin recording Command Buffer
-		if (vkBeginCommandBuffer(secondayCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to begin recording command buffer!");
-		}
-
-		//Basic Drawing Commands
-		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-		vkCmdBindPipeline(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
-
-		vkCmdBindDescriptorSets(secondayCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
-
-		//Set Vertex Buffer for drawing
-		//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
-		VkDeviceSize offsets[] = { 0 };
-
-		//Binding descriptor sets (uniforms)
-		//Call drawing
-		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
-		{
-			vkCmdBindVertexBuffers(secondayCmdBuffers[i], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondayCmdBuffers[i], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondayCmdBuffers[i], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
-		}
-
-		//Stop recording Command Buffer
-		if (vkEndCommandBuffer(secondayCmdBuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to record command buffer!");
-		}
-#pragma endregion
-
-#pragma region Primary Command Buffers
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-		//Begin recording command buffer
-		if (vkBeginCommandBuffer(primaryCmdBuffers[i], &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to begin recording command buffer!");
-		}
-
-		//Starting a Render Pass
-		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = swapChain->renderPass;
-		renderPassInfo.framebuffer = swapChain->framebuffers[i];
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChain->extent;
-
-		//Clearing values
-		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		clearValues[1].depthStencil = { 1.0f, 0 };	//Depth goes from [1,0] - being 1 the furthest possible
-		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderPassInfo.pClearValues = clearValues.data();
-
-		vkCmdBeginRenderPass(primaryCmdBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-		//Execute Secondary Command Buffer
-		vkCmdExecuteCommands(primaryCmdBuffers[i], 1, &secondayCmdBuffers[i]);
-
-		//Finishing Render Pass
-		//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
-		vkCmdEndRenderPass(primaryCmdBuffers[i]);
-
-		//Stop recording Command Buffer
-		if (vkEndCommandBuffer(primaryCmdBuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to record command buffer!");
-		}
-#pragma endregion
-
+	//Begin recording Command Buffer
+	if (vkBeginCommandBuffer(secondayCmdBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to begin recording command buffer!");
 	}
 
+	//Basic Drawing Commands
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
+	vkCmdBindPipeline(secondayCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
+
+	vkCmdBindDescriptorSets(secondayCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+
+	//Set Vertex Buffer for drawing
+	//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
+	VkDeviceSize offsets[] = { 0 };
+
+	//Binding descriptor sets (uniforms)
+	//Call drawing
+	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	{
+		vkCmdBindVertexBuffers(secondayCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+		vkCmdBindIndexBuffer(secondayCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(secondayCmdBuffers[currentFrame], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
+	}
+
+	gui->DrawFrame(secondayCmdBuffers[currentFrame]);
+
+	//Stop recording Command Buffer
+	if (vkEndCommandBuffer(secondayCmdBuffers[currentFrame]) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to record command buffer!");
+	}
+	#pragma endregion
+
+	#pragma region Primary Command Buffers
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+	//Begin recording command buffer
+	if (vkBeginCommandBuffer(primaryCmdBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to begin recording command buffer!");
+	}
+
+	//Starting a Render Pass
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = swapChain->renderPass;
+	renderPassInfo.framebuffer = swapChain->framebuffers[currentFrame];
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = swapChain->extent;
+
+	//Clearing values
+	std::array<VkClearValue, 2> clearValues = {};
+	clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+	clearValues[1].depthStencil = { 1.0f, 0 };	//Depth goes from [1,0] - being 1 the furthest possible
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
+
+	vkCmdBeginRenderPass(primaryCmdBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+	//Execute Secondary Command Buffer
+	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &secondayCmdBuffers[currentFrame]);
+
+	//Finishing Render Pass
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
+	vkCmdEndRenderPass(primaryCmdBuffers[currentFrame]);
+
+	//Stop recording Command Buffer
+	if (vkEndCommandBuffer(primaryCmdBuffers[currentFrame]) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to record command buffer!");
+	}
+	#pragma endregion
 }
 
 void Ravine::mainLoop() {
@@ -1348,7 +1346,6 @@ void Ravine::mainLoop() {
 	vkDeviceWaitIdle(device->handle);
 }
 
-
 void Ravine::drawFrame()
 {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation
@@ -1360,16 +1357,36 @@ void Ravine::drawFrame()
 	//Fences are best fitted to syncronize the application itself with the renderization operations, while
 	//semaphores are used to syncronize operations within or across command queues - thus our best fit.
 
-	uint32_t imageIndex;
-	if (!swapChain->AcquireNextFrame(imageIndex)) {
+	//Handle resize and such
+	uint32_t frameIndex;
+	if (!swapChain->AcquireNextFrame(frameIndex)) {
 		recreateSwapChain();
 	}
+
+	//Update bone transforms
 	if (animations != nullptr) {
 		BoneTransform(Time::elapsedTime(), boneTransforms);
 	}
-	updateUniformBuffer(imageIndex);
 
-	if (!swapChain->SubmitNextFrame(primaryCmdBuffers.data(), imageIndex)) {
+	//Update the uniforms for the given frame
+	updateUniformBuffer(frameIndex);
+
+	//Start GUI recording
+	gui->AcquireFrame();
+	//DRAW THE GUI HERE
+
+
+
+	//BUT NOT AFTER HERE
+	gui->SubmitFrame();
+
+	//Update GUI buffers
+	gui->UpdateBuffers();
+
+	//Make sure to record the new commands
+	recordCommandBuffers(frameIndex);
+
+	if (!swapChain->SubmitNextFrame(primaryCmdBuffers.data(), frameIndex)) {
 		recreateSwapChain();
 	}
 }
@@ -1380,7 +1397,7 @@ void Ravine::setupFPSCam()
 	glfwSetInputMode(*window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 
 	//Hide mouse cursor
-	glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	//Update lastMousePos to avoid initial offset not null
 	glfwGetCursorPos(*window, &lastMouseX, &lastMouseY);
@@ -1389,7 +1406,6 @@ void Ravine::setupFPSCam()
 	camera = new RvCamera(glm::vec3(5.f, 0.f, 0.f), 90.f, 0.f);
 
 }
-
 
 void Ravine::updateUniformBuffer(uint32_t currentImage)
 {
@@ -1532,13 +1548,12 @@ void Ravine::cleanupSwapChain() {
 
 	//Destroy Graphics Pipeline and all it's components
 	vkDestroyPipeline(device->handle, *graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, graphicsPipeline->pipelineLayout, nullptr);
+	vkDestroyPipelineLayout(device->handle, graphicsPipeline->layout, nullptr);
 
 	//Destroy swap chain and all it's images
 	swapChain->Clear();
 	delete swapChain;
 }
-
 
 void Ravine::cleanup()
 {

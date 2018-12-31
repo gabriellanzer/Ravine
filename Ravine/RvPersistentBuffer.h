@@ -11,11 +11,11 @@ struct RvPersistentBuffer
 	RvPersistentBuffer(VkDeviceSize bufferSize, size_t sizeOfDataType);
 	~RvPersistentBuffer();
 
-	VkBuffer handle;
-	VkDeviceMemory memory;
-	VkDeviceSize bufferSize;
-	size_t sizeOfDataType;
-	size_t instancesCount;
+	VkBuffer handle = VK_NULL_HANDLE;
+	VkDeviceMemory memory = VK_NULL_HANDLE;
+	VkDeviceSize bufferSize = 0;
+	size_t sizeOfDataType = 0;
+	size_t instancesCount = 0;
 
 	//TODO: Implement someday hehe
 	// bool GetData(void* data, size_t offset, size_t);

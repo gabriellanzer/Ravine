@@ -4,37 +4,65 @@
 //Vulkan Includes
 #include <vulkan/vulkan.h>
 
+//STD Includes
+#include <vector>
+
 //ImGUI Includes
 #include "imgui.h"
 
+//GLM Includes
+#include <glm/glm.hpp>
+
 //Ravine Includes
 #include "RvDevice.h"
+#include "RvWindow.h"
 #include "RvSwapChain.h"
-#include "RvGraphicsPipeline.h"
 #include "RvTexture.h"
+#include "RvGUIPipeline.h"
+
 
 struct RvGUI
 {
 	//External Parameters
 	ImGuiIO* io;
 	RvDevice* device;
-	size_t width, height;
 	RvSwapChain* swapChain;
+	RvWindow* window;
 
 	//Font Attributes
-	RvTexture* fontTexture;
+	RvTexture fontTexture;
 	VkSampler textureSampler;
 
 	//Pipeline Attributes
-	RvGraphicsPipeline* guiPipeline;
+	RvGUIPipeline* guiPipeline;
 	VkDescriptorPool descriptorPool;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorSet descriptorSet;
+	
+	//Block of push constant information
+	struct PushConstBlock {
+		glm::vec2 scale;
+		glm::vec2 translate;
+	} pushConstBlock;
 
-	RvGUI(RvDevice& device, RvSwapChain& swapChain, size_t width, size_t height);
+	//Buffer Attributes
+	VkPushConstantRange pushConstantRange;
+	RvPersistentBuffer vertexBuffer;
+	RvPersistentBuffer indexBuffer;
+
+	//TODO: Create command buffers here and do a blitting operation later
+	//Today we are using the same CMD buffers to draw models and do UI stuff
+	//std::vector<VkCommandBuffer> commandBuffers;
+	//void CreateFrameBuffers();
+
+	RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window);
 	~RvGUI();
 
-	void Init(VkRenderPass& renderPass);
+	void Init(VkSampleCountFlagBits samplesCount);
+	void AcquireFrame();
+	void SubmitFrame();
+	void UpdateBuffers();
+	void DrawFrame(VkCommandBuffer commandBuffer);
 
 private:
 	void CreateTextureSampler();
@@ -42,6 +70,7 @@ private:
 	void CreateDescriptorPool();
 	void CreateDescriptorSetLayout();
 	void CreateDescriptorSet();
+	void CreatePushConstants();
 
 };
 

@@ -35,6 +35,9 @@
 #include "RvTexture.h"
 #include "RvCamera.h"
 
+//GUI Includes
+#include "RvGUI.h"
+
 //Math defines
 #define f_max(a,b)            (((a) > (b)) ? (a) : (b))
 #define f_min(a,b)            (((a) < (b)) ? (a) : (b))
@@ -81,6 +84,9 @@ private:
 
 	//Camera
 	RvCamera* camera;
+
+	//GUI
+	RvGUI* gui;
 
 	const aiScene* scene;
 	//Todo: Move to MESH
@@ -220,7 +226,10 @@ private:
 	void createMultiSamplingResources();
 
 	//Creates command buffers array
-	void createCommandBuffers();
+	void allocateCommandBuffers();
+
+	//Records new draw commands
+	void recordCommandBuffers(uint32_t currentFrame);
 
 	//Main application loop
 	void mainLoop();

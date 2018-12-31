@@ -9,7 +9,7 @@
 
 struct RvGraphicsPipeline
 {
-	RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass);
+	RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass);
 	~RvGraphicsPipeline();
 
 	RvDevice* device;
@@ -18,11 +18,9 @@ struct RvGraphicsPipeline
 	VkShaderModule vertModule;
 	VkShaderModule fragModule;
 
-	VkPipelineLayout pipelineLayout;
+	VkPipelineLayout layout;
 	VkPipelineCache pipelineCache;
 	VkRenderPass renderPass;
-
-	void Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass);
 
 	operator VkPipeline() {
 		return handle;

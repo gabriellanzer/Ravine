@@ -79,7 +79,7 @@ void RvDevice::CreateCommandPool()
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-	poolInfo.flags = 0; // Optional
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	if (vkCreateCommandPool(handle, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create command pool!");
@@ -199,7 +199,7 @@ RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bu
 	return newBuffer;
 }
 
-RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM)
+RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height, VkFormat format)
 {
 	return rvTools::createTexture(this, pixels, width, height, format);
 }

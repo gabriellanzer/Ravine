@@ -1,23 +1,26 @@
 #include "RvGUIPipeline.h"
 
-RvGUIPipeline::RvGUIPipeline(RvDevice & device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass)
-{
-	Init(extent, sampleCount, descriptorSetLayout, renderPass);
-}
+//Ravine Includes
+#include "RvTools.h"
 
-RvGUIPipeline::~RvGUIPipeline()
-{
-	vkDestroyShaderModule(device->handle, fragModule, nullptr);
-	vkDestroyShaderModule(device->handle, vertModule, nullptr);
-}
+//ImGUI Includes
+#include "imgui.h"
 
-void RvGUIPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass)
+RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass) : device(&device)
 {
+	//Create Pipeline cache
+	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
+	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+	if (vkCreatePipelineCache(device.handle, &pipelineCacheCreateInfo, nullptr, &pipelineCache) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create Pipeline Cache!");
+	}
+
+	//Load Shaders
 	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/gui.vert.spv");
 	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/gui.frag.spv");
-
-	vertModule = rvTools::createShaderModule(device->handle, vertShaderCode);
-	fragModule = rvTools::createShaderModule(device->handle, fragShaderCode);
+	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
+	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -38,12 +41,33 @@ void RvGUIPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, V
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Vertex_input
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	auto bindingDescription = RvVertex::getBindingDescription();
-	auto attributeDescriptions = RvVertex::getAttributeDescriptions();
+
+	VkVertexInputBindingDescription bindingDescription{};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = sizeof(ImDrawVert);
+	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	VkVertexInputAttributeDescription attributeDescriptions[3];
+	// Location 0: Position
+	attributeDescriptions[0].location = 0;
+	attributeDescriptions[0].binding = 0;
+	attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+	attributeDescriptions[0].offset = offsetof(ImDrawVert, pos);
+	// Location 1: UV
+	attributeDescriptions[1].location = 1;
+	attributeDescriptions[1].binding = 0;
+	attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+	attributeDescriptions[1].offset = offsetof(ImDrawVert, uv);
+	// Location 2: Color
+	attributeDescriptions[2].location = 2;
+	attributeDescriptions[2].binding = 0;
+	attributeDescriptions[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+	attributeDescriptions[2].offset = offsetof(ImDrawVert, col);
+
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(3);
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
 
 	//Input Assembly (describes what kind of geometry will be drawn from the vertices and if primitive restart should be enabled).
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Input_assembly
@@ -74,6 +98,18 @@ void RvGUIPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, V
 	viewportState.scissorCount = 1;
 	viewportState.pScissors = &scissor;
 
+	//Dynamic State (Defines the states that can be changed without recreating the graphics pipeline)
+	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
+	VkDynamicState dynamicStates[] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamicState = {};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = 2,
+	dynamicState.pDynamicStates = dynamicStates;
+
 	//Rasterizer (takes the geometry that is shaped by the vertices at the vertex shader and turns it into fragments)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Rasterizer
 	VkPipelineRasterizationStateCreateInfo rasterizer = {};
@@ -83,13 +119,7 @@ void RvGUIPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, V
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL; //Could be FILL, LINE or POINT (requires GPU feature enabling)
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_NONE;
-	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	//Used for shadow mapping
-	rasterizer.depthBiasEnable = VK_FALSE;
-	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-	rasterizer.depthBiasClamp = 0.0f; // Optional
-	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 
 	//Multisampling (anti-aliasing: combines the fragment shader results of multiple polygons that rasterize to the same pixel)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Multisampling
@@ -102,55 +132,49 @@ void RvGUIPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, V
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
-	//Depth and stencil testing (configuration of these auxiliar buffers)
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Depth_and_stencil_testing
-	//NOT UTILIZED IN THIS TUTORIAL
-
 	//Color Blending (combines the fragment's output with the color that is already in the framebuffer)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Color_blending
 	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+	colorBlendAttachment.blendEnable = VK_TRUE;
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
-	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
 	VkPipelineColorBlendStateCreateInfo colorBlending = {};
 	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
 	colorBlending.attachmentCount = 1;
 	colorBlending.pAttachments = &colorBlendAttachment;
-	colorBlending.blendConstants[0] = 0.0f; // Optional
-	colorBlending.blendConstants[1] = 0.0f; // Optional
-	colorBlending.blendConstants[2] = 0.0f; // Optional
-	colorBlending.blendConstants[3] = 0.0f; // Optional
+	//TODO: Understand why ImGUI doesn't use those values
+	//colorBlending.logicOpEnable = VK_FALSE; 
+	//colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+	//colorBlending.blendConstants[0] = 0.0f; // Optional
+	//colorBlending.blendConstants[1] = 0.0f; // Optional
+	//colorBlending.blendConstants[2] = 0.0f; // Optional
+	//colorBlending.blendConstants[3] = 0.0f; // Optional
 
-	//Dynamic State (Defines the states that can be changed without recreating the graphics pipeline)
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
-	VkDynamicState dynamicStates[] = {
-		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_LINE_WIDTH
-	};
+	//Depth Stencil Attachment
+	VkPipelineDepthStencilStateCreateInfo depthStencil{};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_FALSE;
+	depthStencil.depthWriteEnable = VK_FALSE;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	depthStencil.front = depthStencil.back;
+	depthStencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
-	VkPipelineDynamicStateCreateInfo dynamicState = {};
-	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamicState.dynamicStateCount = 2;
-	dynamicState.pDynamicStates = dynamicStates;
-
-	//Pipeline Layout (Specify the uniform variables used in the pipeline)
+	//Pipeline Layout (Specify the uniform variables and push constants used in the pipeline)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Pipeline_layout
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+	pipelineLayoutInfo.pushConstantRangeCount = 1;
+	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-	if (vkCreatePipelineLayout(device->handle, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(device.handle, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create pipeline layout!");
 	}
 
@@ -162,42 +186,37 @@ void RvGUIPipeline::Init(VkExtent2D extent, VkSampleCountFlagBits sampleCount, V
 	pipelineInfo.pStages = shaderStages;
 
 	//Reference all state objects
+	//Vertex and Rasterizer
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	//Viewpor and scissors
 	pipelineInfo.pViewportState = &viewportState;
+	//Attachments
 	pipelineInfo.pRasterizationState = &rasterizer;
 	pipelineInfo.pMultisampleState = &multisampling;
-	pipelineInfo.pDepthStencilState = nullptr; // Optional
 	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDynamicState = nullptr; // Optional
+	pipelineInfo.pDepthStencilState = &depthStencil;
 
 	//The uniforms layout
-	pipelineInfo.layout = pipelineLayout;
+	pipelineInfo.layout = layout;
 
 	//Reference render pass and define current subpass index
 	pipelineInfo.renderPass = renderPass;
-	pipelineInfo.subpass = 0;
 
 	//Pipeline inheritence
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 	pipelineInfo.basePipelineIndex = -1; // Optional
 
-	//Depth/Stencil state
-	VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;	//Depth compare function
+	//Setup dynamic state
+	pipelineInfo.pDynamicState = &dynamicState;
 
-	//Creates bounds for depth
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f; // Optional
-	depthStencil.maxDepthBounds = 1.0f; // Optional
-
-	//Settin depth/stencil state to pipeline
-	pipelineInfo.pDepthStencilState = &depthStencil;
-
-	if (vkCreateGraphicsPipelines(device->handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(device.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline!");
 	}
+}
+
+RvGUIPipeline::~RvGUIPipeline()
+{
+	vkDestroyShaderModule(device->handle, fragModule, nullptr);
+	vkDestroyShaderModule(device->handle, vertModule, nullptr);
 }

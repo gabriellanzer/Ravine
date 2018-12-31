@@ -47,8 +47,8 @@ struct RvGUI
 
 	//Buffer Attributes
 	VkPushConstantRange pushConstantRange;
-	RvPersistentBuffer vertexBuffer;
-	RvPersistentBuffer indexBuffer;
+	std::vector<RvPersistentBuffer> vertexBuffer;
+	std::vector<RvPersistentBuffer> indexBuffer;
 
 	//TODO: Create command buffers here and do a blitting operation later
 	//Today we are using the same CMD buffers to draw models and do UI stuff
@@ -61,8 +61,8 @@ struct RvGUI
 	void Init(VkSampleCountFlagBits samplesCount);
 	void AcquireFrame();
 	void SubmitFrame();
-	void UpdateBuffers();
-	void DrawFrame(VkCommandBuffer commandBuffer);
+	void UpdateBuffers(uint32_t frameIndex);
+	void DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex);
 
 private:
 	void CreateTextureSampler();

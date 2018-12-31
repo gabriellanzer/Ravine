@@ -1280,7 +1280,7 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 		vkCmdDrawIndexed(secondayCmdBuffers[currentFrame], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
 	}
 
-	gui->DrawFrame(secondayCmdBuffers[currentFrame]);
+	gui->DrawFrame(secondayCmdBuffers[currentFrame], currentFrame);
 
 	//Stop recording Command Buffer
 	if (vkEndCommandBuffer(secondayCmdBuffers[currentFrame]) != VK_SUCCESS) {
@@ -1381,7 +1381,7 @@ void Ravine::drawFrame()
 	gui->SubmitFrame();
 
 	//Update GUI buffers
-	gui->UpdateBuffers();
+	gui->UpdateBuffers(frameIndex);
 
 	//Make sure to record the new commands
 	recordCommandBuffers(frameIndex);

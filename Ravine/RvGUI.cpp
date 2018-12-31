@@ -52,8 +52,8 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	CreatePushConstants(); //Create the structure that defines the push constant range
 
 	//Reset buffers
-	vertexBuffer = {};
-	indexBuffer = {};
+	vertexBuffer.resize(swapChain->images.size());
+	indexBuffer.resize(swapChain->images.size());
 
 	//Create GUI Graphics Pipeline
 	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, pushConstantRange, swapChain->renderPass);
@@ -211,7 +211,7 @@ void RvGUI::CreatePushConstants()
 	pushConstantRange.offset = 0;
 }
 
-void RvGUI::UpdateBuffers()
+void RvGUI::UpdateBuffers(uint32_t frameIndex)
 {
 	ImDrawData* imDrawData = ImGui::GetDrawData();
 
@@ -225,14 +225,14 @@ void RvGUI::UpdateBuffers()
 	}
 
 	// Vertex buffer
-	if ((vertexBuffer.handle == VK_NULL_HANDLE) || (vertexBuffer.bufferSize != vertexBufferSize)) {
+	if ((vertexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (vertexBuffer[frameIndex].bufferSize != vertexBufferSize)) {
 
 		//Cleanup from old buffer
-		if (vertexBuffer.sizeOfDataType > static_cast<uint32_t>(0))
+		if (vertexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
 		{
-			vkDestroyBuffer(device->handle, vertexBuffer.handle, nullptr);
-			vkFreeMemory(device->handle, vertexBuffer.memory, nullptr);
-			vertexBuffer.~RvPersistentBuffer();
+			vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
+			vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
+			vertexBuffer[frameIndex].~RvPersistentBuffer();
 		}
 
 		//Allocate new one
@@ -245,7 +245,7 @@ void RvGUI::UpdateBuffers()
 		}
 
 		//Create buffer on GPU
-		vertexBuffer = device->createPersistentBuffer(vtxDst, vertexBufferSize, sizeof(ImDrawVert),
+		vertexBuffer[frameIndex] = device->createPersistentBuffer(vtxDst, vertexBufferSize, sizeof(ImDrawVert),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		//Free-up memory
@@ -253,14 +253,14 @@ void RvGUI::UpdateBuffers()
 	}
 
 	// Index buffer
-	if ((indexBuffer.handle == VK_NULL_HANDLE) || (indexBuffer.bufferSize < indexBufferSize)) {
+	if ((indexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (indexBuffer[frameIndex].bufferSize < indexBufferSize)) {
 
 		//Cleanup from old buffer
-		if (indexBuffer.sizeOfDataType > static_cast<uint32_t>(0))
+		if (indexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
 		{
-			vkDestroyBuffer(device->handle, indexBuffer.handle, nullptr);
-			vkFreeMemory(device->handle, indexBuffer.memory, nullptr);
-			indexBuffer.~RvPersistentBuffer();
+			vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
+			vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
+			indexBuffer[frameIndex].~RvPersistentBuffer();
 		}
 
 		//Allocate new one
@@ -273,7 +273,7 @@ void RvGUI::UpdateBuffers()
 		}
 
 		//Create buffer on GPU
-		indexBuffer = device->createPersistentBuffer(idxDst, indexBufferSize, sizeof(ImDrawIdx),
+		indexBuffer[frameIndex] = device->createPersistentBuffer(idxDst, indexBufferSize, sizeof(ImDrawIdx),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		//Free-up memory
@@ -281,7 +281,7 @@ void RvGUI::UpdateBuffers()
 	}
 }
 
-void RvGUI::DrawFrame(VkCommandBuffer commandBuffer)
+void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 {
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -308,8 +308,8 @@ void RvGUI::DrawFrame(VkCommandBuffer commandBuffer)
 	if (imDrawData->CmdListsCount > 0) {
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.handle, offsets);
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer[frameIndex].handle, offsets);
+		vkCmdBindIndexBuffer(commandBuffer, indexBuffer[frameIndex].handle, 0, VK_INDEX_TYPE_UINT16);
 
 		for (int32_t i = 0; i < imDrawData->CmdListsCount; i++)
 		{

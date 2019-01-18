@@ -6,7 +6,7 @@
 //ImGUI Includes
 #include "imgui.h"
 
-RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass) : device(&device)
+RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass) : device(&device)
 {
 	//Create Pipeline cache
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
@@ -172,7 +172,7 @@ RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountF
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+	pipelineLayoutInfo.pPushConstantRanges = pushConstantRange;
 
 	if (vkCreatePipelineLayout(device.handle, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create pipeline layout!");

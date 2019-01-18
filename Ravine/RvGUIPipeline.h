@@ -10,7 +10,7 @@
 
 struct RvGUIPipeline
 {
-	RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange pushConstantRange, VkRenderPass renderPass);
+	RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass);
 	~RvGUIPipeline();
 
 	RvDevice* device;

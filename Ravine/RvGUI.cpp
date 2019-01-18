@@ -56,7 +56,7 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	indexBuffer.resize(swapChain->images.size());
 
 	//Create GUI Graphics Pipeline
-	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, pushConstantRange, swapChain->renderPass);
+	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
 }
 
 void RvGUI::AcquireFrame()
@@ -224,8 +224,9 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 		return;
 	}
 
+	//TODO: Fix the updating of the buffers to a performatic way of doing this!
 	// Vertex buffer
-	if ((vertexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (vertexBuffer[frameIndex].bufferSize != vertexBufferSize)) {
+	//if ((vertexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (vertexBuffer[frameIndex].bufferSize != vertexBufferSize)) {
 
 		//Cleanup from old buffer
 		if (vertexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
@@ -250,10 +251,10 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 
 		//Free-up memory
 		delete vtxDst;
-	}
+	//}
 
 	// Index buffer
-	if ((indexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (indexBuffer[frameIndex].bufferSize < indexBufferSize)) {
+	//if ((indexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (indexBuffer[frameIndex].bufferSize < indexBufferSize)) {
 
 		//Cleanup from old buffer
 		if (indexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
@@ -278,7 +279,7 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 
 		//Free-up memory
 		delete idxDst;
-	}
+	//}
 }
 
 void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)
@@ -289,8 +290,8 @@ void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->handle);
 
 	VkViewport viewport = {};
-	viewport.width = ImGui::GetIO().DisplaySize.x;
-	viewport.height = ImGui::GetIO().DisplaySize.y;
+	viewport.width = io.DisplaySize.x;
+	viewport.height = io.DisplaySize.y;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);

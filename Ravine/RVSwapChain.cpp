@@ -110,7 +110,7 @@ VkPresentModeKHR RvSwapChain::choosePresentMode(const std::vector<VkPresentModeK
 		}
 	}
 
-	return VK_PRESENT_MODE_IMMEDIATE_KHR;
+	return bestMode;
 }
 
 VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) {

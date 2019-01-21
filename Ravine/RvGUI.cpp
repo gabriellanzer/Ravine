@@ -2,6 +2,10 @@
 
 //STD Includes
 #include <array>
+#include <iostream>
+
+//Hash Includes
+#include "crc32.h"
 
 //Ravine Include
 #include "Time.h"
@@ -219,67 +223,83 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 	VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
 	VkDeviceSize indexBufferSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
 
-	//Update buffers only if vertex or index count has been changed compared to current buffer size
+	//Avoid drawing empty buffers
 	if ((vertexBufferSize == 0) || (indexBufferSize == 0)) {
 		return;
 	}
 
-	//TODO: Fix the updating of the buffers to a performatic way of doing this!
-	// Vertex buffer
-	//if ((vertexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (vertexBuffer[frameIndex].bufferSize != vertexBufferSize)) {
+	//Calculate CRC for changes detection
+	uint32_t vtxCrc = ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL };
+	static const unsigned long long guiVtxToCharSize = sizeof(ImDrawVert) / sizeof(char);
+	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
+		const ImDrawList* cmd_list = imDrawData->CmdLists[n];
+		vtxCrc = crc(reinterpret_cast<char*>(cmd_list->VtxBuffer.Data), cmd_list->VtxBuffer.Size*guiVtxToCharSize, vtxCrc);
+	}
 
-		//Cleanup from old buffer
-		if (vertexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
-		{
-			vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
-			vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
-			vertexBuffer[frameIndex].~RvPersistentBuffer();
-		}
+	//TODO: Get this number from a define
+	static uint32_t lastVtxCrc[5] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 
-		//Allocate new one
-		ImDrawVert* vtxDst = new ImDrawVert[imDrawData->TotalVtxCount];
-		ImDrawVert* vtxItt = vtxDst;
-		for (int n = 0; n < imDrawData->CmdListsCount; n++) {
-			const ImDrawList* cmd_list = imDrawData->CmdLists[n];
-			memcpy(vtxItt, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-			vtxItt += cmd_list->VtxBuffer.Size;
-		}
+	//Compare CRC to detect changes and avoid useless updates
+	if (vtxCrc == lastVtxCrc[frameIndex])
+	{
+		//std::cout << "ImGUI Vtx CRC not equal!" << std::endl;
+		return;
+	}
 
-		//Create buffer on GPU
-		vertexBuffer[frameIndex] = device->createPersistentBuffer(vtxDst, vertexBufferSize, sizeof(ImDrawVert),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	lastVtxCrc[frameIndex] = vtxCrc;
 
-		//Free-up memory
-		delete vtxDst;
-	//}
+#pragma region Vertex Buffer
+	//Cleanup from old buffer
+	if (vertexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
+	{
+		vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
+		vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
+		vertexBuffer[frameIndex].~RvPersistentBuffer();
+	}
 
-	// Index buffer
-	//if ((indexBuffer[frameIndex].handle == VK_NULL_HANDLE) || (indexBuffer[frameIndex].bufferSize < indexBufferSize)) {
+	//Allocate new one
+	ImDrawVert* vtxRsc = new ImDrawVert[imDrawData->TotalVtxCount];
+	ImDrawVert* vtxItt = vtxRsc;
+	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
+		const ImDrawList* cmd_list = imDrawData->CmdLists[n];
+		memcpy(vtxItt, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+		vtxItt += cmd_list->VtxBuffer.Size;
+	}
 
-		//Cleanup from old buffer
-		if (indexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
-		{
-			vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
-			vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
-			indexBuffer[frameIndex].~RvPersistentBuffer();
-		}
+	//Create buffer on GPU
+	vertexBuffer[frameIndex] = device->createPersistentBuffer(vtxRsc, vertexBufferSize, sizeof(ImDrawVert),
+		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		//Allocate new one
-		ImDrawIdx* idxDst = new ImDrawIdx[imDrawData->TotalIdxCount];
-		ImDrawIdx* idxItt = idxDst;
-		for (int n = 0; n < imDrawData->CmdListsCount; n++) {
-			const ImDrawList* cmd_list = imDrawData->CmdLists[n];
-			memcpy(idxItt, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-			idxItt += cmd_list->IdxBuffer.Size;
-		}
+	//Free-up memory
+	delete vtxRsc;
+#pragma endregion
 
-		//Create buffer on GPU
-		indexBuffer[frameIndex] = device->createPersistentBuffer(idxDst, indexBufferSize, sizeof(ImDrawIdx),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+#pragma region Index Buffer
+	//Cleanup from old buffer
+	if (indexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
+	{
+		vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
+		vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
+		indexBuffer[frameIndex].~RvPersistentBuffer();
+	}
 
-		//Free-up memory
-		delete idxDst;
-	//}
+	//Allocate new one
+	ImDrawIdx* idxRsc = new ImDrawIdx[imDrawData->TotalIdxCount];
+	ImDrawIdx* idxItt = idxRsc;
+	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
+		const ImDrawList* cmd_list = imDrawData->CmdLists[n];
+		memcpy(idxItt, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+		idxItt += cmd_list->IdxBuffer.Size;
+	}
+
+	//Create buffer on GPU
+	indexBuffer[frameIndex] = device->createPersistentBuffer(idxRsc, indexBufferSize, sizeof(ImDrawIdx),
+		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	//Free-up memory
+	delete idxRsc;
+#pragma endregion
+
 }
 
 void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)

@@ -187,7 +187,7 @@ RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bu
 
 	// Persistent buffer
 	RvPersistentBuffer newBuffer(bufferSize, sizeOfDataType);
-	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
+	createBuffer(bufferSize, usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
 
 	// Copying data to persistent buffer
 	rvTools::copyBuffer(*this, stagingBuffer.buffer, newBuffer.handle, bufferSize);

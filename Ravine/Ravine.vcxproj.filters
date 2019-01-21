@@ -72,9 +72,6 @@
     <ClCompile Include="RvCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="crc32.cpp">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClCompile>
     <ClCompile Include="imgui_demo.cpp">
       <Filter>Header Files\ImGUI</Filter>
     </ClCompile>
@@ -92,6 +89,9 @@
     </ClCompile>
     <ClCompile Include="RvGUI.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crc32.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

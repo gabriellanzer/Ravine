@@ -219,4 +219,7 @@ RvGUIPipeline::~RvGUIPipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);
+	vkDestroyPipelineCache(device->handle, pipelineCache, nullptr);
+	vkDestroyPipelineLayout(device->handle, layout, nullptr);
+	vkDestroyPipeline(device->handle, handle, nullptr);
 }

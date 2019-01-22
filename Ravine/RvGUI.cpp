@@ -13,7 +13,7 @@
 //GLFW Includes
 #include <glfw/glfw3.h>
 
-RvGUI::RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window)
+RvGUI::RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window), swapChainImagesCount(swapChain.images.size())
 {
 	ImGui::CreateContext();
 	io = &ImGui::GetIO();
@@ -21,7 +21,37 @@ RvGUI::RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : devic
 
 RvGUI::~RvGUI()
 {
+	//Freeup Pipeline
 	delete guiPipeline;
+
+	//Freeup Texture Samplers
+	vkDestroySampler(device->handle, textureSampler, nullptr);
+	fontTexture.Free();
+
+	//Destroy Descriptor pool with descriptor sets allocation
+	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
+	vkDestroyDescriptorSetLayout(device->handle, descriptorSetLayout, nullptr);
+
+	//Clear Buffers
+	for (size_t i = 0; i < swapChainImagesCount; i++)
+	{
+		//Destroy Vertex Buffers
+		vkDestroyBuffer(device->handle, vertexBuffer[i].handle, nullptr);
+		vkFreeMemory(device->handle, vertexBuffer[i].memory, nullptr);
+
+		//Destroy Index Buffers
+		vkDestroyBuffer(device->handle, indexBuffer[i].handle, nullptr);
+		vkFreeMemory(device->handle, indexBuffer[i].memory, nullptr);
+	}
+	vertexBuffer.clear();
+	indexBuffer.clear();
+
+	//Cleanup Pointers
+	device = nullptr;
+	swapChain = nullptr;
+	window = nullptr;
+	io = nullptr;
+	guiPipeline = nullptr;
 }
 
 void RvGUI::Init(VkSampleCountFlagBits samplesCount)
@@ -56,8 +86,9 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	CreatePushConstants(); //Create the structure that defines the push constant range
 
 	//Reset buffers
-	vertexBuffer.resize(swapChain->images.size());
-	indexBuffer.resize(swapChain->images.size());
+	swapChainImagesCount = swapChain->images.size();
+	vertexBuffer.resize(swapChainImagesCount);
+	indexBuffer.resize(swapChainImagesCount);
 
 	//Create GUI Graphics Pipeline
 	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
@@ -236,9 +267,6 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 		vtxCrc = crc(reinterpret_cast<char*>(cmd_list->VtxBuffer.Data), cmd_list->VtxBuffer.Size*guiVtxToCharSize, vtxCrc);
 	}
 
-	//TODO: Get this number from a define
-	static uint32_t lastVtxCrc[5] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
-
 	//Compare CRC to detect changes and avoid useless updates
 	if (vtxCrc == lastVtxCrc[frameIndex])
 	{
@@ -250,12 +278,9 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 
 #pragma region Vertex Buffer
 	//Cleanup from old buffer
-	if (vertexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
-	{
-		vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
-		vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
-		vertexBuffer[frameIndex].~RvPersistentBuffer();
-	}
+	vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
+	vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
+	vertexBuffer[frameIndex].~RvPersistentBuffer();
 
 	//Allocate new one
 	ImDrawVert* vtxRsc = new ImDrawVert[imDrawData->TotalVtxCount];
@@ -276,12 +301,9 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 
 #pragma region Index Buffer
 	//Cleanup from old buffer
-	if (indexBuffer[frameIndex].sizeOfDataType > static_cast<uint32_t>(0))
-	{
-		vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
-		vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
-		indexBuffer[frameIndex].~RvPersistentBuffer();
-	}
+	vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
+	vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
+	indexBuffer[frameIndex].~RvPersistentBuffer();
 
 	//Allocate new one
 	ImDrawIdx* idxRsc = new ImDrawIdx[imDrawData->TotalIdxCount];

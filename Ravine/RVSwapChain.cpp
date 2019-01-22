@@ -312,9 +312,9 @@ void RvSwapChain::CreateFramebuffers()
 
 void RvSwapChain::CreateSyncObjects()
 {
-	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+	imageAvailableSemaphores.resize(RV_MAX_FRAMES_IN_FLIGHT);
+	renderFinishedSemaphores.resize(RV_MAX_FRAMES_IN_FLIGHT);
+	inFlightFences.resize(RV_MAX_FRAMES_IN_FLIGHT);
 
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -323,7 +323,7 @@ void RvSwapChain::CreateSyncObjects()
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	for (size_t i = 0; i < RV_MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		if (vkCreateSemaphore(device->handle, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
 			vkCreateSemaphore(device->handle, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
@@ -336,7 +336,7 @@ void RvSwapChain::CreateSyncObjects()
 
 void RvSwapChain::DestroySyncObjects()
 {
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+	for (size_t i = 0; i < RV_MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(device->handle, renderFinishedSemaphores[i], nullptr);
 		vkDestroySemaphore(device->handle, imageAvailableSemaphores[i], nullptr);
 		vkDestroyFence(device->handle, inFlightFences[i], nullptr);
@@ -409,7 +409,7 @@ bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 		throw std::runtime_error("Failed to present swap chain image!");
 	}
 
-	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	currentFrame = (currentFrame + 1) % RV_MAX_FRAMES_IN_FLIGHT;
 	return true;
 }
 

@@ -1557,6 +1557,9 @@ void Ravine::cleanupSwapChain() {
 
 void Ravine::cleanup()
 {
+	//Cleanup RvGUI data
+	delete gui;
+
 	//Hold number of swapchain images
 	uint32_t swapImagesCount = swapChain->images.size();
 
@@ -1615,7 +1618,6 @@ void Ravine::cleanup()
 
 	//Destroy VK surface and instance
 	delete window;
-
 	vkDestroyInstance(instance, nullptr);
 
 	//Finish GLFW

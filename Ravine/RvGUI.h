@@ -29,6 +29,9 @@ struct RvGUI
 	RvSwapChain* swapChain;
 	RvWindow* window;
 
+	//External parameters state
+	uint32_t swapChainImagesCount = 0;
+
 	//Font Attributes
 	RvTexture fontTexture;
 	VkSampler textureSampler;
@@ -49,6 +52,9 @@ struct RvGUI
 	VkPushConstantRange pushConstantRange;
 	std::vector<RvPersistentBuffer> vertexBuffer;
 	std::vector<RvPersistentBuffer> indexBuffer;
+
+	//TODO: Get this number from a define
+	uint32_t lastVtxCrc[RV_MAX_FRAMES_IN_FLIGHT] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 
 	//TODO: Create command buffers here and do a blitting operation later
 	//Today we are using the same CMD buffers to draw models and do UI stuff

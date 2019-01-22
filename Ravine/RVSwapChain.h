@@ -36,7 +36,7 @@ public:
 	uint32_t HEIGHT;
 
 	//Number of maximum simultaneous frames
-	const int MAX_FRAMES_IN_FLIGHT = 2;
+	#define RV_MAX_FRAMES_IN_FLIGHT 3
 
 	//Vulkan Object Handle
 	VkSwapchainKHR handle = VK_NULL_HANDLE;

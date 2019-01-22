@@ -412,6 +412,8 @@ void Ravine::createDescriptorSetLayout()
 
 }
 
+#pragma region ANIMATION STUFF
+
 static glm::mat4 AiToGLMMat4(aiMatrix4x4& in_mat)
 {
 	glm::mat4 tmp;
@@ -1062,6 +1064,8 @@ uint16_t Ravine::FindPosition(double AnimationTime, const aiNodeAnim * pNodeAnim
 	}
 }
 
+#pragma endregion
+
 void Ravine::createVertexBuffer()
 {
 	/*
@@ -1271,7 +1275,6 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
 	//Set Vertex Buffer for drawing
-	//VkBuffer auxVertexBuffers[] = { vertexBuffer.handle };
 	VkDeviceSize offsets[] = { 0 };
 
 	//Binding descriptor sets (uniforms)
@@ -1280,10 +1283,8 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	{
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(meshes[meshIndex].index_count), 1, 0, 0, 0);
+		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 	}
-
-	gui->DrawFrame(secondaryCmdBuffers[currentFrame], currentFrame);
 
 	//Stop recording Command Buffer
 	if (vkEndCommandBuffer(secondaryCmdBuffers[currentFrame]) != VK_SUCCESS) {
@@ -1317,8 +1318,11 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	vkCmdBeginRenderPass(primaryCmdBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-	//Execute Secondary Command Buffer
+	//Execute Skinned Mesh Pipeline - Secondary Command Buffer
 	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &secondaryCmdBuffers[currentFrame]);
+
+	//Execute GUI Pipeline - Secondary Command Buffer
+	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &gui->cmdBuffers[currentFrame]);
 
 	//Finishing Render Pass
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
@@ -1379,15 +1383,18 @@ void Ravine::drawFrame()
 	gui->AcquireFrame();
 	//DRAW THE GUI HERE
 
-
+	ImGui::ShowDemoWindow();
 
 	//BUT NOT AFTER HERE
 	gui->SubmitFrame();
 
-	//Update GUI buffers
+	//Update GUI Buffers
 	gui->UpdateBuffers(frameIndex);
 
-	//Make sure to record the new commands
+	//Record GUI Draw Commands into CMD Buffers
+	gui->RecordCmdBuffers(frameIndex);
+
+	//Make sure to record all new Commands
 	recordCommandBuffers(frameIndex);
 
 	if (!swapChain->SubmitNextFrame(primaryCmdBuffers.data(), frameIndex)) {

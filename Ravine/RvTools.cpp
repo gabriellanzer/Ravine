@@ -36,7 +36,7 @@ namespace rvTools {
 
 		//Staging buffer
 		size_t dataSize = width * height * 4; //Size * 4 channels (RGBA)
-		RvDynamicBuffer stagingBuffer = device->createDynamicBuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		RvDynamicBuffer stagingBuffer = device->createDynamicBuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			(VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
 		);
 
@@ -159,8 +159,8 @@ namespace rvTools {
 			if (mipWidth > 1) mipWidth /= 2;
 			if (mipHeight > 1) mipHeight /= 2;
 		}
-		
-		for (uint32_t i = 0; i < mipLevels-1; i++) {
+
+		for (uint32_t i = 0; i < mipLevels - 1; i++) {
 
 			barrier.subresourceRange.baseMipLevel = i;
 			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -174,9 +174,9 @@ namespace rvTools {
 								 0, nullptr,
 								 1, &barrier);
 		}
-		
+
 		//Changing layout here because last mipLevel is never blitted from
-		barrier.subresourceRange.baseMipLevel = mipLevels-1;
+		barrier.subresourceRange.baseMipLevel = mipLevels - 1;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -441,6 +441,22 @@ namespace rvTools {
 		}
 
 		return shaderModule;
+	}
+
+	RvFramebufferAttachment createFrameBufferAttachment(RvDevice* device, uint32_t width, uint32_t height, RvFramebufferAttachmentCreateInfo createInfo)
+	{
+		RvFramebufferAttachment newAttachment = {};
+		device->createImage(
+			width, height, createInfo.mipLevels, device->sampleCount, createInfo.format,
+			createInfo.tilling,
+			createInfo.usage,
+			createInfo.memoryProperties,
+			createInfo.createFlag,
+			newAttachment.image, newAttachment.memory);
+		newAttachment.imageView = createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
+		transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
+
+		return newAttachment;
 	}
 
 }

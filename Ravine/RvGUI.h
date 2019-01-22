@@ -53,7 +53,12 @@ struct RvGUI
 	std::vector<RvPersistentBuffer> vertexBuffer;
 	std::vector<RvPersistentBuffer> indexBuffer;
 
-	//TODO: Get this number from a define
+	//The GUI CommandBuffers for each frame
+	std::vector<VkCommandBuffer> cmdBuffers;
+
+	//The GUI FrameBuffers for each frame
+	std::vector<RvFramebufferAttachment> frameBuffers;
+
 	uint32_t lastVtxCrc[RV_MAX_FRAMES_IN_FLIGHT] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 
 	//TODO: Create command buffers here and do a blitting operation later
@@ -68,9 +73,11 @@ struct RvGUI
 	void AcquireFrame();
 	void SubmitFrame();
 	void UpdateBuffers(uint32_t frameIndex);
-	void DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex);
+	void RecordCmdBuffers(uint32_t frameIndex);
 
 private:
+	void CreateFrameBuffers();
+	void CreateCmdBuffers();
 	void CreateTextureSampler();
 	void CreateFontTexture();
 	void CreateDescriptorPool();

@@ -85,10 +85,13 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	CreateDescriptorSet(); //The descriptor set holds information regarding data location and types
 	CreatePushConstants(); //Create the structure that defines the push constant range
 
-	//Reset buffers
+	//Reset Buffers
 	swapChainImagesCount = swapChain->images.size();
 	vertexBuffer.resize(swapChainImagesCount);
 	indexBuffer.resize(swapChainImagesCount);
+
+	//Create Cmd Buffers for drwaing
+	CreateCmdBuffers();
 
 	//Create GUI Graphics Pipeline
 	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
@@ -110,10 +113,32 @@ void RvGUI::AcquireFrame()
 
 void RvGUI::SubmitFrame()
 {
-	ImGui::ShowDemoWindow();
-
 	//Render generates draw buffers
 	ImGui::Render();
+}
+
+void RvGUI::CreateFrameBuffers()
+{
+	frameBuffers.resize(swapChainImagesCount);
+
+	
+}
+
+void RvGUI::CreateCmdBuffers()
+{
+	//Resize according to swapChain size
+	cmdBuffers.resize(swapChainImagesCount);
+
+	//Allocate Command Buffers into Command Pool
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = device->commandPool; //TODO: Use a local pool to enable multi-threading later
+	allocInfo.commandBufferCount = (uint32_t)cmdBuffers.size();
+
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+	if (vkAllocateCommandBuffers(device->handle, &allocInfo, cmdBuffers.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate command buffers!");
+	}
 }
 
 void RvGUI::CreateTextureSampler()
@@ -327,26 +352,45 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 
 }
 
-void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)
+void RvGUI::RecordCmdBuffers(uint32_t frameIndex)
 {
 	ImGuiIO& io = ImGui::GetIO();
 
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->layout, 0, 1, &descriptorSet, 0, nullptr);
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->handle);
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+
+	//Setup inheritance information to provide access modifiers from RenderPass
+	VkCommandBufferInheritanceInfo inheritanceInfo = {};
+	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+	inheritanceInfo.renderPass = swapChain->renderPass;
+	//inheritanceInfo.subpass = 0; TODO: USE SUBPASS FOR DEPENDENCIES (BLITTING)
+	inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+	inheritanceInfo.framebuffer = swapChain->framebuffers[frameIndex]; //TODO: USE INTERNAL FRAMEBUFFER
+	inheritanceInfo.pipelineStatistics = 0;
+	beginInfo.pInheritanceInfo = &inheritanceInfo;
+
+	//Begin recording Command Buffer
+	if (vkBeginCommandBuffer(cmdBuffers[frameIndex], &beginInfo) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to begin recording command buffer!");
+	}
+
+	vkCmdBindDescriptorSets(cmdBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->layout, 0, 1, &descriptorSet, 0, nullptr);
+	vkCmdBindPipeline(cmdBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->handle);
 
 	VkViewport viewport = {};
 	viewport.width = io.DisplaySize.x;
 	viewport.height = io.DisplaySize.y;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
-	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+	vkCmdSetViewport(cmdBuffers[frameIndex], 0, 1, &viewport);
 
-	// UI scale and translate via push constants
+	//UI scale and translate via push constants
 	pushConstBlock.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
 	pushConstBlock.translate = glm::vec2(-1.0f);
-	vkCmdPushConstants(commandBuffer, guiPipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstBlock), &pushConstBlock);
+	vkCmdPushConstants(cmdBuffers[frameIndex], guiPipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstBlock), &pushConstBlock);
 
-	// Render commands
+	//Render commands
 	ImDrawData* imDrawData = ImGui::GetDrawData();
 	int32_t vertexOffset = 0;
 	int32_t indexOffset = 0;
@@ -354,8 +398,8 @@ void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 	if (imDrawData->CmdListsCount > 0) {
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer[frameIndex].handle, offsets);
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer[frameIndex].handle, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindVertexBuffers(cmdBuffers[frameIndex], 0, 1, &vertexBuffer[frameIndex].handle, offsets);
+		vkCmdBindIndexBuffer(cmdBuffers[frameIndex], indexBuffer[frameIndex].handle, 0, VK_INDEX_TYPE_UINT16);
 
 		for (int32_t i = 0; i < imDrawData->CmdListsCount; i++)
 		{
@@ -368,11 +412,16 @@ void RvGUI::DrawFrame(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 				scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
 				scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
 				scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
-				vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
-				vkCmdDrawIndexed(commandBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
+				vkCmdSetScissor(cmdBuffers[frameIndex], 0, 1, &scissorRect);
+				vkCmdDrawIndexed(cmdBuffers[frameIndex], pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
 				indexOffset += pcmd->ElemCount;
 			}
 			vertexOffset += cmd_list->VtxBuffer.Size;
 		}
+	}
+
+	//Stop recording Command Buffer
+	if (vkEndCommandBuffer(cmdBuffers[frameIndex]) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to record command buffer!");
 	}
 }

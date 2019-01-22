@@ -131,6 +131,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
       <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
@@ -152,6 +153,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
       <Command>$(OutDir)\..\data\shaders\convert.bat</Command>

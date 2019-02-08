@@ -57,7 +57,8 @@ struct RvGUI
 	std::vector<VkCommandBuffer> cmdBuffers;
 
 	//The GUI FrameBuffers for each frame
-	std::vector<RvFramebufferAttachment> frameBuffers;
+	std::vector<VkFramebuffer> framebuffers;
+	std::vector<RvFramebufferAttachment> framebufferAttachments;
 
 	uint32_t lastVtxCrc[RV_MAX_FRAMES_IN_FLIGHT] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 

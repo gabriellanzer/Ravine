@@ -28,6 +28,7 @@
 
 //VK Wrappers
 #include "RvTools.h"
+#include "RvAnimationTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"
 #include "RvGraphicsPipeline.h"
@@ -53,6 +54,9 @@ using std::vector;
 
 //Specific usages of ASSIMP library
 using Assimp::Importer;
+
+//Specific usages of Ravine library
+using namespace rvTools::animation;
 
 class Ravine
 {
@@ -196,14 +200,6 @@ private:
 	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
 	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
 
-	aiMatrix4x4 interpolateTranslation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
-	aiMatrix4x4 interpolateRotation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
-	aiMatrix4x4 interpolateScale(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
-
-	uint16_t FindRotation(double AnimationTime, const aiNodeAnim* pNodeAnim);
-	uint16_t FindScale(double AnimationTime, const aiNodeAnim* pNodeAnim);
-	uint16_t FindPosition(double AnimationTime, const aiNodeAnim* pNodeAnim);
-
 	//Create vertex buffer
 	void createVertexBuffer();
 
@@ -254,5 +250,6 @@ private:
 #pragma region Static
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 #pragma endregion
+
 };
 

@@ -167,6 +167,7 @@
     <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
+    <ClCompile Include="RvAnimationTools.cpp" />
     <ClCompile Include="RvCamera.cpp" />
     <ClCompile Include="RvCmdBuffer.cpp" />
     <ClCompile Include="RvDynamicBuffer.cpp" />
@@ -190,6 +191,7 @@
     <ClInclude Include="imstb_textedit.h" />
     <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="Ravine.h" />
+    <ClInclude Include="RvAnimationTools.h" />
     <ClInclude Include="RvCamera.h" />
     <ClInclude Include="RvCmdBuffer.h" />
     <ClInclude Include="RvDynamicBuffer.h" />

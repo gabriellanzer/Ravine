@@ -93,6 +93,9 @@
     <ClCompile Include="crc32.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="RvAnimationTools.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -168,6 +171,9 @@
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="RvGUIPipeline.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvAnimationTools.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>

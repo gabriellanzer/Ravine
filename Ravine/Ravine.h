@@ -44,16 +44,11 @@
 #define f_min(a,b)            (((a) < (b)) ? (a) : (b))
 
 //Assimp Includes
-#include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
 
 //Specific usages of STD library
 using std::string;
 using std::vector;
-
-//Specific usages of ASSIMP library
-using Assimp::Importer;
 
 //Specific usages of Ravine library
 using namespace rvTools::animation;
@@ -97,18 +92,6 @@ private:
 	RvSkinnedMeshColored* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
-	//ANIMATION STUFF
-	uint32_t animationsCount;
-	aiAnimation* animations;
-	double* ticksPerSecond;
-	double* animationDuration;
-	aiMatrix4x4 animGlobalInverseTransform;
-	uint16_t numBones;
-	std::map<std::string, uint16_t> boneMapping;
-	std::vector<BoneInfo> boneInfo;
-	uint32_t curAnimId;
-	aiNode* rootNode;
-	std::vector<aiMatrix4x4> boneTransforms;
 
 	// Animation interpolation helper
 	float animInterpolation = 0.0f;
@@ -199,7 +182,7 @@ private:
 	void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
 	//TODO: Move to Blend-tree
 	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
-	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
+	void ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
 
 	//Create vertex buffer
 	void createVertexBuffer();

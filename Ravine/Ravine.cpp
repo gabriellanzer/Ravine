@@ -22,6 +22,13 @@
 #include "RvConfig.h"
 #include "RvDebug.h"
 
+//Assimp Includes
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/postprocess.h>     // Post processing flags
+
+//Specific usages of ASSIMP library
+using Assimp::Importer;
+
 Ravine::Ravine()
 {
 }
@@ -443,7 +450,7 @@ bool Ravine::loadScene(const std::string& filePath)
 	//Load mesh
 	meshesCount = scene->mNumMeshes;
 	meshes = new RvSkinnedMeshColored[scene->mNumMeshes];
-	animGlobalInverseTransform = scene->mRootNode->mTransformation;
+	aiMatrix4x4 animGlobalInverseTransform = scene->mRootNode->mTransformation;
 	animGlobalInverseTransform.Inverse();
 
 	//Load each mesh
@@ -451,6 +458,8 @@ bool Ravine::loadScene(const std::string& filePath)
 	{
 		//Hold reference
 		const aiMesh* mesh = scene->mMeshes[i];
+
+		meshes[i].animGlobalInverseTransform = animGlobalInverseTransform;
 
 		//Allocate data structures
 		meshes[i].vertex_count = mesh->mNumVertices;
@@ -580,25 +589,19 @@ bool Ravine::loadScene(const std::string& filePath)
 
 	std::cout << "Loaded file with " << scene->mNumAnimations << " animations.\n";
 
-	animationsCount = scene->mNumAnimations;
+	meshes[0].animations.reserve(scene->mNumAnimations);
 	if (scene->mNumAnimations > 0)
 	{
 		//Record animation parameters
-		animations = new aiAnimation[scene->mNumAnimations];
-		ticksPerSecond = new double[scene->mNumAnimations];
-		animationDuration = new double[scene->mNumAnimations];
 		for (uint32_t i = 0; i < scene->mNumAnimations; i++)
 		{
-			animations[i] = *scene->mAnimations[i];
-			ticksPerSecond[i] = scene->mAnimations[i]->mTicksPerSecond != 0 ?
-				scene->mAnimations[i]->mTicksPerSecond : 25.0f;
-			animationDuration[i] = scene->mAnimations[i]->mDuration;
+			meshes[0].animations.push_back(new RvAnimation({ scene->mAnimations[i] }));
 		}
 
 		//Set current animation
-		curAnimId = 0;
+		meshes[0].curAnimId = 0;
 	}
-	rootNode = new aiNode(*scene->mRootNode);
+	meshes[0].rootNode = new aiNode(*scene->mRootNode);
 
 	//Return success
 	return true;
@@ -613,17 +616,17 @@ void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 		std::string BoneName(pMesh->mBones[i]->mName.data);
 
 		if (boneMapping.find(BoneName) == boneMapping.end()) {
-			BoneIndex = numBones;
-			numBones++;
-			BoneInfo bi;
-			boneInfo.push_back(bi);
+			BoneIndex = meshes[0].numBones;
+			meshes[0].numBones++;
+			RvBoneInfo bi;
+			meshes[0].boneInfo.push_back(bi);
 		}
 		else {
 			BoneIndex = boneMapping[BoneName];
 		}
 
 		boneMapping[BoneName] = BoneIndex;
-		boneInfo[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
+		meshes[0].boneInfo[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
 
 		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {
 			uint16_t VertexID = 0 + pMesh->mBones[i]->mWeights[j].mVertexId;
@@ -636,34 +639,39 @@ void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms)
 {
 	const aiMatrix4x4 identity;
-	uint16_t otherindex = (curAnimId + 1) % animationsCount;
-	runTime += Time::deltaTime() * (animationDuration[curAnimId] / animationDuration[otherindex] * animInterpolation + 1.0f * (1.0f - animInterpolation));
-	ReadNodeHeirarchy(runTime, rootNode, identity);
+	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
+	double animDuration = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mDuration;
+	double otherDuration = meshes[0].animations[otherindex]->aiAnim->mDuration;
+	runTime += Time::deltaTime() * (animDuration / otherDuration * animInterpolation + 1.0f * (1.0f - animInterpolation));
+	ReadNodeHeirarchy(runTime, animDuration, otherDuration, meshes[0].rootNode, identity);
 
-	Transforms.resize(numBones);
+	Transforms.resize(meshes[0].numBones);
 
-	for (uint16_t i = 0; i < numBones; i++) {
-		Transforms[i] = boneInfo[i].FinalTransformation;
+	for (uint16_t i = 0; i < meshes[0].numBones; i++) {
+		Transforms[i] = meshes[0].boneInfo[i].FinalTransformation;
 	}
 }
 
-void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const aiMatrix4x4& ParentTransform)
+void Ravine::ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode * pNode, 
+							   const aiMatrix4x4& ParentTransform)
 {
 	std::string NodeName(pNode->mName.data);
 
 	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
 
-	uint16_t otherindex = (curAnimId + 1) % animationsCount;
-	const aiNodeAnim* pNodeAnim = findNodeAnim(&animations[curAnimId], NodeName);
-	const aiNodeAnim* otherNodeAnim = findNodeAnim(&animations[otherindex], NodeName);
+	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
+	const aiNodeAnim* pNodeAnim = findNodeAnim(meshes[0].animations[meshes[0].curAnimId]->aiAnim, NodeName);
+	const aiNodeAnim* otherNodeAnim = findNodeAnim(meshes[0].animations[otherindex]->aiAnim, NodeName);
+	
+	float otherAnimTime = AnimationTime * curDuration / otherDuration;
 
-	float otherAnimTime = AnimationTime * animationDuration[otherindex] / animationDuration[curAnimId];
+	double ticksPerSecond = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mTicksPerSecond;
+	float TimeInTicks = AnimationTime * ticksPerSecond;
+	float animationTime = std::fmod(TimeInTicks, curDuration);
 
-	float TimeInTicks = AnimationTime * ticksPerSecond[curAnimId];
-	float animationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
-
-	float otherTimeInTicks = otherAnimTime * ticksPerSecond[otherindex];
-	float otherAnimationTime = std::fmod(otherTimeInTicks, animationDuration[otherindex]);
+	ticksPerSecond = meshes[0].animations[otherindex]->aiAnim->mTicksPerSecond;
+	float otherTimeInTicks = otherAnimTime * ticksPerSecond;
+	float otherAnimationTime = std::fmod(otherTimeInTicks, otherDuration);
 
 	if (pNodeAnim)
 	{
@@ -677,15 +685,16 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 
 	aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
 
-	if (boneMapping.find(NodeName) != boneMapping.end())
+	if (meshes[0].boneMapping.find(NodeName) != meshes[0].boneMapping.end())
 	{
-		uint32_t BoneIndex = boneMapping[NodeName];
-		boneInfo[BoneIndex].FinalTransformation = animGlobalInverseTransform * GlobalTransformation * boneInfo[BoneIndex].BoneOffset;
+		uint32_t BoneIndex = meshes[0].boneMapping[NodeName];
+		meshes[0].boneInfo[BoneIndex].FinalTransformation = meshes[0].animGlobalInverseTransform *
+			GlobalTransformation * meshes[0].boneInfo[BoneIndex].BoneOffset;
 	}
 
 	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
 	{
-		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
+		ReadNodeHeirarchy(AnimationTime, curDuration, otherDuration, pNode->mChildren[i], GlobalTransformation);
 	}
 }
 
@@ -997,8 +1006,8 @@ void Ravine::drawFrame()
 	}
 
 	//Update bone transforms
-	if (animations != nullptr) {
-		BoneTransform(Time::elapsedTime(), boneTransforms);
+	if (meshes[0].animations.size() > 0) {
+		BoneTransform(Time::elapsedTime(), meshes[0].boneTransforms);
 	}
 
 	//Update the uniforms for the given frame
@@ -1063,7 +1072,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 		//Delta Mouse Positions
 		double deltaX = mouseX - lastMouseX;
 		double deltaY = mouseY - lastMouseY;
-		
+
 		//Calculate look rotation update
 		camera->horRot -= deltaX * 30.0 * Time::deltaTime();
 		camera->verRot -= deltaY * 30.0 * Time::deltaTime();
@@ -1123,14 +1132,14 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	// SWAP ANIMATIONS
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && keyUpPressed == false) {
 		keyUpPressed = true;
-		curAnimId = (curAnimId + 1) % animationsCount;
+		meshes[0].curAnimId = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
 	}
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE) {
 		keyUpPressed = false;
 	}
 	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && keyDownPressed == false) {
 		keyDownPressed = true;
-		curAnimId = (curAnimId - 1) % animationsCount;
+		meshes[0].curAnimId = (meshes[0].curAnimId - 1) % meshes[0].animations.size();
 	}
 	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_RELEASE) {
 		keyDownPressed = false;
@@ -1169,9 +1178,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 #pragma region Bones
 	RvBoneBufferObject bonesUbo = {};
 
-	for (size_t i = 0; i < boneTransforms.size(); i++)
+	for (size_t i = 0; i < meshes[0].boneTransforms.size(); i++)
 	{
-		bonesUbo.transformMatrixes[i] = glm::transpose(glm::make_mat4(&boneTransforms[i].a1));
+		bonesUbo.transformMatrixes[i] = glm::transpose(glm::make_mat4(&meshes[0].boneTransforms[i].a1));
 	}
 
 	void* bonesData;

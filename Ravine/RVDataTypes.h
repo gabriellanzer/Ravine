@@ -11,22 +11,23 @@
 //STD Includes
 #include <array>
 #include <vector>
+#include <map>
 
 //Vulkan Includes
 #include <vulkan/vulkan.h>
 
 //Assimp Includes
-#include <assimp\matrix4x4.h>
+#include <assimp/scene.h>
 
 #pragma region RvAnimation
 
 struct RvAnimation
 {
-	aiAnimation* animations;
+	aiAnimation* aiAnim;
 	//Map<boneId, singleBoneAnimationFrames/*aiNodeAnim*/>
 };
 
-struct BoneInfo
+struct RvBoneInfo
 {
 	aiMatrix4x4 BoneOffset;
 	aiMatrix4x4 FinalTransformation;
@@ -301,21 +302,26 @@ struct RvSkinnedVertexColored {
 struct RvSkinnedMeshColored
 {
 	RvSkinnedVertexColored*	vertices;
-	uint32_t				vertex_count;
+	uint32_t				vertex_count = 0;
 
 	uint32_t*				indices;
-	uint32_t				index_count;
+	uint32_t				index_count = 0;
 
 	uint32_t*				textureIds;
-	uint32_t				textures_count;
+	uint32_t				textures_count = 0;
 
 	aiNode* rootNode;
-	uint16_t numBones;
+	uint16_t numBones = 0;
 
-	std::vector<RvAnimation> animations;
+	std::vector<RvAnimation*> animations;
 	aiMatrix4x4 animGlobalInverseTransform;
 	std::map<std::string, uint16_t> boneMapping;
-	std::vector<BoneInfo> boneInfo;
+	std::vector<RvBoneInfo> boneInfo;
+
+	//TODO: Move to RvAnimationState
+	std::vector<aiMatrix4x4> boneTransforms;
+	uint16_t curAnimId = 0;
+
 };
 
 #pragma endregion

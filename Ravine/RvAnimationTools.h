@@ -13,6 +13,8 @@ namespace rvTools
 {
 	namespace animation
 	{
+		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName);
+
 		aiMatrix4x4 interpolateTranslation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
 		aiMatrix4x4 interpolateRotation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
 		aiMatrix4x4 interpolateScale(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);

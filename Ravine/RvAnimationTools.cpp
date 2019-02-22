@@ -5,6 +5,20 @@ namespace rvTools
 {
 	namespace animation
 	{
+		// Find animation for a given node
+		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName)
+		{
+			for (uint32_t i = 0; i < animation->mNumChannels; i++)
+			{
+				const aiNodeAnim* nodeAnim = animation->mChannels[i];
+				if (std::string(nodeAnim->mNodeName.data) == nodeName)
+				{
+					return nodeAnim;
+				}
+			}
+			return nullptr;
+		}
+
 		aiMatrix4x4 interpolateTranslation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
 		{
 			aiVector3D translation;

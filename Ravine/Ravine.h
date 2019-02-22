@@ -94,7 +94,7 @@ private:
 
 	const aiScene* scene;
 	//Todo: Move to MESH
-	RvMeshData* meshes;
+	RvSkinnedMeshColored* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
 	//ANIMATION STUFF
@@ -196,7 +196,8 @@ private:
 
 	//Load scene file and populates meshes vector
 	bool loadScene(const std::string& filePath);
-	void loadBones(const aiMesh* pMesh, RvMeshData& meshData);
+	void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
+	//TODO: Move to Blend-tree
 	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
 	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
 

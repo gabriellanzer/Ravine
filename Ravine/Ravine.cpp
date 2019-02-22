@@ -442,7 +442,7 @@ bool Ravine::loadScene(const std::string& filePath)
 
 	//Load mesh
 	meshesCount = scene->mNumMeshes;
-	meshes = new RvMeshData[scene->mNumMeshes];
+	meshes = new RvSkinnedMeshColored[scene->mNumMeshes];
 	animGlobalInverseTransform = scene->mRootNode->mTransformation;
 	animGlobalInverseTransform.Inverse();
 
@@ -454,7 +454,7 @@ bool Ravine::loadScene(const std::string& filePath)
 
 		//Allocate data structures
 		meshes[i].vertex_count = mesh->mNumVertices;
-		meshes[i].vertices = new RvVertex[mesh->mNumVertices];
+		meshes[i].vertices = new RvSkinnedVertexColored[mesh->mNumVertices];
 		meshes[i].index_count = mesh->mNumFaces * 3;
 		meshes[i].indices = new uint32_t[mesh->mNumFaces * 3];
 
@@ -604,8 +604,10 @@ bool Ravine::loadScene(const std::string& filePath)
 	return true;
 }
 
-void Ravine::loadBones(const aiMesh* pMesh, RvMeshData& meshData)
+void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 {
+	std::map<std::string, uint16_t> boneMapping;
+
 	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
 		uint16_t BoneIndex = 0;
 		std::string BoneName(pMesh->mBones[i]->mName.data);
@@ -645,20 +647,6 @@ void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms
 	}
 }
 
-// Find animation for a given node
-const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName)
-{
-	for (uint32_t i = 0; i < animation->mNumChannels; i++)
-	{
-		const aiNodeAnim* nodeAnim = animation->mChannels[i];
-		if (std::string(nodeAnim->mNodeName.data) == nodeName)
-		{
-			return nodeAnim;
-		}
-	}
-	return nullptr;
-}
-
 void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const aiMatrix4x4& ParentTransform)
 {
 	std::string NodeName(pNode->mName.data);
@@ -669,9 +657,9 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, const aiNode * pNode, const
 	const aiNodeAnim* pNodeAnim = findNodeAnim(&animations[curAnimId], NodeName);
 	const aiNodeAnim* otherNodeAnim = findNodeAnim(&animations[otherindex], NodeName);
 
-	float otherAnimTime = runTime * animationDuration[otherindex] / animationDuration[curAnimId];
+	float otherAnimTime = AnimationTime * animationDuration[otherindex] / animationDuration[curAnimId];
 
-	float TimeInTicks = runTime * ticksPerSecond[curAnimId];
+	float TimeInTicks = AnimationTime * ticksPerSecond[curAnimId];
 	float animationTime = std::fmod(TimeInTicks, animationDuration[curAnimId]);
 
 	float otherTimeInTicks = otherAnimTime * ticksPerSecond[otherindex];
@@ -713,7 +701,7 @@ void Ravine::createVertexBuffer()
 	vertexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvVertex) * meshes[i].vertex_count, sizeof(RvVertex),
+		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertex_count, sizeof(RvSkinnedVertexColored),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 		delete[] meshes[i].vertices;

@@ -38,8 +38,8 @@ RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSa
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Vertex_input
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	auto bindingDescription = RvVertex::getBindingDescription();
-	auto attributeDescriptions = RvVertex::getAttributeDescriptions();
+	auto bindingDescription = RvSkinnedVertexColored::getBindingDescription();
+	auto attributeDescriptions = RvSkinnedVertexColored::getAttributeDescriptions();
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;

@@ -13,8 +13,8 @@
 RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass) : device(&device)
 {
 	//Loading shaders
-	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/skinned_shader.vert.spv");
-	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/tex_skinned_shader.frag.spv");
+	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/skinned_shader_color.vert.spv");
+	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/tex_skinned_shader_color.frag.spv");
 
 	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
 	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);

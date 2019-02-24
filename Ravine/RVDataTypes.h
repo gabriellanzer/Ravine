@@ -87,11 +87,15 @@ struct RvMesh
 	uint32_t	textures_count;
 };
 
+#pragma endregion
+
+#pragma region RvMeshColored
+
 struct RvVertexColored {
 	glm::vec3 pos;
-	glm::vec3 color;
 	glm::vec2 texCoord;
 	glm::vec3 normal;
+	glm::vec3 color;
 
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription = {};
@@ -111,23 +115,23 @@ struct RvVertexColored {
 		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[0].offset = offsetof(RvVertexColored, pos);
 
-		//Color
+		//Texture
 		attributeDescriptions[1].binding = 0;
 		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(RvVertexColored, color);
-
-		//Texture
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(RvVertexColored, texCoord);
+		attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(RvVertexColored, texCoord);
 
 		//Normal
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(RvVertexColored, normal);
+
+		//Color
 		attributeDescriptions[3].binding = 0;
 		attributeDescriptions[3].location = 3;
 		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offsetof(RvVertexColored, normal);
+		attributeDescriptions[3].offset = offsetof(RvVertexColored, color);
 
 		return attributeDescriptions;
 	}
@@ -226,6 +230,10 @@ struct RvSkinnedMesh
 	uint32_t			textures_count;
 };
 
+#pragma endregion
+
+#pragma region RvSkinnedMeshColored
+
 struct RvSkinnedVertexColored {
 	glm::vec3 pos;
 	glm::vec3 color;
@@ -314,6 +322,7 @@ struct RvSkinnedMeshColored
 
 	std::vector<RvAnimation*> animations;
 	aiMatrix4x4 animGlobalInverseTransform;
+	// TODO: REFACTOR MAPPING TO NOT USE STRINGS
 	std::map<std::string, uint16_t> boneMapping;
 	std::vector<RvBoneInfo> boneInfo;
 

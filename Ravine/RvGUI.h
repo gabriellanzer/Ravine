@@ -20,7 +20,6 @@
 #include "RvTexture.h"
 #include "RvGUIPipeline.h"
 
-
 struct RvGUI
 {
 	//External Parameters

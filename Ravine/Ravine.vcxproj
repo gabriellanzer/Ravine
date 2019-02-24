@@ -215,9 +215,11 @@
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag" />
     <None Include="bin\data\shaders\gui.vert" />
-    <None Include="bin\data\shaders\skinned_shader.frag" />
-    <None Include="bin\data\shaders\skinned_shader.vert" />
-    <None Include="bin\data\shaders\tex_skinned_shader.frag" />
+    <None Include="bin\data\shaders\mesh_static_color.frag" />
+    <None Include="bin\data\shaders\mesh_static_color.vert" />
+    <None Include="bin\data\shaders\skinned_shader_color.frag" />
+    <None Include="bin\data\shaders\skinned_shader_color.vert" />
+    <None Include="bin\data\shaders\tex_skinned_shader_color.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

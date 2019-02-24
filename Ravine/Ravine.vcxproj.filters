@@ -25,6 +25,21 @@
     <Filter Include="Header Files\ImGUI">
       <UniqueIdentifier>{399e4d1c-e983-4fb4-a289-001f9b98a561}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shaders\Gui">
+      <UniqueIdentifier>{ed2aaccc-c559-43fa-9f81-60e254de1138}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders\Static">
+      <UniqueIdentifier>{770e3f84-d14c-447b-8dc4-6509581a881d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders\Skinned">
+      <UniqueIdentifier>{8db2bc66-5d38-4329-b289-5d8f7389ac35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Ravine System\GUI">
+      <UniqueIdentifier>{9bf9175a-2b1a-41f7-b9df-2b683e786dfa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\GUI">
+      <UniqueIdentifier>{d537db77-51c1-4d1c-be4f-837de8de0848}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -81,12 +96,6 @@
     <ClCompile Include="RvDynamicBuffer.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RvGUI.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvGUIPipeline.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
     <ClCompile Include="RvPersistentBuffer.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
@@ -95,6 +104,12 @@
     </ClCompile>
     <ClCompile Include="RvWindow.cpp">
       <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGUI.cpp">
+      <Filter>Source Files\Ravine System\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGUIPipeline.cpp">
+      <Filter>Source Files\Ravine System\GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -146,12 +161,6 @@
     <ClInclude Include="imstb_truetype.h">
       <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
-    <ClInclude Include="RvGUI.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvGUIPipeline.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
     <ClInclude Include="RvAnimationTools.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
@@ -176,22 +185,34 @@
     <ClInclude Include="RvWindow.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
+    <ClInclude Include="RvGUI.h">
+      <Filter>Header Files\Ravine System\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGUIPipeline.h">
+      <Filter>Header Files\Ravine System\GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag">
-      <Filter>Source Files\Shaders</Filter>
+      <Filter>Source Files\Shaders\Gui</Filter>
     </None>
     <None Include="bin\data\shaders\gui.vert">
-      <Filter>Source Files\Shaders</Filter>
+      <Filter>Source Files\Shaders\Gui</Filter>
     </None>
-    <None Include="bin\data\shaders\skinned_shader.frag">
-      <Filter>Source Files\Shaders</Filter>
+    <None Include="bin\data\shaders\mesh_static_color.frag">
+      <Filter>Source Files\Shaders\Static</Filter>
     </None>
-    <None Include="bin\data\shaders\skinned_shader.vert">
-      <Filter>Source Files\Shaders</Filter>
+    <None Include="bin\data\shaders\mesh_static_color.vert">
+      <Filter>Source Files\Shaders\Static</Filter>
     </None>
-    <None Include="bin\data\shaders\tex_skinned_shader.frag">
-      <Filter>Source Files\Shaders</Filter>
+    <None Include="bin\data\shaders\skinned_shader_color.vert">
+      <Filter>Source Files\Shaders\Skinned</Filter>
+    </None>
+    <None Include="bin\data\shaders\tex_skinned_shader_color.frag">
+      <Filter>Source Files\Shaders\Skinned</Filter>
+    </None>
+    <None Include="bin\data\shaders\skinned_shader_color.frag">
+      <Filter>Source Files\Shaders\Skinned</Filter>
     </None>
   </ItemGroup>
 </Project>

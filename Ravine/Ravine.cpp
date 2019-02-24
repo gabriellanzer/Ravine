@@ -609,23 +609,23 @@ bool Ravine::loadScene(const std::string& filePath)
 
 void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 {
-	std::map<std::string, uint16_t> boneMapping;
+	//std::map<std::string, uint16_t> boneMapping;
 
 	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
 		uint16_t BoneIndex = 0;
 		std::string BoneName(pMesh->mBones[i]->mName.data);
 
-		if (boneMapping.find(BoneName) == boneMapping.end()) {
+		if (meshData.boneMapping.find(BoneName) == meshData.boneMapping.end()) {
 			BoneIndex = meshes[0].numBones;
 			meshes[0].numBones++;
 			RvBoneInfo bi;
 			meshes[0].boneInfo.push_back(bi);
 		}
 		else {
-			BoneIndex = boneMapping[BoneName];
+			BoneIndex = meshData.boneMapping[BoneName];
 		}
 
-		boneMapping[BoneName] = BoneIndex;
+		meshData.boneMapping[BoneName] = BoneIndex;
 		meshes[0].boneInfo[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
 
 		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {

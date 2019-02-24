@@ -45,32 +45,8 @@
     <ClCompile Include="RvSwapChain.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RvDebug.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvConfig.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvPersistentBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvDynamicBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="RvTools.cpp">
       <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvCmdBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvTexture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvCamera.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="imgui_demo.cpp">
       <Filter>Header Files\ImGUI</Filter>
@@ -84,16 +60,40 @@
     <ClCompile Include="imgui.cpp">
       <Filter>Header Files\ImGUI</Filter>
     </ClCompile>
-    <ClCompile Include="RvGUIPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RvGUI.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="crc32.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
     <ClCompile Include="RvAnimationTools.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvCamera.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvCmdBuffer.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvConfig.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvDebug.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvDynamicBuffer.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGUI.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGUIPipeline.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvPersistentBuffer.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvTexture.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvWindow.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
@@ -125,32 +125,11 @@
     <ClInclude Include="RvFramebufferAttachment.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RvDebug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RvConfig.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RvWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RvPersistentBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RvDynamicBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RvTools.h">
       <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvCmdBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RvTexture.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RvCamera.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="imgui.h">
       <Filter>Header Files\ImGUI</Filter>
@@ -174,6 +153,27 @@
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="RvAnimationTools.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvCamera.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvCmdBuffer.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvDebug.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvDynamicBuffer.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvPersistentBuffer.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTexture.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvWindow.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>

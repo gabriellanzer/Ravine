@@ -1,4 +1,3 @@
-
 #ifndef RV_SWAPCHAIN_H
 #define RV_SWAPCHAIN_H
 

@@ -1,4 +1,3 @@
-
 #ifndef RV_DATATYPES_H
 #define RV_DATATYPES_H
 

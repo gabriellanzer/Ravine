@@ -1,4 +1,3 @@
-
 #ifndef RV_UNIFORMTYPES_H
 #define RV_UNIFORMTYPES_H
 

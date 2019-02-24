@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAVINE_DEVICE_H
+#define RAVINE_DEVICE_H
 
 //STD Includes
 #include <vector>
@@ -63,3 +64,4 @@ public:
 
 };
 
+#endif

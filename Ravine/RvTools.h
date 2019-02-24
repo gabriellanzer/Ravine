@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAVINE_TOOLS_H
+#define RAVINE_TOOLS_H
 
 //Vulkan Includes
 #include <vulkan\vulkan.h>
@@ -55,3 +56,4 @@ namespace rvTools
 
 };
 
+#endif

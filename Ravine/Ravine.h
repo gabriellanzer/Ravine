@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAVINE_H
+#define RAVINE_H
 
 //GLFW Includes
 #define GLFW_INCLUDE_VULKAN
@@ -12,7 +13,6 @@
 
 //Vulkan Include
 #include <vulkan\vulkan.h>
-
 
 //GLM includes
 #define GLM_FORCE_RADIANS
@@ -237,3 +237,4 @@ private:
 
 };
 
+#endif

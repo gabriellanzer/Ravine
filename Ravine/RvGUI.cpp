@@ -8,7 +8,7 @@
 #include "crc32.h"
 
 //Ravine Include
-#include "Time.h"
+#include "RvTime.h"
 
 //GLFW Includes
 #include <glfw/glfw3.h>
@@ -102,7 +102,7 @@ void RvGUI::AcquireFrame()
 	double mouseX, mouseY;
 	glfwGetCursorPos(*window, &mouseX, &mouseY);
 	io->DisplaySize = ImVec2((float)swapChain->WIDTH, (float)swapChain->HEIGHT);
-	io->DeltaTime = Time::deltaTime();
+	io->DeltaTime = RvTime::deltaTime();
 
 	io->MousePos = ImVec2(mouseX, mouseY);
 	io->MouseDown[0] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_LEFT);

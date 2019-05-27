@@ -18,7 +18,7 @@
 #include "SingleFileLibraries\stb_image.h"
 
 //Ravine Systems Includes
-#include "Time.h"
+#include "RvTime.h"
 #include "RvConfig.h"
 #include "RvDebug.h"
 
@@ -39,7 +39,7 @@ Ravine::~Ravine()
 
 void Ravine::run()
 {
-	Time::initialize();
+	RvTime::initialize();
 	initWindow();
 	initVulkan();
 	mainLoop();
@@ -49,7 +49,7 @@ void Ravine::run()
 #pragma region Static Methods
 
 //Static method because GLFW doesn't know how to call a member function with the "this" pointer to our Ravine instance.
-void Ravine::framebufferResizeCallback(GLFWwindow * window, int width, int height)
+void Ravine::framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
 	auto rvWindowTemp = reinterpret_cast<RvWindow*>(glfwGetWindowUserPointer(window));
 	rvWindowTemp->framebufferResized = true;
@@ -271,7 +271,7 @@ void Ravine::recreateSwapChain() {
 	vkDeviceWaitIdle(device->handle);
 
 	//Storing handle
-	RvSwapChain *oldSwapchain = swapChain;
+	RvSwapChain* oldSwapchain = swapChain;
 	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
 	swapChain->CreateSyncObjects();
 	swapChain->CreateImageViews();
@@ -293,7 +293,7 @@ void Ravine::createDescriptorPool()
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size()*RV_IMAGES_COUNT);
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * RV_IMAGES_COUNT);
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
@@ -334,7 +334,7 @@ void Ravine::createDescriptorSets()
 		for (uint32_t j = 0; j < RV_IMAGES_COUNT; j++)
 		{
 			imageInfo[j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo[j].imageView = textures[j%texturesSize].view; //TODO Fix this later!
+			imageInfo[j].imageView = textures[j % texturesSize].view; //TODO Fix this later!
 			imageInfo[j].sampler = textureSampler;
 		}
 
@@ -425,20 +425,20 @@ bool Ravine::loadScene(const std::string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
-					  aiProcess_GenSmoothNormals | \
-					  aiProcess_JoinIdenticalVertices | \
-					  aiProcess_ImproveCacheLocality | \
-					  aiProcess_LimitBoneWeights | \
-					  aiProcess_RemoveRedundantMaterials | \
-					  aiProcess_Triangulate | \
-					  aiProcess_GenUVCoords | \
-					  aiProcess_SortByPType | \
-					  aiProcess_FindDegenerates | \
-					  aiProcess_FindInvalidData | \
-					  aiProcess_FindInstances | \
-					  aiProcess_ValidateDataStructure | \
-					  aiProcess_OptimizeMeshes | \
-					  0);
+		aiProcess_GenSmoothNormals | \
+		aiProcess_JoinIdenticalVertices | \
+		aiProcess_ImproveCacheLocality | \
+		aiProcess_LimitBoneWeights | \
+		aiProcess_RemoveRedundantMaterials | \
+		aiProcess_Triangulate | \
+		aiProcess_GenUVCoords | \
+		aiProcess_SortByPType | \
+		aiProcess_FindDegenerates | \
+		aiProcess_FindInvalidData | \
+		aiProcess_FindInstances | \
+		aiProcess_ValidateDataStructure | \
+		aiProcess_OptimizeMeshes | \
+		0);
 	scene = importer.GetOrphanedScene();
 
 	// If the import failed, report it
@@ -642,7 +642,7 @@ void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms
 	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
 	double animDuration = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mDuration;
 	double otherDuration = meshes[0].animations[otherindex]->aiAnim->mDuration;
-	runTime += Time::deltaTime() * (animDuration / otherDuration * animInterpolation + 1.0f * (1.0f - animInterpolation));
+	runTime += RvTime::deltaTime() * (animDuration / otherDuration * animInterpolation + 1.0f * (1.0f - animInterpolation));
 	ReadNodeHeirarchy(runTime, animDuration, otherDuration, meshes[0].rootNode, identity);
 
 	Transforms.resize(meshes[0].numBones);
@@ -652,8 +652,8 @@ void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms
 	}
 }
 
-void Ravine::ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode * pNode, 
-							   const aiMatrix4x4& ParentTransform)
+void Ravine::ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode* pNode,
+	const aiMatrix4x4& ParentTransform)
 {
 	std::string NodeName(pNode->mName.data);
 
@@ -662,7 +662,7 @@ void Ravine::ReadNodeHeirarchy(double AnimationTime, double curDuration, double 
 	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
 	const aiNodeAnim* pNodeAnim = findNodeAnim(meshes[0].animations[meshes[0].curAnimId]->aiAnim, NodeName);
 	const aiNodeAnim* otherNodeAnim = findNodeAnim(meshes[0].animations[otherindex]->aiAnim, NodeName);
-	
+
 	float otherAnimTime = AnimationTime * curDuration / otherDuration;
 
 	double ticksPerSecond = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mTicksPerSecond;
@@ -978,8 +978,8 @@ void Ravine::mainLoop() {
 	setupFPSCam();
 
 	while (!glfwWindowShouldClose(*window)) {
-		Time::update();
-		fpsTitle = "Ravine - Milisseconds " + std::to_string(Time::deltaTime() * 1000.0);
+		RvTime::update();
+		fpsTitle = "Ravine - Milisseconds " + std::to_string(RvTime::deltaTime() * 1000.0);
 		glfwSetWindowTitle(*window, fpsTitle.c_str());
 		glfwPollEvents();
 		drawFrame();
@@ -1007,7 +1007,7 @@ void Ravine::drawFrame()
 
 	//Update bone transforms
 	if (meshes[0].animations.size() > 0) {
-		BoneTransform(Time::elapsedTime(), meshes[0].boneTransforms);
+		BoneTransform(RvTime::elapsedTime(), meshes[0].boneTransforms);
 	}
 
 	//Update the uniforms for the given frame
@@ -1074,8 +1074,8 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 		double deltaY = mouseY - lastMouseY;
 
 		//Calculate look rotation update
-		camera->horRot -= deltaX * 30.0 * Time::deltaTime();
-		camera->verRot -= deltaY * 30.0 * Time::deltaTime();
+		camera->horRot -= deltaX * 30.0 * RvTime::deltaTime();
+		camera->verRot -= deltaY * 30.0 * RvTime::deltaTime();
 
 		//Limit vertical angle
 		camera->verRot = f_max(f_min(89.9, camera->verRot), -89.9);
@@ -1092,22 +1092,22 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	//Calculate translation
 	glm::vec4 translation = glm::vec4(0);
 	if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
-		translation.z -= 2.0 * Time::deltaTime();
+		translation.z -= 2.0 * RvTime::deltaTime();
 
 	if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
-		translation.x -= 2.0 * Time::deltaTime();
+		translation.x -= 2.0 * RvTime::deltaTime();
 
 	if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
-		translation.z += 2.0 * Time::deltaTime();
+		translation.z += 2.0 * RvTime::deltaTime();
 
 	if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
-		translation.x += 2.0 * Time::deltaTime();
+		translation.x += 2.0 * RvTime::deltaTime();
 
 	if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		translation.y -= 2.0 * Time::deltaTime();
+		translation.y -= 2.0 * RvTime::deltaTime();
 
 	if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		translation.y += 2.0 * Time::deltaTime();
+		translation.y += 2.0 * RvTime::deltaTime();
 
 	if (glfwGetKey(*window, GLFW_KEY_R) == GLFW_PRESS) {
 		camera->horRot = 90.0f;

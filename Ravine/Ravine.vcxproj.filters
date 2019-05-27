@@ -45,9 +45,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Time.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Ravine.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
@@ -111,12 +108,12 @@
     <ClCompile Include="RvGUIPipeline.cpp">
       <Filter>Source Files\Ravine System\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="RvTime.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Ravine.h">
@@ -190,6 +187,9 @@
     </ClInclude>
     <ClInclude Include="RvGUIPipeline.h">
       <Filter>Header Files\Ravine System\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTime.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

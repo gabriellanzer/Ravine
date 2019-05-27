@@ -1,5 +1,4 @@
-#ifndef RV_TIME_H
-#define RV_TIME_H
+#pragma once
 
 //STD Includes
 #include <chrono>
@@ -27,5 +26,3 @@ private:
 
 	static double _deltaTime;
 };
-
-#endif

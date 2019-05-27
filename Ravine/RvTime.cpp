@@ -1,38 +1,38 @@
-#include "Time.h"
+#include "RvTime.h"
 
-std::chrono::high_resolution_clock::time_point Time::startTime;
-std::chrono::high_resolution_clock::time_point Time::lastFrameTime;
-std::chrono::high_resolution_clock::time_point Time::currentFrameTime;
-double Time::_deltaTime;
+std::chrono::high_resolution_clock::time_point RvTime::startTime;
+std::chrono::high_resolution_clock::time_point RvTime::lastFrameTime;
+std::chrono::high_resolution_clock::time_point RvTime::currentFrameTime;
+double RvTime::_deltaTime;
 
-void Time::initialize()
+void RvTime::initialize()
 {
 	startTime = std::chrono::high_resolution_clock::now();
 	lastFrameTime = currentFrameTime = startTime;
 }
 
-void Time::update()
+void RvTime::update()
 {
 	lastFrameTime = currentFrameTime;
 	currentFrameTime = std::chrono::high_resolution_clock::now();
 	_deltaTime = std::chrono::duration<double, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
 }
 
-double Time::elapsedTime()
+double RvTime::elapsedTime()
 {
 	return std::chrono::duration<double, std::chrono::seconds::period>(currentFrameTime - startTime).count();
 }
 
-double Time::deltaTime()
+double RvTime::deltaTime()
 {
 	return _deltaTime;
 }
 
-Time::Time()
+RvTime::RvTime()
 {
 }
 
 
-Time::~Time()
+RvTime::~RvTime()
 {
 }

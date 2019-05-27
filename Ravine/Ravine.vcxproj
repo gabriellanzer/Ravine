@@ -181,7 +181,7 @@
     <ClCompile Include="RvGraphicsPipeline.cpp" />
     <ClCompile Include="RvSwapChain.cpp" />
     <ClCompile Include="RvWindow.cpp" />
-    <ClCompile Include="Time.cpp" />
+    <ClCompile Include="RvTime.cpp" />
     <ClCompile Include="RvTools.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -209,7 +209,7 @@
     <ClInclude Include="RvUniformTypes.h" />
     <ClInclude Include="RvWindow.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
-    <ClInclude Include="Time.h" />
+    <ClInclude Include="RvTime.h" />
     <ClInclude Include="RvTools.h" />
   </ItemGroup>
   <ItemGroup>

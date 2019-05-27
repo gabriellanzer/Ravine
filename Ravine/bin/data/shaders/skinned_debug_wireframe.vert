@@ -10,7 +10,7 @@ layout(binding = 0) uniform UniformBufferObject {
 	vec4 camPos;
 } ubo;
 
-layout(binding = 2) uniform BonesBufferObject {
+layout(binding = 3) uniform BonesBufferObject {
 	mat4 boneTransforms[128];
 } bones;
 
@@ -39,7 +39,7 @@ void main() {
 
 	vec4 PosL = BoneTransform * vec4(inPosition, 1.0);
     gl_Position = ubo.proj * ubo.view * ubo.model * PosL;
-    fragColor = inColor;
+    fragColor = vec3(0,1,1);
     fragTexCoord = inTexCoord;
 	fragNorm = mat3(transpose(inverse(ubo.model))) * inNorm;
 	fragPos = vec3(ubo.model * PosL);

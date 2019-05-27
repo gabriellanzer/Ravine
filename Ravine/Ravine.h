@@ -31,7 +31,8 @@
 #include "RvAnimationTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"
-#include "RvGraphicsPipeline.h"
+#include "RvPolygonPipeline.h"
+#include "RvLinePipeline.h"
 #include "RvWindow.h"
 #include "RvTexture.h"
 #include "RvCamera.h"
@@ -74,7 +75,14 @@ private:
 	//Todo: Move to VULKAN APP
 	RvDevice* device;
 	RvSwapChain* swapChain;
-	RvGraphicsPipeline* graphicsPipeline;
+
+	//TODO: Fix Creation flow with shaders integration
+	std::vector<char> skinnedTexColCode;
+	std::vector<char> staticTexColCode;
+	std::vector<char> phongTexColCode;
+	RvPolygonPipeline* skinnedGraphicsPipeline;
+	RvLinePipeline* skinnedLineGraphicsPipeline;
+	RvPolygonPipeline* staticGraphicsPipeline;
 
 	//Mouse parameters
 	//Todo: Move to INPUT
@@ -130,9 +138,8 @@ private:
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM
 	std::vector<RvDynamicBuffer> uniformBuffers;
-
-	//TODO: Move to UNIFORM
-	std::vector<RvDynamicBuffer> materialBuffers;
+	std::vector<RvDynamicBuffer> materialsBuffers;
+	std::vector<RvDynamicBuffer> animationsBuffers;
 
 	//Texture related objects
 	uint32_t mipLevels;

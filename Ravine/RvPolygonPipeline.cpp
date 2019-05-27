@@ -1,4 +1,4 @@
-#include "RVGraphicsPipeline.h"
+#include "RvPolygonPipeline.h"
 
 //STD Includes
 #include <vector>
@@ -10,12 +10,9 @@
 #include "RvTools.h"
 
 
-RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass) : device(&device)
+RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode) : device(&device)
 {
-	//Loading shaders
-	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/skinned_shader_color.vert.spv");
-	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/tex_skinned_shader_color.frag.spv");
-
+	//ShaderModules
 	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
 	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
 
@@ -133,7 +130,8 @@ RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSa
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
 	VkDynamicState dynamicStates[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_LINE_WIDTH
+		VK_DYNAMIC_STATE_LINE_WIDTH,
+		VK_DYNAMIC_STATE_SCISSOR
 	};
 
 	VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -196,13 +194,14 @@ RvGraphicsPipeline::RvGraphicsPipeline(RvDevice& device, VkExtent2D extent, VkSa
 	//Settin depth/stencil state to pipeline
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
+	//TODO: Use Pipeline Cache
 	if (vkCreateGraphicsPipelines(device.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline!");
 	}
 }
 
 
-RvGraphicsPipeline::~RvGraphicsPipeline()
+RvPolygonPipeline::~RvPolygonPipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);

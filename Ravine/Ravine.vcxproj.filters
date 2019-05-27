@@ -51,9 +51,6 @@
     <ClCompile Include="RvDevice.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RvGraphicsPipeline.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
     <ClCompile Include="RvSwapChain.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
@@ -111,6 +108,12 @@
     <ClCompile Include="RvTime.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="RvPolygonPipeline.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
+    <ClCompile Include="RvLinePipeline.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -123,9 +126,6 @@
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="RvDevice.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvGraphicsPipeline.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="RvSwapChain.h">
@@ -191,6 +191,12 @@
     <ClInclude Include="RvTime.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
+    <ClInclude Include="RvPolygonPipeline.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvLinePipeline.h">
+      <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag">
@@ -199,19 +205,16 @@
     <None Include="bin\data\shaders\gui.vert">
       <Filter>Source Files\Shaders\Gui</Filter>
     </None>
-    <None Include="bin\data\shaders\mesh_static_color.frag">
-      <Filter>Source Files\Shaders\Static</Filter>
-    </None>
-    <None Include="bin\data\shaders\mesh_static_color.vert">
-      <Filter>Source Files\Shaders\Static</Filter>
-    </None>
-    <None Include="bin\data\shaders\skinned_shader_color.vert">
+    <None Include="bin\data\shaders\skinned_tex_color.vert">
       <Filter>Source Files\Shaders\Skinned</Filter>
     </None>
-    <None Include="bin\data\shaders\tex_skinned_shader_color.frag">
-      <Filter>Source Files\Shaders\Skinned</Filter>
+    <None Include="bin\data\shaders\static_tex_color.vert">
+      <Filter>Source Files\Shaders\Static</Filter>
     </None>
-    <None Include="bin\data\shaders\skinned_shader_color.frag">
+    <None Include="bin\data\shaders\phong_tex_color.frag">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="bin\data\shaders\skinned_debug_wireframe.vert">
       <Filter>Source Files\Shaders\Skinned</Filter>
     </None>
   </ItemGroup>

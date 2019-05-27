@@ -173,12 +173,13 @@
     <ClCompile Include="RvDynamicBuffer.cpp" />
     <ClCompile Include="RvGUI.cpp" />
     <ClCompile Include="RvGUIPipeline.cpp" />
+    <ClCompile Include="RvLinePipeline.cpp" />
     <ClCompile Include="RvTexture.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
     <ClCompile Include="RvConfig.cpp" />
     <ClCompile Include="RvDebug.cpp" />
     <ClCompile Include="RvDevice.cpp" />
-    <ClCompile Include="RvGraphicsPipeline.cpp" />
+    <ClCompile Include="RvPolygonPipeline.cpp" />
     <ClCompile Include="RvSwapChain.cpp" />
     <ClCompile Include="RvWindow.cpp" />
     <ClCompile Include="RvTime.cpp" />
@@ -197,13 +198,14 @@
     <ClInclude Include="RvDynamicBuffer.h" />
     <ClInclude Include="RvGUI.h" />
     <ClInclude Include="RvGUIPipeline.h" />
+    <ClInclude Include="RvLinePipeline.h" />
     <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />
     <ClInclude Include="RvConfig.h" />
     <ClInclude Include="RvDataTypes.h" />
     <ClInclude Include="RvDebug.h" />
     <ClInclude Include="RvDevice.h" />
-    <ClInclude Include="RvGraphicsPipeline.h" />
+    <ClInclude Include="RvPolygonPipeline.h" />
     <ClInclude Include="RvFramebufferAttachment.h" />
     <ClInclude Include="RvSwapChain.h" />
     <ClInclude Include="RvUniformTypes.h" />
@@ -215,11 +217,10 @@
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag" />
     <None Include="bin\data\shaders\gui.vert" />
-    <None Include="bin\data\shaders\mesh_static_color.frag" />
-    <None Include="bin\data\shaders\mesh_static_color.vert" />
-    <None Include="bin\data\shaders\skinned_shader_color.frag" />
-    <None Include="bin\data\shaders\skinned_shader_color.vert" />
-    <None Include="bin\data\shaders\tex_skinned_shader_color.frag" />
+    <None Include="bin\data\shaders\phong_tex_color.frag" />
+    <None Include="bin\data\shaders\skinned_debug_wireframe.vert" />
+    <None Include="bin\data\shaders\skinned_tex_color.vert" />
+    <None Include="bin\data\shaders\static_tex_color.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

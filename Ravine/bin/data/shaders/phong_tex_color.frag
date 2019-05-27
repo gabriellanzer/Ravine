@@ -12,6 +12,10 @@ layout(binding = 0) uniform UniformBufferObject {
 
 layout(binding = 1) uniform sampler2D texSampler[2];
 
+layout(binding = 2) uniform MaterialBufferObject {
+	vec4 customColor;
+} material;
+
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec3 fragNorm;
 layout(location = 2) in vec3 fragPos;
@@ -46,9 +50,5 @@ void main() {
 
     vec3 result = (ambient + diffuse + specular) * ubo.objectColor.rgb;
 
-    outColor = vec4(fragColor * texture(texSampler[1], fragTexCoord).rgb, 1.0);
-	outColor *= vec4(result, 1.0);
-
-	//This line refers to the second uniform object
-	//outColor = material.customColor;
+    outColor = vec4(fragColor * texture(texSampler[1], fragTexCoord).rgb * result, 1.0) * material.customColor;
 }

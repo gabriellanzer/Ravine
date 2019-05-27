@@ -91,7 +91,21 @@ void Ravine::initVulkan() {
 	swapChain->CreateImageViews();
 	swapChain->CreateRenderPass();
 	createDescriptorSetLayout();
-	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, swapChain->renderPass);
+
+
+	//Shaders Loading
+	skinnedTexColCode	= rvTools::readFile("../data/shaders/skinned_tex_color.vert.spv");
+	staticTexColCode	= rvTools::readFile("../data/shaders/static_tex_color.vert.spv");
+	phongTexColCode		= rvTools::readFile("../data/shaders/phong_tex_color.frag.spv");
+
+	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+	skinnedTexColCode = rvTools::readFile("../data/shaders/skinned_debug_wireframe.vert.spv");
+	skinnedLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, staticTexColCode, phongTexColCode);
+
 	createMultiSamplingResources();
 	createDepthResources();
 	swapChain->CreateFramebuffers();
@@ -276,7 +290,10 @@ void Ravine::recreateSwapChain() {
 	swapChain->CreateSyncObjects();
 	swapChain->CreateImageViews();
 	swapChain->CreateRenderPass();
-	graphicsPipeline = new RvGraphicsPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayout, swapChain->renderPass);
+	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, staticTexColCode, phongTexColCode);
 	createMultiSamplingResources();
 	createDepthResources();
 	swapChain->CreateFramebuffers();
@@ -325,10 +342,10 @@ void Ravine::createDescriptorSets()
 
 	//Configuring descriptor sets
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = uniformBuffers[i].buffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(RvUniformBufferObject);
+		VkDescriptorBufferInfo globalUniformsInfo = {};
+		globalUniformsInfo.buffer = uniformBuffers[i].buffer;
+		globalUniformsInfo.offset = 0;
+		globalUniformsInfo.range = sizeof(RvUniformBufferObject);
 
 		VkDescriptorImageInfo imageInfo[RV_IMAGES_COUNT];
 		for (uint32_t j = 0; j < RV_IMAGES_COUNT; j++)
@@ -338,21 +355,26 @@ void Ravine::createDescriptorSets()
 			imageInfo[j].sampler = textureSampler;
 		}
 
-		VkDescriptorBufferInfo materialInfo = {};
-		materialInfo.buffer = materialBuffers[i].buffer;
-		materialInfo.offset = 0;
-		materialInfo.range = sizeof(RvBoneBufferObject);
+		VkDescriptorBufferInfo materialsInfo = {};
+		materialsInfo.buffer = materialsBuffers[i].buffer;
+		materialsInfo.offset = 0;
+		materialsInfo.range = sizeof(RvMaterialBufferObject);
 
-		std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
+		VkDescriptorBufferInfo animationsInfo = {};
+		animationsInfo.buffer = animationsBuffers[i].buffer;
+		animationsInfo.offset = 0;
+		animationsInfo.range = sizeof(RvBoneBufferObject);
 
-		//Buffer Info
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
+
+		//Global Uniform Buffer Info
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = descriptorSets[i];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
+		descriptorWrites[0].pBufferInfo = &globalUniformsInfo;
 
 		//Image Info
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -363,14 +385,23 @@ void Ravine::createDescriptorSets()
 		descriptorWrites[1].descriptorCount = RV_IMAGES_COUNT;
 		descriptorWrites[1].pImageInfo = imageInfo;
 
-		//Buffer Info
+		//Materials Uniform Buffer Info
 		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[2].dstSet = descriptorSets[i];
 		descriptorWrites[2].dstBinding = 2;
 		descriptorWrites[2].dstArrayElement = 0;
 		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[2].descriptorCount = 1;
-		descriptorWrites[2].pBufferInfo = &materialInfo;
+		descriptorWrites[2].pBufferInfo = &materialsInfo;
+
+		//Animations Uniform Buffer Info
+		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[3].dstSet = descriptorSets[i];
+		descriptorWrites[3].dstBinding = 3;
+		descriptorWrites[3].dstArrayElement = 0;
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[3].descriptorCount = 1;
+		descriptorWrites[3].pBufferInfo = &animationsInfo;
 
 		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
@@ -379,14 +410,12 @@ void Ravine::createDescriptorSets()
 
 void Ravine::createDescriptorSetLayout()
 {
-	//Uniform layout
+	//Global Uniforms layout
 	VkDescriptorSetLayoutBinding uboLayoutBinding = {};
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	//Only relevant for image sampling related descriptors.
-	uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
 	//Texture Sampler layout
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
@@ -396,17 +425,22 @@ void Ravine::createDescriptorSetLayout()
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	//Uniform layout
+	//Materials layout
 	VkDescriptorSetLayoutBinding materialLayoutBinding = {};
 	materialLayoutBinding.binding = 2;
 	materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	materialLayoutBinding.descriptorCount = 1;
-	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	//Only relevant for image sampling related descriptors.
-	materialLayoutBinding.pImmutableSamplers = nullptr; // Optional
+	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	//Animations layout
+	VkDescriptorSetLayoutBinding animationLayoutBinding = {};
+	animationLayoutBinding.binding = 3;
+	animationLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	animationLayoutBinding.descriptorCount = 1;
+	animationLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	//Bindings array
-	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding };
+	std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding, animationLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -736,11 +770,13 @@ void Ravine::createUniformBuffers()
 {
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	uniformBuffers.resize(swapChain->images.size());
-	materialBuffers.resize(swapChain->images.size());
+	materialsBuffers.resize(swapChain->images.size());
+	animationsBuffers.resize(swapChain->images.size());
 
 	for (size_t i = 0; i < swapChain->images.size(); i++) {
 		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		materialBuffers[i] = device->createDynamicBuffer(sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		materialsBuffers[i] = device->createDynamicBuffer(sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		animationsBuffers[i] = device->createDynamicBuffer(sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 	}
 }
 
@@ -904,15 +940,24 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	//Basic Drawing Commands
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *graphicsPipeline);
+	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
 
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
 	//Set Vertex Buffer for drawing
 	VkDeviceSize offsets[] = { 0 };
 
 	//Binding descriptor sets (uniforms)
 	//Call drawing
+	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	{
+		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+	}
+
+	//Perform the same with lines rendering
+	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedLineGraphicsPipeline);
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
@@ -1152,6 +1197,8 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 #pragma endregion
 
+	//TODO: Proper, per-object uniform with different DescriptorSets or PushConstant ids for indirect access
+#pragma region Global Uniforms
 	//Rotating object 90 degrees per second
 	//ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
@@ -1174,8 +1221,20 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	vkMapMemory(device->handle, uniformBuffers[currentImage].memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(device->handle, uniformBuffers[currentImage].memory);
+#pragma endregion
 
-#pragma region Bones
+#pragma region Materials
+	RvMaterialBufferObject materialsUbo = {};
+
+	materialsUbo.customColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	void* materialsData;
+	vkMapMemory(device->handle, materialsBuffers[currentImage].memory, 0, sizeof(materialsUbo), 0, &materialsData);
+	memcpy(materialsData, &materialsUbo, sizeof(materialsUbo));
+	vkUnmapMemory(device->handle, materialsBuffers[currentImage].memory);
+#pragma endregion
+
+#pragma region Animations
 	RvBoneBufferObject bonesUbo = {};
 
 	for (size_t i = 0; i < meshes[0].boneTransforms.size(); i++)
@@ -1184,9 +1243,9 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	}
 
 	void* bonesData;
-	vkMapMemory(device->handle, materialBuffers[currentImage].memory, 0, sizeof(bonesUbo), 0, &bonesData);
+	vkMapMemory(device->handle, animationsBuffers[currentImage].memory, 0, sizeof(bonesUbo), 0, &bonesData);
 	memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
-	vkUnmapMemory(device->handle, materialBuffers[currentImage].memory);
+	vkUnmapMemory(device->handle, animationsBuffers[currentImage].memory);
 #pragma endregion
 
 	//std::cout << camera->horRot << "; " << camera->verRot << std::endl;
@@ -1198,8 +1257,12 @@ void Ravine::cleanupSwapChain() {
 	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(secondaryCmdBuffers.size()), secondaryCmdBuffers.data());
 
 	//Destroy Graphics Pipeline and all it's components
-	vkDestroyPipeline(device->handle, *graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, graphicsPipeline->layout, nullptr);
+	vkDestroyPipeline(device->handle, *skinnedGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, skinnedGraphicsPipeline->layout, nullptr);
+	vkDestroyPipeline(device->handle, *skinnedLineGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, skinnedLineGraphicsPipeline->layout, nullptr);
+	vkDestroyPipeline(device->handle, *staticGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, staticGraphicsPipeline->layout, nullptr);
 
 	//Destroy swap chain and all it's images
 	swapChain->Clear();
@@ -1237,8 +1300,8 @@ void Ravine::cleanup()
 
 	//Destroying swap chain images
 	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, materialBuffers[i].buffer, nullptr);
-		vkFreeMemory(device->handle, materialBuffers[i].memory, nullptr);
+		vkDestroyBuffer(device->handle, animationsBuffers[i].buffer, nullptr);
+		vkFreeMemory(device->handle, animationsBuffers[i].memory, nullptr);
 	}
 
 	//Destroy descriptor set layout (uniform bind)
@@ -1257,7 +1320,7 @@ void Ravine::cleanup()
 	}
 
 	//Destroy graphics pipeline
-	delete graphicsPipeline;
+	delete skinnedGraphicsPipeline;
 
 	//Destroy vulkan logical device and validation layer
 	device->Clear();

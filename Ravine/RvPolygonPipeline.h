@@ -1,5 +1,5 @@
-#ifndef RV_GRAPHICS_PIPELINE_H
-#define RV_GRAPHICS_PIPELINE_H
+#ifndef RV_POLYGON_PIPELINE_H
+#define RV_POLYGON_PIPELINE_H
 
 //Vulkan Includes
 #include <vulkan\vulkan.h>

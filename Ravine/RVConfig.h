@@ -1,8 +1,9 @@
 #ifndef RV_CONFIG_H
 #define RV_CONFIG_H
 
-//STD Includes
-#include <vector>
+//EASTL Includes
+#include <EASTL/vector.h>
+using eastl::vector;
 
 //Vulkan Includes
 #include <vulkan\vulkan.h>
@@ -10,12 +11,12 @@
 namespace rvCfg
 {
 	//Validation layers to be enabled
-	const std::vector<const char*> ValidationLayers = {
+	const vector<const char*> ValidationLayers = {
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 
 	//Physical Device required extensions
-	const std::vector<const char*> DeviceExtensions = {
+	const vector<const char*> DeviceExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 

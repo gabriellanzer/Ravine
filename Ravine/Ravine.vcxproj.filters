@@ -114,6 +114,9 @@
     <ClCompile Include="RvWireframePipeline.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="EASTL_new.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -196,6 +199,9 @@
     </ClInclude>
     <ClInclude Include="RvWireframePipeline.h">
       <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="EASTL_new.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

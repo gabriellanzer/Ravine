@@ -1,8 +1,9 @@
 #ifndef RAVINE_DEVICE_H
 #define RAVINE_DEVICE_H
 
-//STD Includes
-#include <vector>
+//EASTL Includes
+#include <EASTL/vector.h>
+using eastl::vector;
 
 //Vulkan Includes
 #include <vulkan\vulkan.h>
@@ -52,7 +53,7 @@ public:
 	RvPersistentBuffer createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+	VkFormat findSupportedFormat(const vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 	VkSampleCountFlagBits getMaxUsableSampleCount();
 

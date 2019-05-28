@@ -1,8 +1,10 @@
 #ifndef RV_SWAPCHAIN_H
 #define RV_SWAPCHAIN_H
 
-//STD Includes
-#include <vector>
+//EASTL Includes
+#include <EASTL/vector.h>
+using eastl::vector;
+#include "EASTL_new.h"
 
 //Vulkan Includes
 #include <vulkan/vulkan.h>
@@ -15,8 +17,8 @@
 //Structure for Swap Chain Support query of details
 struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentModes;
+	vector<VkSurfaceFormatKHR> formats;
+	vector<VkPresentModeKHR> presentModes;
 };
 
 struct RvSwapChain
@@ -44,21 +46,21 @@ public:
 	VkRenderPass renderPass;
 
 	//Swap chain properties
-	std::vector<VkImage> images;
+	vector<VkImage> images;
 	VkFormat imageFormat;
 	VkExtent2D extent;
-	std::vector<VkImageView> imageViews;
+	vector<VkImageView> imageViews;
 
 	//Framebuffers
-	std::vector<VkFramebuffer> framebuffers;
-	std::vector<RvFramebufferAttachment> framebufferAttachments;
+	vector<VkFramebuffer> framebuffers;
+	vector<RvFramebufferAttachment> framebufferAttachments;
 
 	//Queue fences
-	std::vector<VkFence> inFlightFences;
+	vector<VkFence> inFlightFences;
 
 	//Queues semaphors
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
+	vector<VkSemaphore> imageAvailableSemaphores;
+	vector<VkSemaphore> renderFinishedSemaphores;
 
 	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
 	~RvSwapChain();
@@ -78,9 +80,9 @@ public:
 	bool SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
 
 
-	VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkSurfaceFormatKHR chooseSurfaceFormat(const vector<VkSurfaceFormatKHR>& availableFormats);
 
-	VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
+	VkPresentModeKHR choosePresentMode(const vector<VkPresentModeKHR> availablePresentModes);
 
 	VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 

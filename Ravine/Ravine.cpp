@@ -3,12 +3,13 @@
 //STD Includes
 #include <iostream>
 #include <stdexcept>
-#include <functional>
-#include <cstdlib>
-#include <set>
-#include <algorithm>
 #include <fstream>
-#include <string>
+
+//EASTL Includes
+#include <EASTL/functional.h>
+#include <EASTL/set.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/string.h>
 
 //GLM Includes
 #include <glm\gtc\matrix_transform.hpp>
@@ -75,14 +76,14 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	std::string modelName = "guard.fbx";
+	string modelName = "guard.fbx";
 	if (loadScene("../data/" + modelName))
 	{
-		std::cout << modelName << " loaded!\n";
+		std::cout << modelName.c_str() << " loaded!\n";
 	}
 	else
 	{
-		std::cout << "file not found at path " << modelName << std::endl;
+		std::cout << "file not found at path " << modelName.c_str() << std::endl;
 		return;
 	}
 
@@ -125,12 +126,12 @@ void Ravine::initVulkan() {
 	gui->Init(device->getMaxUsableSampleCount());
 }
 
-std::vector<const char*> Ravine::getRequiredInstanceExtensions() {
+vector<const char*> Ravine::getRequiredInstanceExtensions() {
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions;
 	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+	vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 #ifdef VALIDATION_LAYERS_ENABLED
 	extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -165,7 +166,7 @@ void Ravine::createInstance() {
 	//Query for available extensions
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr); //Query size
-	std::vector<VkExtensionProperties> extensions(extensionCount); //Reserve
+	vector<VkExtensionProperties> extensions(extensionCount); //Reserve
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data()); //Query data
 	std::cout << "Vulkan available extensions:" << std::endl;
 	for (const auto& extension : extensions) {
@@ -174,7 +175,7 @@ void Ravine::createInstance() {
 	}
 
 	//GLFW Window Management extensions
-	std::vector<const char*> requiredExtensions = getRequiredInstanceExtensions();
+	vector<const char*> requiredExtensions = getRequiredInstanceExtensions();
 	std::cout << "Application required extensions:" << std::endl;
 	for (uint32_t i = 0; i < requiredExtensions.size(); i++) {
 		bool found = false;
@@ -213,7 +214,7 @@ void Ravine::pickPhysicalDevice()
 		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
-	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
 	for (const auto& curPhysicalDevice : devices) {
@@ -260,10 +261,10 @@ bool Ravine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-	std::set<std::string> requiredExtensions(rvCfg::DeviceExtensions.begin(), rvCfg::DeviceExtensions.end());
+	eastl::set<eastl::string> requiredExtensions(rvCfg::DeviceExtensions.begin(), rvCfg::DeviceExtensions.end());
 
 	for (const auto& extension : availableExtensions) {
 		requiredExtensions.erase(extension.extensionName);
@@ -312,7 +313,7 @@ void Ravine::recreateSwapChain() {
 
 void Ravine::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 3> poolSizes = {};
+	array<VkDescriptorPoolSize, 3> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -333,7 +334,7 @@ void Ravine::createDescriptorPool()
 
 void Ravine::createDescriptorSets()
 {
-	std::vector<VkDescriptorSetLayout> layouts(swapChain->images.size(), descriptorSetLayout);
+	vector<VkDescriptorSetLayout> layouts(swapChain->images.size(), descriptorSetLayout);
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
@@ -371,7 +372,7 @@ void Ravine::createDescriptorSets()
 		animationsInfo.offset = 0;
 		animationsInfo.range = sizeof(RvBoneBufferObject);
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
+		array<VkWriteDescriptorSet, 4> descriptorWrites = {};
 
 		//Global Uniform Buffer Info
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -446,7 +447,7 @@ void Ravine::createDescriptorSetLayout()
 	animationLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	//Bindings array
-	std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding, animationLayoutBinding };
+	array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding, animationLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -461,10 +462,10 @@ void Ravine::createDescriptorSetLayout()
 
 #pragma region ANIMATION STUFF
 
-bool Ravine::loadScene(const std::string& filePath)
+bool Ravine::loadScene(const string& filePath)
 {
 	Importer importer;
-	importer.ReadFile(filePath, aiProcess_CalcTangentSpace | \
+	importer.ReadFile(filePath.c_str(), aiProcess_CalcTangentSpace | \
 		aiProcess_GenSmoothNormals | \
 		aiProcess_JoinIdenticalVertices | \
 		aiProcess_ImproveCacheLocality | \
@@ -649,11 +650,9 @@ bool Ravine::loadScene(const std::string& filePath)
 
 void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 {
-	//std::map<std::string, uint16_t> boneMapping;
-
 	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
 		uint16_t BoneIndex = 0;
-		std::string BoneName(pMesh->mBones[i]->mName.data);
+		string BoneName(pMesh->mBones[i]->mName.data);
 
 		if (meshData.boneMapping.find(BoneName) == meshData.boneMapping.end()) {
 			BoneIndex = meshes[0].numBones;
@@ -695,7 +694,7 @@ void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms
 void Ravine::ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode* pNode,
 	const aiMatrix4x4& ParentTransform)
 {
-	std::string NodeName(pNode->mName.data);
+	string NodeName(pNode->mName.data);
 
 	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
 
@@ -808,7 +807,8 @@ void Ravine::loadTextureImages()
 	{
 		//Loading image
 		int texWidth, texHeight, texChannels;
-		std::cout << texturesToLoad[i - 1] << std::endl;
+
+		std::cout << texturesToLoad[i - 1].c_str() << std::endl;
 		stbi_uc* pixels = stbi_load(("../data/" + texturesToLoad[i - 1]).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 		textures[i] = device->createTexture(pixels, texWidth, texHeight);
@@ -995,7 +995,7 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	renderPassInfo.renderArea.extent = swapChain->extent;
 
 	//Clearing values
-	std::array<VkClearValue, 2> clearValues = {};
+	array<VkClearValue, 2> clearValues = {};
 	clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
 	clearValues[1].depthStencil = { 1.0f, 0 };	//Depth goes from [1,0] - being 1 the furthest possible
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -1023,16 +1023,23 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 void Ravine::mainLoop() {
 
-	std::string fpsTitle = "";
+	string fpsTitle = "";
+
+	//TODO: Review eastl::to_string linking error!
+	char deltaTimeMili[128];
 
 	//Application
 	setupFPSCam();
 
-	while (!glfwWindowShouldClose(*window)) {
+	while (!glfwWindowShouldClose(*window)){
 		RvTime::update();
-		fpsTitle = "Ravine - Milisseconds " + std::to_string(RvTime::deltaTime() * 1000.0);
+		
+		sprintf(deltaTimeMili, "%f", RvTime::deltaTime() * 1000.0);
+		fpsTitle = "Ravine - Milisseconds " + string(deltaTimeMili);
 		glfwSetWindowTitle(*window, fpsTitle.c_str());
+		
 		glfwPollEvents();
+		
 		drawFrame();
 	}
 
@@ -1105,13 +1112,11 @@ void Ravine::setupFPSCam()
 
 void Ravine::updateUniformBuffer(uint32_t currentImage)
 {
-	//Comment on constantly changed uniforms.
 	/*
 	Using a UBO this way is not the most efficient way to pass frequently changing values to the shader.
 	A more efficient way to pass a small buffer of data to shaders are push constants.
 	Reference: https://vulkan-tutorial.com/Uniform_buffers/Descriptor_layout_and_buffer
 	*/
-	RvUniformBufferObject ubo = {};
 
 #pragma region Inputs
 
@@ -1205,6 +1210,8 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//TODO: Proper, per-object uniform with different DescriptorSets or PushConstant ids for indirect access
 #pragma region Global Uniforms
+	RvUniformBufferObject ubo = {};
+
 	//Rotating object 90 degrees per second
 	//ubo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.model = glm::scale(ubo.model, glm::vec3(0.025f, 0.025f, 0.025f));
@@ -1254,7 +1261,6 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 	vkUnmapMemory(device->handle, animationsBuffers[currentImage].memory);
 #pragma endregion
 
-	//std::cout << camera->horRot << "; " << camera->verRot << std::endl;
 }
 
 void Ravine::cleanupSwapChain() {
@@ -1304,7 +1310,13 @@ void Ravine::cleanup()
 		vkFreeMemory(device->handle, uniformBuffers[i].memory, nullptr);
 	}
 
-	//Destroying swap chain images
+	//Destroying material buffers
+	for (size_t i = 0; i < swapImagesCount; i++) {
+		vkDestroyBuffer(device->handle, materialsBuffers[i].buffer, nullptr);
+		vkFreeMemory(device->handle, materialsBuffers[i].memory, nullptr);
+	}
+
+	//Destroying animation buffers
 	for (size_t i = 0; i < swapImagesCount; i++) {
 		vkDestroyBuffer(device->handle, animationsBuffers[i].buffer, nullptr);
 		vkFreeMemory(device->handle, animationsBuffers[i].memory, nullptr);

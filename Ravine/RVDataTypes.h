@@ -7,16 +7,23 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-//STD Includes
-#include <array>
-#include <vector>
-#include <map>
+//EASTL Includes
+#include <EASTL/array.h>
+#include <EASTL/vector.h>
+#include <EASTL/map.h>
+#include <EASTL/string.h>
+
 
 //Vulkan Includes
 #include <vulkan/vulkan.h>
 
 //Assimp Includes
 #include <assimp/scene.h>
+
+using eastl::array;
+using eastl::vector;
+using eastl::map;
+using eastl::string;
 
 #pragma region RvAnimation
 
@@ -50,8 +57,8 @@ struct RvVertex {
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+	static array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+		array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
 
 		//Position
 		attributeDescriptions[0].binding = 0;
@@ -106,8 +113,8 @@ struct RvVertexColored {
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
+	static array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+		array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
 
 		//Position
 		attributeDescriptions[0].binding = 0;
@@ -169,8 +176,8 @@ struct RvSkinnedVertex {
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions = {};
+	static array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions() {
+		array<VkVertexInputAttributeDescription, 5> attributeDescriptions = {};
 
 		//Position
 		attributeDescriptions[0].binding = 0;
@@ -251,8 +258,8 @@ struct RvSkinnedVertexColored {
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions = {};
+	static array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions() {
+		array<VkVertexInputAttributeDescription, 6> attributeDescriptions = {};
 
 		//Position
 		attributeDescriptions[0].binding = 0;
@@ -320,14 +327,14 @@ struct RvSkinnedMeshColored
 	aiNode* rootNode;
 	uint16_t numBones = 0;
 
-	std::vector<RvAnimation*> animations;
+	vector<RvAnimation*> animations;
 	aiMatrix4x4 animGlobalInverseTransform;
 	// TODO: REFACTOR MAPPING TO NOT USE STRINGS
-	std::map<std::string, uint16_t> boneMapping;
-	std::vector<RvBoneInfo> boneInfo;
+	map<string, uint16_t> boneMapping;
+	vector<RvBoneInfo> boneInfo;
 
 	//TODO: Move to RvAnimationState
-	std::vector<aiMatrix4x4> boneTransforms;
+	vector<aiMatrix4x4> boneTransforms;
 	uint16_t curAnimId = 0;
 
 };

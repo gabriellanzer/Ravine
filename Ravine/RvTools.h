@@ -4,9 +4,10 @@
 //Vulkan Includes
 #include <vulkan\vulkan.h>
 
-//STD Includes
-#include <vector>
-#include <algorithm>
+//EASTL Includes
+#include <EASTL/vector.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/string.h>
 
 //Ravine Includes
 #include "RvSwapChain.h"
@@ -14,6 +15,8 @@
 #include "RvTexture.h"
 
 struct SwapChainSupportDetails;
+using eastl::string;
+using eastl::vector;
 
 namespace rvTools
 {
@@ -46,13 +49,13 @@ namespace rvTools
 
 	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-	std::vector<char> readFile(const std::string& filename);
+	vector<char> readFile(const string& filename);
 
 	void transitionImageLayout(RvDevice device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 
 	void copyBuffer(RvDevice& device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);
+	VkShaderModule createShaderModule(VkDevice device, const vector<char>& code);
 
 };
 

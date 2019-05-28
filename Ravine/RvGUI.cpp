@@ -234,7 +234,7 @@ void RvGUI::CreateDescriptorSetLayout()
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	//Bindings array
-	std::array<VkDescriptorSetLayoutBinding, 1> bindings = { samplerLayoutBinding };
+	array<VkDescriptorSetLayoutBinding, 1> bindings = { samplerLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -420,8 +420,8 @@ void RvGUI::RecordCmdBuffers(uint32_t frameIndex)
 			{
 				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
 				VkRect2D scissorRect;
-				scissorRect.offset.x = std::max((int32_t)(pcmd->ClipRect.x), 0);
-				scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
+				scissorRect.offset.x = eastl::max((int32_t)(pcmd->ClipRect.x), 0);
+				scissorRect.offset.y = eastl::max((int32_t)(pcmd->ClipRect.y), 0);
 				scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
 				scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
 				vkCmdSetScissor(cmdBuffers[frameIndex], 0, 1, &scissorRect);

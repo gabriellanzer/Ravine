@@ -1,8 +1,12 @@
 #include "RVSwapChain.h"
 
-//Local dependencies
-#include <algorithm>
-#include <array>
+//EASTL Includes
+#include <EASTL/algorithm.h>
+#include <EASTL/array.h>
+using eastl::array;
+
+//STD Includes
+#include <stdexcept>
 
 
 RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain) : renderPass()
@@ -79,7 +83,7 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	this->extent = extent;
 }
 
-VkSurfaceFormatKHR RvSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+VkSurfaceFormatKHR RvSwapChain::chooseSurfaceFormat(const vector<VkSurfaceFormatKHR>& availableFormats) {
 
 	if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED) {
 		return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
@@ -94,7 +98,7 @@ VkSurfaceFormatKHR RvSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceF
 	return availableFormats[0];
 }
 
-VkPresentModeKHR RvSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR> availablePresentModes) {
+VkPresentModeKHR RvSwapChain::choosePresentMode(const vector<VkPresentModeKHR> availablePresentModes) {
 
 	//FIFO v-sync might not be available on some drivers
 	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -120,8 +124,8 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 	else {
 		VkExtent2D actualExtent = { WIDTH, HEIGHT };
 
-		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
-		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+		actualExtent.width = eastl::max(capabilities.minImageExtent.width, eastl::min(capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = eastl::max(capabilities.minImageExtent.height, eastl::min(capabilities.maxImageExtent.height, actualExtent.height));
 
 		return actualExtent;
 	}
@@ -244,7 +248,7 @@ void RvSwapChain::CreateRenderPass()
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 	//Attachments
-	std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
+	array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
 
 	//Render Pass
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Render_pass
@@ -288,7 +292,7 @@ void RvSwapChain::CreateFramebuffers()
 	for (size_t i = 0; i < imageViews.size(); i++) {
 		//Copy framebuffer attachments 
 		//TODO: Maybe this can be optimized butting the vector outside and adding/removing imageViews for each iteration
-		std::vector<VkImageView> attachments;
+		vector<VkImageView> attachments;
 
 		for (size_t j = 0; j < framebufferAttachments.size(); j++)
 		{

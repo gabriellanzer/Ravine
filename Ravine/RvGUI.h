@@ -4,8 +4,8 @@
 //Vulkan Includes
 #include <vulkan/vulkan.h>
 
-//STD Includes
-#include <vector>
+//EASTL Includes
+#include <EASTL/vector.h>
 
 //ImGUI Includes
 #include "imgui.h"
@@ -49,15 +49,15 @@ struct RvGUI
 
 	//Buffer Attributes
 	VkPushConstantRange pushConstantRange;
-	std::vector<RvPersistentBuffer> vertexBuffer;
-	std::vector<RvPersistentBuffer> indexBuffer;
+	vector<RvPersistentBuffer> vertexBuffer;
+	vector<RvPersistentBuffer> indexBuffer;
 
 	//The GUI CommandBuffers for each frame
-	std::vector<VkCommandBuffer> cmdBuffers;
+	vector<VkCommandBuffer> cmdBuffers;
 
 	//The GUI FrameBuffers for each frame
-	std::vector<VkFramebuffer> framebuffers;
-	std::vector<RvFramebufferAttachment> framebufferAttachments;
+	vector<VkFramebuffer> framebuffers;
+	vector<RvFramebufferAttachment> framebufferAttachments;
 
 	uint32_t lastVtxCrc[RV_MAX_FRAMES_IN_FLIGHT] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 

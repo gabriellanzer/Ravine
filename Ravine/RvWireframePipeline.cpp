@@ -10,7 +10,7 @@
 #include "RvTools.h"
 
 
-RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode) : device(&device)
+RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
 	//ShaderModules
 	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);

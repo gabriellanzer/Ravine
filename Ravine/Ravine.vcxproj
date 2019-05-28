@@ -88,11 +88,11 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x86\;..\lib\x86\Debug\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
@@ -105,11 +105,11 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x64\;..\lib\x64\Debug\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
@@ -124,13 +124,13 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x86\;..\lib\x86\Release\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
@@ -146,13 +146,13 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x64\;..\lib\x64\Release\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
@@ -161,6 +161,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="crc32.h" />
+    <ClCompile Include="EASTL_new.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
@@ -186,6 +187,7 @@
     <ClCompile Include="RvTools.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EASTL_new.h" />
     <ClInclude Include="imgui.h" />
     <ClInclude Include="imgui_internal.h" />
     <ClInclude Include="imstb_rectpack.h" />

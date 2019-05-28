@@ -6,12 +6,12 @@ namespace rvTools
 	namespace animation
 	{
 		// Find animation for a given node
-		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName)
+		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const string nodeName)
 		{
 			for (uint32_t i = 0; i < animation->mNumChannels; i++)
 			{
 				const aiNodeAnim* nodeAnim = animation->mChannels[i];
-				if (std::string(nodeAnim->mNodeName.data) == nodeName)
+				if (string(nodeAnim->mNodeName.data) == nodeName)
 				{
 					return nodeAnim;
 				}

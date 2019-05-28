@@ -6,10 +6,16 @@
 #include <GLFW/glfw3.h>
 
 //STD includes
-#include <vector>
-#include <array>
-#include <unordered_set>
-#include <map>
+#include <EASTL/allocator.h>
+#include <EASTL/vector.h>
+#include <EASTL/array.h>
+#include <EASTL/unordered_set.h>
+#include <EASTL/map.h>
+#include <EASTL/string.h>
+
+using eastl::string;
+using eastl::vector;
+using eastl::array;
 
 //Vulkan Include
 #include <vulkan\vulkan.h>
@@ -47,10 +53,6 @@
 //Assimp Includes
 #include <assimp/scene.h>           // Output data structure
 
-//Specific usages of STD library
-using std::string;
-using std::vector;
-
 //Specific usages of Ravine library
 using namespace rvTools::animation;
 
@@ -68,7 +70,7 @@ private:
 	//Todo: Move to Window
 	const int WIDTH = 1920;
 	const int HEIGHT = 1080;
-	const std::string WINDOW_NAME = "Ravine Engine";
+	const string WINDOW_NAME = "Ravine Engine";
 
 	//Ravine objects
 	RvWindow* window;
@@ -77,11 +79,11 @@ private:
 	RvSwapChain* swapChain;
 
 	//TODO: Fix Creation flow with shaders integration
-	std::vector<char> skinnedTexColCode;
-	std::vector<char> skinnedWireframeCode;
-	std::vector<char> staticTexColCode;
-	std::vector<char> phongTexColCode;
-	std::vector<char> solidColorCode;
+	vector<char> skinnedTexColCode;
+	vector<char> skinnedWireframeCode;
+	vector<char> staticTexColCode;
+	vector<char> phongTexColCode;
+	vector<char> solidColorCode;
 	RvPolygonPipeline* skinnedGraphicsPipeline;
 	RvWireframePipeline* skinnedWireframeGraphicsPipeline;
 	RvPolygonPipeline* staticGraphicsPipeline;
@@ -121,27 +123,27 @@ private:
 	//TODO: Move to DESCRIPTOR
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
-	std::vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
+	vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
 
 	//Commands Buffers and it's Pool
 	//TODO: Move to COMMAND BUFFER
-	std::vector<VkCommandBuffer> primaryCmdBuffers;
-	std::vector<VkCommandBuffer> secondaryCmdBuffers;
+	vector<VkCommandBuffer> primaryCmdBuffers;
+	vector<VkCommandBuffer> secondaryCmdBuffers;
 
 	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
 	//Reference: https://developer.nvidia.com/vulkan-memory-management
 
 	//TODO: Move vertex and index buffer in MESH class
 	//Verter buffer
-	std::vector<RvPersistentBuffer> vertexBuffers;
+	vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
-	std::vector<RvPersistentBuffer> indexBuffers;
+	vector<RvPersistentBuffer> indexBuffers;
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM
-	std::vector<RvDynamicBuffer> uniformBuffers;
-	std::vector<RvDynamicBuffer> materialsBuffers;
-	std::vector<RvDynamicBuffer> animationsBuffers;
+	vector<RvDynamicBuffer> uniformBuffers;
+	vector<RvDynamicBuffer> materialsBuffers;
+	vector<RvDynamicBuffer> animationsBuffers;
 
 	//Texture related objects
 	uint32_t mipLevels;
@@ -160,7 +162,7 @@ private:
 	void initVulkan();
 
 	//Returns a list of extensions required by the Vulkan Instance
-	std::vector<const char*> getRequiredInstanceExtensions();
+	vector<const char*> getRequiredInstanceExtensions();
 
 	//Create Vulkan Instance for the start of the application
 	void createInstance();
@@ -187,7 +189,7 @@ private:
 	void createDescriptorSets();
 
 	//Load scene file and populates meshes vector
-	bool loadScene(const std::string& filePath);
+	bool loadScene(const string& filePath);
 	void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
 	//TODO: Move to Blend-tree
 	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);

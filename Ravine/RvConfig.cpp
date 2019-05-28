@@ -6,7 +6,7 @@ bool rvCfg::CheckValidationLayerSupport()
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
 	for (const char* layerName : ValidationLayers) {

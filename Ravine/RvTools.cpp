@@ -1,6 +1,10 @@
 ﻿#include "RvTools.h"
 
+//EASTL Includes
+#include <EASTL/algorithm.h>
+
 //STD Include
+#include <stdexcept>
 #include <fstream>
 
 #pragma region USEFULL DEFINES
@@ -59,7 +63,7 @@ namespace rvTools {
 		Floor - handles case where the dimension is not power of 2
 		+1 - Add a mip level for the original level
 		*/
-		size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
+		size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(eastl::max(width, height)))) + 1;
 
 		//Creating new image
 		device->createImage(width, height, mipLevels,
@@ -262,7 +266,7 @@ namespace rvTools {
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
-		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
 		int i = 0;
@@ -313,16 +317,17 @@ namespace rvTools {
 		return details;
 	}
 
-	std::vector<char> readFile(const std::string & filename)
+	vector<char> readFile(const string & filename)
 	{
-		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+		std::ifstream file(filename.c_str(), std::ios::ate | std::ios::binary);
 
 		if (!file.is_open()) {
-			throw std::runtime_error("Failed to open file at " + filename);
+			string error("Failed to open file at " + filename);
+			throw std::runtime_error(error.c_str());
 		}
 
 		size_t fileSize = (size_t)file.tellg();
-		std::vector<char> buffer(fileSize);
+		vector<char> buffer(fileSize);
 
 		file.seekg(0);
 		file.read(buffer.data(), fileSize);
@@ -425,7 +430,7 @@ namespace rvTools {
 		device.endSingleTimeCommands(commandBuffer);
 	}
 
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code)
+	VkShaderModule createShaderModule(VkDevice device, const vector<char>& code)
 	{
 
 		//Create shader module with data pointer (uint32_t ptr) and size (in bytes)

@@ -8,18 +8,22 @@
 //Vulkan Include
 #include <vulkan/vulkan.h>
 
+//EASTL Includes
+#include <EASTL/string.h>
+using eastl::string;
+
 //STD Includes
-#include <string>
+#include <stdexcept>
 
 struct RvWindow
 {
 private:
 	GLFWwindow * window;
-	std::string title;
+	eastl::string title;
 	VkInstance* instance;
 
 public:
-	RvWindow(uint32_t width, uint32_t height, const std::string title, bool fullscreen = false, GLFWframebuffersizefun resizeCallback = NULL);
+	RvWindow(uint32_t width, uint32_t height, const eastl::string title, bool fullscreen = false, GLFWframebuffersizefun resizeCallback = NULL);
 	~RvWindow();
 	
 	VkSurfaceKHR surface;

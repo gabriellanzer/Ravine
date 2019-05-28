@@ -1,19 +1,19 @@
 #ifndef ANIMATION_TOOLS_H
 #define ANIMATION_TOOLS_H
 
-//#include <glm/glm.hpp>
-//#include <glm/gtc/matrix_transform.hpp>
-//#include <glm/gtc/type_ptr.hpp>
-//#include <glm/gtx/quaternion.hpp>
+//EASTL Includes
+#include <EASTL/string.h>
 
 //Assimp Includes
 #include <assimp/anim.h>
+
+using eastl::string;
 
 namespace rvTools
 {
 	namespace animation
 	{
-		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const std::string nodeName);
+		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const string nodeName);
 
 		aiMatrix4x4 interpolateTranslation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
 		aiMatrix4x4 interpolateRotation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);

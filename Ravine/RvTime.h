@@ -1,7 +1,7 @@
 #pragma once
 
-//STD Includes
-#include <chrono>
+//EASTL Includes
+#include <EASTL/chrono.h>
 
 //GLFW Include
 #include <glfw\glfw3.h>
@@ -10,9 +10,9 @@ class RvTime
 {
 public:
 
-	static std::chrono::high_resolution_clock::time_point startTime;
-	static std::chrono::high_resolution_clock::time_point lastFrameTime;
-	static std::chrono::high_resolution_clock::time_point currentFrameTime;
+	static eastl::chrono::high_resolution_clock::time_point startTime;
+	static eastl::chrono::high_resolution_clock::time_point lastFrameTime;
+	static eastl::chrono::high_resolution_clock::time_point currentFrameTime;
 
 	static void initialize();
 	static void update();

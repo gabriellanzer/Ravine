@@ -1,8 +1,12 @@
 #include "RVDevice.h"
 
+//EASTL Includes
+#include <EASTL/algorithm.h>
+#include <EASTL/set.h>
+
+using eastl::set;
+
 //STD Includes
-#include <algorithm>
-#include <set>
 #include <iostream>
 
 //Ravine System Includes
@@ -13,8 +17,8 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 {
 	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(physicalDevice, surface);
 
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+	vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
 
 	float queuePriority = 1.0f;
 	for (int queueFamily : uniqueQueueFamilies) {
@@ -215,7 +219,7 @@ uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags pro
 	throw std::runtime_error("Failed to find suitable memory type!");
 }
 
-VkFormat RvDevice::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+VkFormat RvDevice::findSupportedFormat(const vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
 	for (VkFormat format : candidates) {
 		VkFormatProperties props;
@@ -242,7 +246,7 @@ VkFormat RvDevice::findDepthFormat()
 
 VkSampleCountFlagBits RvDevice::getMaxUsableSampleCount()
 {
-	VkSampleCountFlags counts = std::min(deviceProperties.limits.framebufferColorSampleCounts, deviceProperties.limits.framebufferDepthSampleCounts);
+	VkSampleCountFlags counts = eastl::min(deviceProperties.limits.framebufferColorSampleCounts, deviceProperties.limits.framebufferDepthSampleCounts);
 	if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
 	if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
 	if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }

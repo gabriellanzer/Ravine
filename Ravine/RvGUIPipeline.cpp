@@ -17,8 +17,8 @@ RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountF
 	}
 
 	//Load Shaders
-	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/gui.vert.spv");
-	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/gui.frag.spv");
+	vector<char> vertShaderCode = rvTools::readFile("../data/shaders/gui.vert.spv");
+	vector<char> fragShaderCode = rvTools::readFile("../data/shaders/gui.frag.spv");
 	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
 	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
 

@@ -185,6 +185,7 @@
     <ClCompile Include="RvWindow.cpp" />
     <ClCompile Include="RvTime.cpp" />
     <ClCompile Include="RvTools.cpp" />
+    <ClCompile Include="SingleFileLibraries\spirv_reflect.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EASTL_new.h" />
@@ -212,6 +213,7 @@
     <ClInclude Include="RvSwapChain.h" />
     <ClInclude Include="RvUniformTypes.h" />
     <ClInclude Include="RvWindow.h" />
+    <ClInclude Include="SingleFileLibraries\spirv_reflect.h" />
     <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="RvTime.h" />
     <ClInclude Include="RvTools.h" />

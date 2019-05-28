@@ -117,6 +117,9 @@
     <ClCompile Include="EASTL_new.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SingleFileLibraries\spirv_reflect.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -201,6 +204,9 @@
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
     <ClInclude Include="EASTL_new.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SingleFileLibraries\spirv_reflect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

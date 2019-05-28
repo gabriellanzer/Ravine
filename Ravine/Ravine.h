@@ -5,7 +5,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-//STD includes
+//EASTL includes
 #include <EASTL/allocator.h>
 #include <EASTL/vector.h>
 #include <EASTL/array.h>

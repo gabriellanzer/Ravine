@@ -94,15 +94,16 @@ void Ravine::initVulkan() {
 
 
 	//Shaders Loading
-	skinnedTexColCode	= rvTools::readFile("../data/shaders/skinned_tex_color.vert.spv");
-	staticTexColCode	= rvTools::readFile("../data/shaders/static_tex_color.vert.spv");
-	phongTexColCode		= rvTools::readFile("../data/shaders/phong_tex_color.frag.spv");
+	skinnedTexColCode		= rvTools::readFile("../data/shaders/skinned_tex_color.vert.spv");
+	skinnedWireframeCode	= rvTools::readFile("../data/shaders/skinned_wireframe.vert.spv");
+	staticTexColCode		= rvTools::readFile("../data/shaders/static_tex_color.vert.spv");
+	phongTexColCode			= rvTools::readFile("../data/shaders/phong_tex_color.frag.spv");
+	solidColorCode			= rvTools::readFile("../data/shaders/solid_color.frag.spv");
 
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
-	skinnedTexColCode = rvTools::readFile("../data/shaders/skinned_debug_wireframe.vert.spv");
-	skinnedLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayout, swapChain->renderPass, staticTexColCode, phongTexColCode);
 
@@ -292,13 +293,18 @@ void Ravine::recreateSwapChain() {
 	swapChain->CreateRenderPass();
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayout, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayout, swapChain->renderPass, staticTexColCode, phongTexColCode);
 	createMultiSamplingResources();
 	createDepthResources();
 	swapChain->CreateFramebuffers();
 	allocateCommandBuffers();
-
+	RvGUI* oldGui = gui;
+	gui = new RvGUI(*device, *swapChain, *window);
+	gui->Init(device->getMaxUsableSampleCount());
+	delete oldGui;
 	//Deleting old swapchain
 	oldSwapchain->Clear();
 	delete oldSwapchain;
@@ -957,7 +963,7 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	}
 
 	//Perform the same with lines rendering
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedLineGraphicsPipeline);
+	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
@@ -1259,8 +1265,8 @@ void Ravine::cleanupSwapChain() {
 	//Destroy Graphics Pipeline and all it's components
 	vkDestroyPipeline(device->handle, *skinnedGraphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(device->handle, skinnedGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *skinnedLineGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, skinnedLineGraphicsPipeline->layout, nullptr);
+	vkDestroyPipeline(device->handle, *skinnedWireframeGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, skinnedWireframeGraphicsPipeline->layout, nullptr);
 	vkDestroyPipeline(device->handle, *staticGraphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(device->handle, staticGraphicsPipeline->layout, nullptr);
 

@@ -204,9 +204,6 @@ void RvGUI::CreateFontTexture()
 
 	//Create texture
 	fontTexture = device->createTexture(fontData, texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM);
-
-	//Cleanup font data after texture creation
-	delete[] fontData;
 }
 
 void RvGUI::CreateDescriptorPool()

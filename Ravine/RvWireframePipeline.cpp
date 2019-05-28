@@ -10,7 +10,7 @@
 #include "RvTools.h"
 
 
-RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode) : device(&device)
+RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode) : device(&device)
 {
 	//ShaderModules
 	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
@@ -78,7 +78,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	rasterizer.depthClampEnable = VK_FALSE; //VK_FALSE discards fragments outside of near/far plane frustum
 	rasterizer.rasterizerDiscardEnable = VK_FALSE; //VK_TRUE discards any geometry rendered here
 	rasterizer.polygonMode = VK_POLYGON_MODE_LINE; //Could be FILL, LINE or POINT (requires GPU feature enabling)
-	rasterizer.lineWidth = 1.0f;
+	rasterizer.lineWidth = 2.0f;
 	rasterizer.cullMode = VK_CULL_MODE_NONE;
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -180,7 +180,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthTestEnable = VK_TRUE;
 	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_ALWAYS;	//Depth compare function
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;	//Depth compare function
 
 	//Creates bounds for depth
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
@@ -197,7 +197,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 }
 
 
-RvLinePipeline::~RvLinePipeline()
+RvWireframePipeline::~RvWireframePipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);

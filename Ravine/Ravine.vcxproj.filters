@@ -111,7 +111,7 @@
     <ClCompile Include="RvPolygonPipeline.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RvLinePipeline.cpp">
+    <ClCompile Include="RvWireframePipeline.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
@@ -194,7 +194,7 @@
     <ClInclude Include="RvPolygonPipeline.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RvLinePipeline.h">
+    <ClInclude Include="RvWireframePipeline.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>
@@ -214,8 +214,11 @@
     <None Include="bin\data\shaders\phong_tex_color.frag">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="bin\data\shaders\skinned_debug_wireframe.vert">
+    <None Include="bin\data\shaders\skinned_wireframe.vert">
       <Filter>Source Files\Shaders\Skinned</Filter>
+    </None>
+    <None Include="bin\data\shaders\solid_color.frag">
+      <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

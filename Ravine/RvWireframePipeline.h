@@ -7,10 +7,10 @@
 //Ravine Systems
 #include "RvDevice.h"
 
-struct RvLinePipeline
+struct RvWireframePipeline
 {
-	RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode);
-	~RvLinePipeline();
+	RvWireframePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode);
+	~RvWireframePipeline();
 
 	RvDevice* device;
 	VkPipeline handle;

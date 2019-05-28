@@ -32,7 +32,7 @@
 #include "RvDevice.h"
 #include "RvSwapChain.h"
 #include "RvPolygonPipeline.h"
-#include "RvLinePipeline.h"
+#include "RvWireframePipeline.h"
 #include "RvWindow.h"
 #include "RvTexture.h"
 #include "RvCamera.h"
@@ -78,10 +78,12 @@ private:
 
 	//TODO: Fix Creation flow with shaders integration
 	std::vector<char> skinnedTexColCode;
+	std::vector<char> skinnedWireframeCode;
 	std::vector<char> staticTexColCode;
 	std::vector<char> phongTexColCode;
+	std::vector<char> solidColorCode;
 	RvPolygonPipeline* skinnedGraphicsPipeline;
-	RvLinePipeline* skinnedLineGraphicsPipeline;
+	RvWireframePipeline* skinnedWireframeGraphicsPipeline;
 	RvPolygonPipeline* staticGraphicsPipeline;
 
 	//Mouse parameters

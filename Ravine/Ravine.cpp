@@ -1025,17 +1025,13 @@ void Ravine::mainLoop() {
 
 	string fpsTitle = "";
 
-	//TODO: Review eastl::to_string linking error!
-	char deltaTimeMili[128];
-
 	//Application
 	setupFPSCam();
 
 	while (!glfwWindowShouldClose(*window)){
 		RvTime::update();
 		
-		sprintf(deltaTimeMili, "%f", RvTime::deltaTime() * 1000.0);
-		fpsTitle = "Ravine - Milisseconds " + string(deltaTimeMili);
+		fpsTitle = "Ravine - Milisseconds " + eastl::to_string(RvTime::deltaTime() * 1000.0);
 		glfwSetWindowTitle(*window, fpsTitle.c_str());
 		
 		glfwPollEvents();

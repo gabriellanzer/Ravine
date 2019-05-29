@@ -1,9 +1,5 @@
 #include "RvGUI.h"
 
-//STD Includes
-#include <array>
-#include <iostream>
-
 //Hash Includes
 #include "crc32.h"
 
@@ -310,7 +306,6 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 	//Compare CRC to detect changes and avoid useless updates
 	if (vtxCrc == lastVtxCrc[frameIndex])
 	{
-		//std::cout << "ImGUI Vtx CRC not equal!" << std::endl;
 		return;
 	}
 

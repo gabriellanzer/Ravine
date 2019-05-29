@@ -1,4 +1,4 @@
-#include <iostream>
+#include <fmt/printf.h>
 #include "Ravine.h"
 
 int main()
@@ -9,7 +9,7 @@ int main()
 		app.run();
 	}
 	catch (const std::runtime_error& e) {
-		std::cerr << e.what() << std::endl;
+		fmt::print(stderr, e.what());
 		system("pause");
 		return EXIT_FAILURE;
 	}

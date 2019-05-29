@@ -6,8 +6,8 @@
 
 using eastl::set;
 
-//STD Includes
-#include <iostream>
+//FMT Includes
+#include <fmt/printf.h>
 
 //Ravine System Includes
 #include "RvTools.h"
@@ -65,7 +65,7 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	//TODO: This should be dynamically chosen
 	sampleCount = getMaxUsableSampleCount();
-	std::cout << "Choosen samples count: " << sampleCount << std::endl;
+	fmt::print(stdout, "Choosen samples count: {0}\n", sampleCount);
 
 	//Create command pool
 	CreateCommandPool();

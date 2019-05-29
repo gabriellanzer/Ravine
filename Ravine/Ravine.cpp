@@ -1,9 +1,7 @@
 ﻿#include "Ravine.h"
 
 //STD Includes
-#include <iostream>
 #include <stdexcept>
-#include <fstream>
 
 //EASTL Includes
 #include <EASTL/functional.h>
@@ -79,11 +77,11 @@ void Ravine::initVulkan() {
 	string modelName = "guard.fbx";
 	if (loadScene("../data/" + modelName))
 	{
-		std::cout << modelName.c_str() << " loaded!\n";
+		fmt::print(stdout, "{0} loaded!\n", modelName.c_str());
 	}
 	else
 	{
-		std::cout << "file not found at path " << modelName.c_str() << std::endl;
+		fmt::print(stdout, "File not fount at path: {0}\n", modelName.c_str());
 		return;
 	}
 
@@ -174,15 +172,14 @@ void Ravine::createInstance() {
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr); //Query size
 	vector<VkExtensionProperties> extensions(extensionCount); //Reserve
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data()); //Query data
-	std::cout << "Vulkan available extensions:" << std::endl;
-	for (const auto& extension : extensions) {
-		const char* extensionName = extension.extensionName;
-		std::cout << "\t" << extension.extensionName << std::endl;
+	fmt::print(stdout, "Vulkan available extensions:\n");
+	for (const VkExtensionProperties& extension : extensions) {
+		fmt::print(stdout, "\t{0}\n", extension.extensionName);
 	}
 
 	//GLFW Window Management extensions
 	vector<const char*> requiredExtensions = getRequiredInstanceExtensions();
-	std::cout << "Application required extensions:" << std::endl;
+	fmt::print(stdout, "Application required extensions:\n");
 	for (uint32_t i = 0; i < requiredExtensions.size(); i++) {
 		bool found = false;
 		for (uint32_t j = 0; j < extensions.size(); j++) {
@@ -191,7 +188,7 @@ void Ravine::createInstance() {
 				break;
 			}
 		}
-		std::cout << "\t" << requiredExtensions[i] << (found ? " found!" : " NOT found!") << std::endl;
+		fmt::print(stdout, "\t{0} {1}\n", requiredExtensions[i], (found ? "found!" : "NOT found!"));
 	}
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
@@ -200,7 +197,7 @@ void Ravine::createInstance() {
 #ifdef VALIDATION_LAYERS_ENABLED
 	createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
 	createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
-	std::cout << "!Enabling validation layers!" << std::endl;
+	fmt::print(stdout, "!Enabling validation layers!\n");
 #else
 	createInfo.enabledLayerCount = 0;
 #endif
@@ -240,7 +237,7 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	//Debug Physical Device Properties
 	VkPhysicalDeviceProperties deviceProperties;
 	vkGetPhysicalDeviceProperties(device, &deviceProperties);
-	std::cout << "Checking device: " << deviceProperties.deviceName << "\n";
+	fmt::print(stdout, "Checking device: {0}\n", deviceProperties.deviceName);
 
 	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(device, window->surface);
 
@@ -258,7 +255,9 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	bool isSuitable = indices.isComplete() && extensionsSupported && swapChainAdequate &&
 		supportedFeatures.samplerAnisotropy; //Checking for anisotropy support
 	if (isSuitable)
-		std::cout << deviceProperties.deviceName << " is suitable and was selected!\n";
+	{
+		fmt::print(stdout, "{0} is suitable and was selected!\n", deviceProperties.deviceName);
+	}
 
 	return isSuitable;
 }
@@ -689,7 +688,7 @@ bool Ravine::loadScene(const string& filePath)
 		loadBones(mesh, meshes[i]);
 	}
 
-	std::cout << "Loaded file with " << scene->mNumAnimations << " animations.\n";
+	fmt::print(stdout, "Loaded file with {0} animations.\n", scene->mNumAnimations);
 
 	meshes[0].animations.reserve(scene->mNumAnimations);
 	if (scene->mNumAnimations > 0)
@@ -869,7 +868,7 @@ void Ravine::loadTextureImages()
 		//Loading image
 		int texWidth, texHeight, texChannels;
 
-		std::cout << texturesToLoad[i - 1].c_str() << std::endl;
+		fmt::print(stdout, "{0}\n", texturesToLoad[i - 1].c_str());
 		stbi_uc* pixels = stbi_load(("../data/" + texturesToLoad[i - 1]).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 		textures[i] = device->createTexture(pixels, texWidth, texHeight);
@@ -1238,14 +1237,14 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 		if (animInterpolation > 1.0f) {
 			animInterpolation = 1.0f;
 		}
-		std::cout << animInterpolation << std::endl;
+		fmt::print(stdout, "{0}\n", animInterpolation);
 	}
 	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_PRESS) {
 		animInterpolation -= 0.001f;
 		if (animInterpolation < 0.0f) {
 			animInterpolation = 0.0f;
 		}
-		std::cout << animInterpolation << std::endl;
+		fmt::print(stdout, "{0}\n", animInterpolation);
 	}
 	// SWAP ANIMATIONS
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && keyUpPressed == false) {

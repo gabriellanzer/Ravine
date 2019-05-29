@@ -1,18 +1,17 @@
+
+//FMT Includes
+#include <fmt/printf.h>
+
+//Ravine Includes
 #include "RvDebug.h"
-
-//Internal dependencies
-#include <iostream>
 #include "RvTools.h"
-
 
 namespace rvDebug
 {
 
-	//Initializing callback handle
-
 	//Callback function
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
-		std::cerr << "Validation layer: " << msg << std::endl;
+		fmt::print(stderr, "Validation layer: {0}\n", msg);
 
 		return VK_FALSE;
 	}
@@ -57,5 +56,3 @@ namespace rvDebug
 
 
 };
-
-//VkDebugReportCallbackEXT rvDebug::callback = NULL;

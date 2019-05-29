@@ -3,9 +3,12 @@
 //EASTL Includes
 #include <EASTL/algorithm.h>
 
-//STD Include
+//STD Includes
 #include <stdexcept>
 #include <fstream>
+
+//FMT Includes
+#include <fmt/printf.h>
 
 #pragma region USEFULL DEFINES
 #define VK_CHECK_RESULT(f)																				\
@@ -13,7 +16,7 @@
 	VkResult res = (f);																					\
 	if (res != VK_SUCCESS)																				\
 	{																									\
-		std::cout << "Fatal : VkResult is \"" << vks::tools::errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
+		fmt::print(stdout, "Fatal : VkResult is \"{0}\" in {1} at line {2}\n", vks::tools::errorString(res), __FILE__, __LINE__); \
 		assert(res == VK_SUCCESS);																		\
 	}																									\
 }

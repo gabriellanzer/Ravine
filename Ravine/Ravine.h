@@ -20,6 +20,9 @@ using eastl::array;
 //Vulkan Include
 #include <vulkan\vulkan.h>
 
+//FMT Includes
+#include <fmt/printf.h>
+
 //GLM includes
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

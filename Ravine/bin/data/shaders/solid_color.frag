@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 2) uniform MaterialBufferObject {
+layout(set=1, binding = 0) uniform MaterialBufferObject {
 	vec4 customColor;
 } material;
 

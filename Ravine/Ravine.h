@@ -120,8 +120,9 @@ private:
 	VkInstance instance;
 
 	//Descriptors related content
-	//TODO: Move to DESCRIPTOR
-	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorSetLayout globalDescriptorSetLayout;
+	VkDescriptorSetLayout materialDescriptorSetLayout;
+	VkDescriptorSetLayout modelDescriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
 

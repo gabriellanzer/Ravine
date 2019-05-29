@@ -9,7 +9,7 @@
 
 struct RvPolygonPipeline
 {
-	RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode);
+	RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode);
 	~RvPolygonPipeline();
 
 	RvDevice* device;

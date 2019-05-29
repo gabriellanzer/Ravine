@@ -95,18 +95,24 @@ void Ravine::initVulkan() {
 
 
 	//Shaders Loading
-	skinnedTexColCode		= rvTools::readFile("../data/shaders/skinned_tex_color.vert.spv");
-	skinnedWireframeCode	= rvTools::readFile("../data/shaders/skinned_wireframe.vert.spv");
-	staticTexColCode		= rvTools::readFile("../data/shaders/static_tex_color.vert.spv");
-	phongTexColCode			= rvTools::readFile("../data/shaders/phong_tex_color.frag.spv");
-	solidColorCode			= rvTools::readFile("../data/shaders/solid_color.frag.spv");
+	skinnedTexColCode = rvTools::readFile("../data/shaders/skinned_tex_color.vert.spv");
+	skinnedWireframeCode = rvTools::readFile("../data/shaders/skinned_wireframe.vert.spv");
+	staticTexColCode = rvTools::readFile("../data/shaders/static_tex_color.vert.spv");
+	phongTexColCode = rvTools::readFile("../data/shaders/phong_tex_color.frag.spv");
+	solidColorCode = rvTools::readFile("../data/shaders/solid_color.frag.spv");
 
+	VkDescriptorSetLayout* descriptorSetLayouts = new VkDescriptorSetLayout[3]
+	{ 
+		globalDescriptorSetLayout, 
+		materialDescriptorSetLayout, 
+		modelDescriptorSetLayout 
+	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, staticTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
 
 	createMultiSamplingResources();
 	createDepthResources();
@@ -292,12 +298,20 @@ void Ravine::recreateSwapChain() {
 	swapChain->CreateSyncObjects();
 	swapChain->CreateImageViews();
 	swapChain->CreateRenderPass();
+
+	VkDescriptorSetLayout* descriptorSetLayouts = new VkDescriptorSetLayout[3]
+	{
+		globalDescriptorSetLayout,
+		materialDescriptorSetLayout,
+		modelDescriptorSetLayout
+	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayout, swapChain->renderPass, staticTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+
 	createMultiSamplingResources();
 	createDepthResources();
 	swapChain->CreateFramebuffers();
@@ -313,19 +327,26 @@ void Ravine::recreateSwapChain() {
 
 void Ravine::createDescriptorPool()
 {
-	array<VkDescriptorPoolSize, 3> poolSizes = {};
+	array<VkDescriptorPoolSize, 4> poolSizes = {};
+	//Global Uniform
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * RV_IMAGES_COUNT);
-	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
+
+	//Material Uniform
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
+	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * RV_IMAGES_COUNT);
+
+	//Model Uniform
+	poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[3].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size());
+	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size()*3/*Global, Material, Model*/);
 
 	if (vkCreateDescriptorPool(device->handle, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
@@ -334,25 +355,38 @@ void Ravine::createDescriptorPool()
 
 void Ravine::createDescriptorSets()
 {
-	vector<VkDescriptorSetLayout> layouts(swapChain->images.size(), descriptorSetLayout);
+	//Descriptor Sets Count
+	int descriptorSetsCount = swapChain->images.size() * 3 /*Global, Material, Model*/;
+	vector<VkDescriptorSetLayout> layouts(descriptorSetsCount);
+	for (int i = 0; i < descriptorSetsCount/3; i++)
+	{
+		layouts[i * 3 + 0] = globalDescriptorSetLayout;
+		layouts[i * 3 + 1] = materialDescriptorSetLayout;
+		layouts[i * 3 + 2] = modelDescriptorSetLayout;
+	}
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(swapChain->images.size());
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(descriptorSetsCount);
 	allocInfo.pSetLayouts = layouts.data();
 
 	// Setting descriptor sets vector to count of SwapChain images
-	descriptorSets.resize(swapChain->images.size());
+	descriptorSets.resize(descriptorSetsCount);
 	if (vkAllocateDescriptorSets(device->handle, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate descriptor sets!");
 	}
 
 	//Configuring descriptor sets
-	for (size_t i = 0; i < swapChain->images.size(); i++) {
+	for (size_t i = 0; i < descriptorSetsCount/3; i++) {
 		VkDescriptorBufferInfo globalUniformsInfo = {};
 		globalUniformsInfo.buffer = uniformBuffers[i].buffer;
 		globalUniformsInfo.offset = 0;
 		globalUniformsInfo.range = sizeof(RvUniformBufferObject);
+
+		VkDescriptorBufferInfo materialsInfo = {};
+		materialsInfo.buffer = materialsBuffers[i].buffer;
+		materialsInfo.offset = 0;
+		materialsInfo.range = sizeof(RvMaterialBufferObject);
 
 		VkDescriptorImageInfo imageInfo[RV_IMAGES_COUNT];
 		for (uint32_t j = 0; j < RV_IMAGES_COUNT; j++)
@@ -361,11 +395,6 @@ void Ravine::createDescriptorSets()
 			imageInfo[j].imageView = textures[j % texturesSize].view; //TODO Fix this later!
 			imageInfo[j].sampler = textureSampler;
 		}
-
-		VkDescriptorBufferInfo materialsInfo = {};
-		materialsInfo.buffer = materialsBuffers[i].buffer;
-		materialsInfo.offset = 0;
-		materialsInfo.range = sizeof(RvMaterialBufferObject);
 
 		VkDescriptorBufferInfo animationsInfo = {};
 		animationsInfo.buffer = animationsBuffers[i].buffer;
@@ -376,35 +405,35 @@ void Ravine::createDescriptorSets()
 
 		//Global Uniform Buffer Info
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSets[i];
+		descriptorWrites[0].dstSet = descriptorSets[i*3+0];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].pBufferInfo = &globalUniformsInfo;
 
-		//Image Info
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = descriptorSets[i];
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = RV_IMAGES_COUNT;
-		descriptorWrites[1].pImageInfo = imageInfo;
-
 		//Materials Uniform Buffer Info
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = descriptorSets[i*3+1];
+		descriptorWrites[1].dstBinding = 0;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pBufferInfo = &materialsInfo;
+
+		//Image Info
 		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[2].dstSet = descriptorSets[i];
-		descriptorWrites[2].dstBinding = 2;
+		descriptorWrites[2].dstSet = descriptorSets[i*3+1];
+		descriptorWrites[2].dstBinding = 1;
 		descriptorWrites[2].dstArrayElement = 0;
-		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[2].descriptorCount = 1;
-		descriptorWrites[2].pBufferInfo = &materialsInfo;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[2].descriptorCount = RV_IMAGES_COUNT;
+		descriptorWrites[2].pImageInfo = imageInfo;
 
 		//Animations Uniform Buffer Info
 		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[3].dstSet = descriptorSets[i];
-		descriptorWrites[3].dstBinding = 3;
+		descriptorWrites[3].dstSet = descriptorSets[i*3+2];
+		descriptorWrites[3].dstBinding = 0;
 		descriptorWrites[3].dstArrayElement = 0;
 		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[3].descriptorCount = 1;
@@ -424,6 +453,13 @@ void Ravine::createDescriptorSetLayout()
 	uboLayoutBinding.descriptorCount = 1;
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
+	//Materials layout
+	VkDescriptorSetLayoutBinding materialLayoutBinding = {};
+	materialLayoutBinding.binding = 0;
+	materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	materialLayoutBinding.descriptorCount = 1;
+	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 	//Texture Sampler layout
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
 	samplerLayoutBinding.binding = 1;
@@ -432,32 +468,57 @@ void Ravine::createDescriptorSetLayout()
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	//Materials layout
-	VkDescriptorSetLayoutBinding materialLayoutBinding = {};
-	materialLayoutBinding.binding = 2;
-	materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	materialLayoutBinding.descriptorCount = 1;
-	materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
 	//Animations layout
 	VkDescriptorSetLayoutBinding animationLayoutBinding = {};
-	animationLayoutBinding.binding = 3;
+	animationLayoutBinding.binding = 0;
 	animationLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	animationLayoutBinding.descriptorCount = 1;
 	animationLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-	//Bindings array
-	array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding, animationLayoutBinding };
+	//Global Descriptor Set Layout
+	{
+		//Bindings array
+		array<VkDescriptorSetLayoutBinding, 1> bindings = { uboLayoutBinding };
 
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	layoutInfo.pBindings = bindings.data();
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
 
-	if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create descriptor set layout!");
-	};
+		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &globalDescriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor set layout!");
+		};
+	}
 
+	//Material Descriptor Set Layout
+	{
+		//Bindings array
+		array<VkDescriptorSetLayoutBinding, 2> bindings = { materialLayoutBinding, samplerLayoutBinding };
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &materialDescriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor set layout!");
+		};
+	}
+
+	//Model Descriptor Set Layout
+	{
+		//Bindings array
+		array<VkDescriptorSetLayoutBinding, 1> bindings = { animationLayoutBinding };
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor set layout!");
+		};
+	}
 }
 
 #pragma region ANIMATION STUFF
@@ -948,7 +1009,8 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
 	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
 
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+	//Global, Material and Model Descriptor Sets
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 3, &descriptorSets[currentFrame * 3 + 0], 0, nullptr);
 
 	//Set Vertex Buffer for drawing
 	VkDeviceSize offsets[] = { 0 };
@@ -964,6 +1026,10 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	//Perform the same with lines rendering
 	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
+	
+	//Global, Material and Model Descriptor Sets
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 3, &descriptorSets[currentFrame * 3 + 0], 0, nullptr);
+
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
@@ -1028,14 +1094,14 @@ void Ravine::mainLoop() {
 	//Application
 	setupFPSCam();
 
-	while (!glfwWindowShouldClose(*window)){
+	while (!glfwWindowShouldClose(*window)) {
 		RvTime::update();
-		
+
 		fpsTitle = "Ravine - Milisseconds " + eastl::to_string(RvTime::deltaTime() * 1000.0);
 		glfwSetWindowTitle(*window, fpsTitle.c_str());
-		
+
 		glfwPollEvents();
-		
+
 		drawFrame();
 	}
 
@@ -1319,7 +1385,7 @@ void Ravine::cleanup()
 	}
 
 	//Destroy descriptor set layout (uniform bind)
-	vkDestroyDescriptorSetLayout(device->handle, descriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(device->handle, globalDescriptorSetLayout, nullptr);
 
 	//TODO: FIX HERE!
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)

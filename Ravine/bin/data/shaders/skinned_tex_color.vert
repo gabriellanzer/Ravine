@@ -1,7 +1,6 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(set=0, binding = 0) uniform UniformBufferObject {
 	mat4 model;
     mat4 view;
     mat4 proj;
@@ -10,7 +9,7 @@ layout(binding = 0) uniform UniformBufferObject {
 	vec4 camPos;
 } ubo;
 
-layout(binding = 3) uniform BonesBufferObject {
+layout(set=2, binding = 0) uniform BonesBufferObject {
 	mat4 boneTransforms[128];
 } bones;
 

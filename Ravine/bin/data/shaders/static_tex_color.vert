@@ -1,13 +1,15 @@
 #version 450
 
 layout(set=0, binding = 0) uniform UniformBufferObject {
-	mat4 model;
     mat4 view;
     mat4 proj;
-	vec4 objectColor;
 	vec4 lightColor;
 	vec4 camPos;
-} ubo;
+};
+
+layout(set=2, binding = 0) uniform ModelBufferObject {
+	mat4 model;
+};
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
@@ -26,10 +28,10 @@ out gl_PerVertex {
 };
 
 void main() {
-	vec4 PosL = vec4(inPosition, 1.0);
-    gl_Position = ubo.proj * ubo.view * ubo.model * PosL;
+	vec4 PosL = model * vec4(inPosition, 1.0);
+    gl_Position = proj * view * PosL;
     fragColor = inColor;
     fragTexCoord = inTexCoord;
-	fragNorm = mat3(transpose(inverse(ubo.model))) * inNorm;
-	fragPos = vec3(ubo.model * PosL);
+	fragNorm = mat3(transpose(inverse(model))) * inNorm;
+	fragPos = PosL.xyz;
 }

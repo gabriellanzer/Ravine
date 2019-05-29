@@ -2,13 +2,11 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(set=0, binding = 0) uniform UniformBufferObject {
-    mat4 model;
     mat4 view;
     mat4 proj;
-	vec4 objectColor;
 	vec4 lightColor;
 	vec4 camPos;
-} ubo;
+};
 
 layout(set=1, binding = 0) uniform MaterialBufferObject {
 	vec4 customColor;
@@ -32,23 +30,23 @@ vec3 lightPos = vec3(5.0, 5.0, 5.0);
 void main() {
 
 	//Ambient
-    vec3 ambient = ambientStrength * ubo.lightColor.rgb;
+    vec3 ambient = ambientStrength * lightColor.rgb;
 
 	vec3 norm = normalize(fragNorm);
 	vec3 lightDir = normalize(lightPos - fragPos);
 
 	//Diffuse
 	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 diffuse = diff * ubo.lightColor.rgb;
+	vec3 diffuse = diff * lightColor.rgb;
 
 	//Specular
-	vec3 viewDir = normalize(ubo.camPos.rgb - fragPos);
+	vec3 viewDir = normalize(camPos.rgb - fragPos);
 	vec3 reflectDir = reflect(-lightDir, norm);
 
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularFactor);
-	vec3 specular = specularStrength * spec * ubo.lightColor.rgb;  
+	vec3 specular = specularStrength * spec * lightColor.rgb;  
 
-    vec3 result = (ambient + diffuse + specular) * ubo.objectColor.rgb;
+    vec3 result = (ambient + diffuse + specular);
 
     outColor = vec4(fragColor * texture(texSampler[1], fragTexCoord).rgb * result, 1.0) * material.customColor;
 }

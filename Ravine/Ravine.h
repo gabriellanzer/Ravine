@@ -147,6 +147,7 @@ private:
 	//TODO: Move to UNIFORM
 	vector<RvDynamicBuffer> uniformBuffers;
 	vector<RvDynamicBuffer> materialsBuffers;
+	vector<RvDynamicBuffer> modelsBuffers;
 	vector<RvDynamicBuffer> animationsBuffers;
 
 	//Texture related objects
@@ -164,9 +165,6 @@ private:
 
 	//Setup Vulkan Pipeline
 	void initVulkan();
-
-	//Returns a list of extensions required by the Vulkan Instance
-	vector<const char*> getRequiredInstanceExtensions();
 
 	//Create Vulkan Instance for the start of the application
 	void createInstance();
@@ -247,7 +245,12 @@ private:
 #pragma endregion
 
 #pragma region Static
+
+	//Returns a list of extensions required by the Vulkan Instance
+	static vector<const char*> getRequiredInstanceExtensions();
+
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
 #pragma endregion
 
 };

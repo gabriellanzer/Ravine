@@ -340,6 +340,35 @@ namespace rvTools {
 		return buffer;
 	}
 
+	vector<char> compileShaderText(const string& shaderName, const vector<char>& shaderText, shaderc_shader_kind shaderKind, const char* entryPoint)
+	{
+		//Use ShaderC to compile a SPIR-V shader
+		shaderc_compiler_t compiler = shaderc_compiler_initialize();
+		shaderc_compilation_result_t result = nullptr;
+		result = shaderc_compile_into_spv(compiler, shaderText.data(), shaderText.size(), shaderKind, shaderName.c_str(), entryPoint, nullptr);
+		if (shaderc_result_get_compilation_status(result) != shaderc_compilation_status::shaderc_compilation_status_success)
+		{
+			const char* compilationError = shaderc_result_get_error_message(result);
+			fmt::print(stderr, "Error while compiling shader {0}, message:{1}\n", shaderName.c_str(), compilationError);
+			
+			//Cleanup
+			shaderc_compiler_release(compiler);
+			shaderc_result_release(result);
+
+			throw std::runtime_error(compilationError);
+		}
+
+		size_t shaderSize = shaderc_result_get_length(result);
+		vector<char> buffer(shaderSize);
+		memcpy_s(buffer.data(), shaderSize, shaderc_result_get_bytes(result), shaderSize);
+		
+		//Cleanup
+		shaderc_compiler_release(compiler);
+		shaderc_result_release(result);
+
+		return buffer;
+	}
+
 	void transitionImageLayout(RvDevice device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
 	{
 		VkCommandBuffer commandBuffer = device.beginSingleTimeCommands();

@@ -13,7 +13,6 @@
 #include <EASTL/map.h>
 #include <EASTL/string.h>
 
-
 //Vulkan Includes
 #include <vulkan/vulkan.h>
 

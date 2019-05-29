@@ -4,6 +4,9 @@
 //Vulkan Includes
 #include <vulkan\vulkan.h>
 
+//ShaderC Includes
+#include <shaderc/shaderc.h>
+
 //EASTL Includes
 #include <EASTL/vector.h>
 #include <EASTL/algorithm.h>
@@ -50,6 +53,8 @@ namespace rvTools
 	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 	vector<char> readFile(const string& filename);
+	
+	vector<char> compileShaderText(const string& shaderName, const vector<char>& shaderText, shaderc_shader_kind shaderKind, const char* entryPoint);
 
 	void transitionImageLayout(RvDevice device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 

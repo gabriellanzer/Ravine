@@ -1,7 +1,7 @@
 #include "RvGUI.h"
 
 //Hash Includes
-#include "crc32.h"
+#include "crc32.hpp"
 
 //Ravine Include
 #include "RvTime.h"

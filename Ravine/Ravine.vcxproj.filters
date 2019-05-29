@@ -69,9 +69,6 @@
     <ClCompile Include="imgui.cpp">
       <Filter>Header Files\ImGUI</Filter>
     </ClCompile>
-    <ClCompile Include="crc32.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClCompile>
     <ClCompile Include="RvAnimationTools.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
@@ -119,6 +116,9 @@
     </ClCompile>
     <ClCompile Include="SingleFileLibraries\spirv_reflect.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crc32.hpp">
+      <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

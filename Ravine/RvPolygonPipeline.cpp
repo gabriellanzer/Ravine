@@ -9,12 +9,15 @@
 //Ravine Systems
 #include "RvTools.h"
 
-
 RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
 	//ShaderModules
-	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
-	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
+	vector<char> vertexShader = rvTools::compileShaderText("Polygon Vertex Shader", vertShaderCode,
+		shaderc_shader_kind::shaderc_vertex_shader, "main");
+	vertModule = rvTools::createShaderModule(device.handle, vertexShader);
+	vector<char> fragmentShader = rvTools::compileShaderText("Polygon Fragment Shader", fragShaderCode,
+		shaderc_shader_kind::shaderc_fragment_shader, "main");
+	fragModule = rvTools::createShaderModule(device.handle, fragmentShader);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};

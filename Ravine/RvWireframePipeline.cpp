@@ -87,8 +87,8 @@ RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, Vk
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	//Used for shadow mapping
-	rasterizer.depthBiasEnable = VK_FALSE;
-	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+	rasterizer.depthBiasEnable = VK_TRUE;
+	rasterizer.depthBiasConstantFactor = -10.0f; //Bias to make sure wireframe lines are above the mesh
 	rasterizer.depthBiasClamp = 0.0f; // Optional
 	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 

@@ -42,6 +42,7 @@ using eastl::array;
 #include "RvSwapChain.h"
 #include "RvPolygonPipeline.h"
 #include "RvWireframePipeline.h"
+#include "RvLinePipeline.h"
 #include "RvWindow.h"
 #include "RvTexture.h"
 #include "RvCamera.h"
@@ -91,6 +92,8 @@ private:
 	RvPolygonPipeline* skinnedGraphicsPipeline;
 	RvWireframePipeline* skinnedWireframeGraphicsPipeline;
 	RvPolygonPipeline* staticGraphicsPipeline;
+	RvWireframePipeline* staticWireframeGraphicsPipeline;
+	RvLinePipeline* staticLineGraphicsPipeline;
 
 	//Mouse parameters
 	//Todo: Move to INPUT
@@ -143,6 +146,7 @@ private:
 	vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
 	vector<RvPersistentBuffer> indexBuffers;
+	RvDynamicBuffer oddLinesIndexBuffer;
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM

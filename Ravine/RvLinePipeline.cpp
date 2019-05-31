@@ -1,4 +1,4 @@
-#include "RvWireframePipeline.h"
+#include "RvLinePipeline.h"
 
 //STD Includes
 #include <vector>
@@ -10,11 +10,15 @@
 #include "RvTools.h"
 
 
-RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode) : device(&device)
+RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
 	//ShaderModules
-	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
-	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
+	vector<char> vertexShader = rvTools::compileShaderText("Wireframe Vertex Shader", vertShaderCode,
+		shaderc_shader_kind::shaderc_vertex_shader, "main");
+	vertModule = rvTools::createShaderModule(device.handle, vertexShader);
+	vector<char> fragmentShader = rvTools::compileShaderText("Wireframe Fragment Shader", fragShaderCode,
+		shaderc_shader_kind::shaderc_fragment_shader, "main");
+	fragModule = rvTools::createShaderModule(device.handle, fragmentShader);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -46,7 +50,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Input_assembly
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 	//Viewports and Scissors (describes the region of the framebuffer that the output will be rendered to)
@@ -78,13 +82,13 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	rasterizer.depthClampEnable = VK_FALSE; //VK_FALSE discards fragments outside of near/far plane frustum
 	rasterizer.rasterizerDiscardEnable = VK_FALSE; //VK_TRUE discards any geometry rendered here
 	rasterizer.polygonMode = VK_POLYGON_MODE_LINE; //Could be FILL, LINE or POINT (requires GPU feature enabling)
-	rasterizer.lineWidth = 1.0f;
+	rasterizer.lineWidth = 2.0f;
 	rasterizer.cullMode = VK_CULL_MODE_NONE;
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	//Used for shadow mapping
-	rasterizer.depthBiasEnable = VK_FALSE;
-	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+	rasterizer.depthBiasEnable = VK_TRUE;
+	rasterizer.depthBiasConstantFactor = -15.0f; //Bias to make sure wireframe lines are above the mesh
 	rasterizer.depthBiasClamp = 0.0f; // Optional
 	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 
@@ -139,8 +143,8 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Pipeline_layout
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayoutCount);
+	pipelineLayoutInfo.pSetLayouts = descriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -180,7 +184,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthTestEnable = VK_TRUE;
 	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_ALWAYS;	//Depth compare function
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;	//Depth compare function
 
 	//Creates bounds for depth
 	depthStencil.depthBoundsTestEnable = VK_FALSE;

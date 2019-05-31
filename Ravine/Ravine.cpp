@@ -92,7 +92,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	string modelName = "cacimba.fbx";
+	string modelName = "guard.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		fmt::print(stdout, "{0} loaded!\n", modelName.c_str());
@@ -109,7 +109,6 @@ void Ravine::initVulkan() {
 	swapChain->CreateRenderPass();
 	createDescriptorSetLayout();
 
-
 	//Shaders Loading
 	skinnedTexColCode = rvTools::readFile("../data/shaders/skinned_tex_color.vert");
 	skinnedWireframeCode = rvTools::readFile("../data/shaders/skinned_wireframe.vert");
@@ -125,11 +124,15 @@ void Ravine::initVulkan() {
 		modelDescriptorSetLayout
 	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+	staticWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+	staticLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
 
 	createMultiSamplingResources();
 	createDepthResources();
@@ -310,11 +313,15 @@ void Ravine::recreateSwapChain() {
 		modelDescriptorSetLayout
 	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+	staticWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+	staticLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
+		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
 
 	createMultiSamplingResources();
 	createDepthResources();
@@ -1068,37 +1075,36 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	//Basic Drawing Commands
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
 
 	//Global, Material and Model Descriptor Sets
 	size_t setsPerFrame = 1 + (meshesCount * 2);
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 	//Set Vertex Buffer for drawing
 	VkDeviceSize offsets[] = { 0 };
 
-	//Binding descriptor sets (uniforms)
 	//Call drawing
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 	}
 
-	//Perform the same with lines rendering
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
+	//Perform the same with wireframe rendering
+	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
 
 	//Global, Material and Model Descriptor Sets
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
@@ -1418,6 +1424,10 @@ void Ravine::cleanupSwapChain() {
 	vkDestroyPipelineLayout(device->handle, skinnedWireframeGraphicsPipeline->layout, nullptr);
 	vkDestroyPipeline(device->handle, *staticGraphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(device->handle, staticGraphicsPipeline->layout, nullptr);
+	vkDestroyPipeline(device->handle, *staticWireframeGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, staticWireframeGraphicsPipeline->layout, nullptr);
+	vkDestroyPipeline(device->handle, *staticLineGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device->handle, staticLineGraphicsPipeline->layout, nullptr);
 
 	//Destroy swap chain and all it's images
 	swapChain->Clear();
@@ -1473,6 +1483,8 @@ void Ravine::cleanup()
 
 	//Destroy descriptor set layout (uniform bind)
 	vkDestroyDescriptorSetLayout(device->handle, globalDescriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(device->handle, materialDescriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(device->handle, modelDescriptorSetLayout, nullptr);
 
 	//TODO: FIX HERE!
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
@@ -1488,6 +1500,8 @@ void Ravine::cleanup()
 
 	//Destroy graphics pipeline
 	delete skinnedGraphicsPipeline;
+	delete skinnedWireframeGraphicsPipeline;
+	delete staticGraphicsPipeline;
 
 	//Destroy vulkan logical device and validation layer
 	device->Clear();

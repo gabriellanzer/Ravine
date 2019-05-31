@@ -1,5 +1,5 @@
-#ifndef RV_WIREFRAME_PIPELINE_H
-#define RV_WIREFRAME_PIPELINE_H
+#ifndef RV_LINE_PIPELINE_H
+#define RV_LINE_PIPELINE_H
 
 //Vulkan Includes
 #include <vulkan\vulkan.h>
@@ -9,7 +9,7 @@
 
 struct RvLinePipeline
 {
-	RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode);
+	RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode);
 	~RvLinePipeline();
 
 	RvDevice* device;

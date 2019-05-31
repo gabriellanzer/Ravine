@@ -120,6 +120,9 @@
     <ClCompile Include="crc32.hpp">
       <Filter>Header Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="RvLinePipeline.cpp">
+      <Filter>Source Files\Ravine System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -208,6 +211,9 @@
     </ClInclude>
     <ClInclude Include="SingleFileLibraries\spirv_reflect.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvLinePipeline.h">
+      <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

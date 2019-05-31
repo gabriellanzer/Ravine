@@ -12,7 +12,7 @@ layout(set=1, binding = 0) uniform MaterialBufferObject {
 	vec4 customColor;
 } material;
 
-layout(set=1, binding = 1) uniform sampler2D texSampler[2];
+layout(set=1, binding = 1) uniform sampler2D texSampler;
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec3 fragNorm;
@@ -48,5 +48,5 @@ void main() {
 
     vec3 result = (ambient + diffuse + specular);
 
-    outColor = vec4(fragColor * texture(texSampler[1], fragTexCoord).rgb * result, 1.0) * material.customColor;
+    outColor = vec4(fragColor * texture(texSampler, fragTexCoord).rgb * result, 1.0) * material.customColor;
 }

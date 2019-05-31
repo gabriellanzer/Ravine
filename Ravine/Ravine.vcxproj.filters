@@ -232,5 +232,8 @@
     <None Include="bin\data\shaders\solid_color.frag">
       <Filter>Source Files\Shaders</Filter>
     </None>
+    <None Include="bin\data\shaders\static_wireframe.vert">
+      <Filter>Source Files\Shaders\Static</Filter>
+    </None>
   </ItemGroup>
 </Project>

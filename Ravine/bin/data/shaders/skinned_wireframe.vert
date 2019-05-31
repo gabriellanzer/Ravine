@@ -19,10 +19,6 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 4) in uvec4 inBoneID;
 layout(location = 5) in vec4 inBoneWeight;
 
-out gl_PerVertex {
-    vec4 gl_Position;
-};
-
 void main() {
 
 	mat4 BoneTransform = boneTransforms[inBoneID[0]] * inBoneWeight[0];

@@ -82,7 +82,7 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	rasterizer.rasterizerDiscardEnable = VK_FALSE; //VK_TRUE discards any geometry rendered here
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL; //Could be FILL, LINE or POINT (requires GPU feature enabling)
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_NONE;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	//Used for shadow mapping

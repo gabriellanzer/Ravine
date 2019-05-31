@@ -13,10 +13,10 @@
 RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
 	//ShaderModules
-	vector<char> vertexShader = rvTools::compileShaderText("Polygon Vertex Shader", vertShaderCode,
+	vector<char> vertexShader = rvTools::compileShaderText("Wireframe Vertex Shader", vertShaderCode,
 		shaderc_shader_kind::shaderc_vertex_shader, "main");
 	vertModule = rvTools::createShaderModule(device.handle, vertexShader);
-	vector<char> fragmentShader = rvTools::compileShaderText("Polygon Fragment Shader", fragShaderCode,
+	vector<char> fragmentShader = rvTools::compileShaderText("Wireframe Fragment Shader", fragShaderCode,
 		shaderc_shader_kind::shaderc_fragment_shader, "main");
 	fragModule = rvTools::createShaderModule(device.handle, fragmentShader);
 

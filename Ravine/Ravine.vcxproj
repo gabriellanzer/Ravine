@@ -230,6 +230,7 @@
     <None Include="bin\data\shaders\skinned_tex_color.vert" />
     <None Include="bin\data\shaders\solid_color.frag" />
     <None Include="bin\data\shaders\static_tex_color.vert" />
+    <None Include="bin\data\shaders\static_wireframe.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

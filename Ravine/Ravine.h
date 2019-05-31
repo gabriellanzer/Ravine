@@ -85,6 +85,7 @@ private:
 	vector<char> skinnedTexColCode;
 	vector<char> skinnedWireframeCode;
 	vector<char> staticTexColCode;
+	vector<char> staticWireframeCode;
 	vector<char> phongTexColCode;
 	vector<char> solidColorCode;
 	RvPolygonPipeline* skinnedGraphicsPipeline;
@@ -153,7 +154,7 @@ private:
 	//Texture related objects
 	uint32_t mipLevels;
 	RvTexture *textures;
-#define RV_IMAGES_COUNT 32
+#define RV_MAX_IMAGES_COUNT 32
 	uint32_t texturesSize;
 	VkSampler textureSampler;
 

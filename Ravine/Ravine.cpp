@@ -92,7 +92,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	string modelName = "guard.fbx";
+	string modelName = "cacimba.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		fmt::print(stdout, "{0} loaded!\n", modelName.c_str());
@@ -114,6 +114,7 @@ void Ravine::initVulkan() {
 	skinnedTexColCode = rvTools::readFile("../data/shaders/skinned_tex_color.vert");
 	skinnedWireframeCode = rvTools::readFile("../data/shaders/skinned_wireframe.vert");
 	staticTexColCode = rvTools::readFile("../data/shaders/static_tex_color.vert");
+	staticWireframeCode = rvTools::readFile("../data/shaders/static_wireframe.vert");
 	phongTexColCode = rvTools::readFile("../data/shaders/phong_tex_color.frag");
 	solidColorCode = rvTools::readFile("../data/shaders/solid_color.frag");
 
@@ -124,9 +125,9 @@ void Ravine::initVulkan() {
 		modelDescriptorSetLayout
 	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
 
@@ -309,9 +310,9 @@ void Ravine::recreateSwapChain() {
 		modelDescriptorSetLayout
 	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
 		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
 
@@ -330,26 +331,29 @@ void Ravine::recreateSwapChain() {
 
 void Ravine::createDescriptorPool()
 {
-	array<VkDescriptorPoolSize, 4> poolSizes = {};
-	//Global Uniform
+	array<VkDescriptorPoolSize, 5> poolSizes = {};
+	//Global Uniforms
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
-	//Material Uniform
+	//TODO: Change descriptor count accodingly to materials count instead of meshes count
+	//Material Uniforms
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * RV_IMAGES_COUNT);
+	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 
-	//Model Uniform
+	//Model Uniforms
 	poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[3].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
+	poolSizes[3].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
+	poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[4].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size() * 3/*Global, Material, Model*/);
+	poolInfo.maxSets = swapChain->images.size() * (1 + 2 * meshesCount);/*Global, Material (per mesh), Model (per mesh)*/
 
 	if (vkCreateDescriptorPool(device->handle, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
@@ -359,13 +363,18 @@ void Ravine::createDescriptorPool()
 void Ravine::createDescriptorSets()
 {
 	//Descriptor Sets Count
-	int descriptorSetsCount = swapChain->images.size() * 3 /*Global, Material, Model*/;
+	size_t setsPerFrame = (1 + 2 * meshesCount)/*Global, Material (per mesh), Model (per mesh)*/;
+	int framesCount = swapChain->images.size();
+	size_t descriptorSetsCount = framesCount * setsPerFrame;
 	vector<VkDescriptorSetLayout> layouts(descriptorSetsCount);
-	for (int i = 0; i < descriptorSetsCount / 3; i++)
+	for (int i = 0; i < framesCount; i++)
 	{
-		layouts[i * 3 + 0] = globalDescriptorSetLayout;
-		layouts[i * 3 + 1] = materialDescriptorSetLayout;
-		layouts[i * 3 + 2] = modelDescriptorSetLayout;
+		layouts[i * setsPerFrame + 0] = globalDescriptorSetLayout;
+		for (size_t meshId = 0; meshId < meshesCount; meshId++)
+		{
+			layouts[i * setsPerFrame + meshId * 2 + 1] = materialDescriptorSetLayout;
+			layouts[i * setsPerFrame + meshId * 2 + 2] = modelDescriptorSetLayout;
+		}
 	}
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -379,84 +388,105 @@ void Ravine::createDescriptorSets()
 		throw std::runtime_error("Failed to allocate descriptor sets!");
 	}
 
-	//Configuring descriptor sets
-	for (size_t i = 0; i < descriptorSetsCount / 3; i++) {
+	//For each frame
+	for (size_t i = 0; i < framesCount; i++)
+	{
 		VkDescriptorBufferInfo globalUniformsInfo = {};
 		globalUniformsInfo.buffer = uniformBuffers[i].buffer;
 		globalUniformsInfo.offset = 0;
 		globalUniformsInfo.range = sizeof(RvUniformBufferObject);
 
-		VkDescriptorBufferInfo materialsInfo = {};
-		materialsInfo.buffer = materialsBuffers[i].buffer;
-		materialsInfo.offset = 0;
-		materialsInfo.range = sizeof(RvMaterialBufferObject);
-
-		VkDescriptorImageInfo imageInfo[RV_IMAGES_COUNT];
-		for (uint32_t j = 0; j < RV_IMAGES_COUNT; j++)
-		{
-			imageInfo[j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo[j].imageView = textures[j % texturesSize].view; //TODO Fix this later!
-			imageInfo[j].sampler = textureSampler;
-		}
-
-		VkDescriptorBufferInfo modelsInfo = {};
-		modelsInfo.buffer = modelsBuffers[i].buffer;
-		modelsInfo.offset = 0;
-		modelsInfo.range = sizeof(RvModelBufferObject);
-
-		VkDescriptorBufferInfo animationsInfo = {};
-		animationsInfo.buffer = animationsBuffers[i].buffer;
-		animationsInfo.offset = 0;
-		animationsInfo.range = sizeof(RvBoneBufferObject);
-
-		array<VkWriteDescriptorSet, 5> descriptorWrites = {};
+		//Offset per frame iteration
+		size_t frameSetOffset = (i * setsPerFrame);
+		size_t writesPerFrame = (1 + 4 * meshesCount);
+		vector<VkWriteDescriptorSet> descriptorWrites(writesPerFrame);
 
 		//Global Uniform Buffer Info
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSets[i * 3 + 0];
+		descriptorWrites[0].dstSet = descriptorSets[frameSetOffset + 0/*Frame Global Uniform Set*/];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].pBufferInfo = &globalUniformsInfo;
 
-		//Materials Uniform Buffer Info
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = descriptorSets[i * 3 + 1];
-		descriptorWrites[1].dstBinding = 0;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pBufferInfo = &materialsInfo;
+		//For each mesh
+		VkDescriptorBufferInfo* materialsInfo = new VkDescriptorBufferInfo[meshesCount]{};
+		VkDescriptorImageInfo* imageInfo = new VkDescriptorImageInfo[meshesCount]{};
+		VkDescriptorBufferInfo* modelsInfo = new VkDescriptorBufferInfo[meshesCount]{};
+		VkDescriptorBufferInfo* animationsInfo = new VkDescriptorBufferInfo[meshesCount]{};
+		for (size_t meshId = 0; meshId < meshesCount; meshId++)
+		{
+			//Offset per mesh iteration
+			size_t meshSetOffset = meshId * 2;
+			size_t meshWritesOffset = meshId * 4;
 
-		//Image Info
-		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[2].dstSet = descriptorSets[i * 3 + 1];
-		descriptorWrites[2].dstBinding = 1;
-		descriptorWrites[2].dstArrayElement = 0;
-		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[2].descriptorCount = RV_IMAGES_COUNT;
-		descriptorWrites[2].pImageInfo = imageInfo;
+			//Materials Uniform Buffer Info
+			materialsInfo[meshId] = {};
+			materialsInfo[meshId].buffer = materialsBuffers[i].buffer;
+			materialsInfo[meshId].offset = 0;
+			materialsInfo[meshId].range = sizeof(RvMaterialBufferObject);
 
-		//Models Uniform Buffer Info
-		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[3].dstSet = descriptorSets[i * 3 + 2];
-		descriptorWrites[3].dstBinding = 0;
-		descriptorWrites[3].dstArrayElement = 0;
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[3].descriptorCount = 1;
-		descriptorWrites[3].pBufferInfo = &modelsInfo;
+			descriptorWrites[meshWritesOffset+1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset+1].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset+1].dstBinding = 0;
+			descriptorWrites[meshWritesOffset+1].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset+1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset+1].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset+1].pBufferInfo = &materialsInfo[meshId];
 
-		//Animations Uniform Buffer Info
-		descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[4].dstSet = descriptorSets[i * 3 + 2];
-		descriptorWrites[4].dstBinding = 1;
-		descriptorWrites[4].dstArrayElement = 0;
-		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[4].descriptorCount = 1;
-		descriptorWrites[4].pBufferInfo = &animationsInfo;
+			//Image Info
+			imageInfo[meshId] = {};
+			imageInfo[meshId].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			RvSkinnedMeshColored& mesh = meshes[meshId];
+			size_t textureId = mesh.textures_count > 0 ? 1 + mesh.textureIds[0] : 0/*Missing Texture (Pink)*/;
+			imageInfo[meshId].imageView = textures[textureId].view;
+			imageInfo[meshId].sampler = textureSampler;
 
-		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+			descriptorWrites[meshWritesOffset+2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset+2].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset+2].dstBinding = 1;
+			descriptorWrites[meshWritesOffset+2].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset+2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[meshWritesOffset+2].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset+2].pImageInfo = &imageInfo[meshId];
+
+			//Models Uniform Buffer Info
+			modelsInfo[meshId] = {};
+			modelsInfo[meshId].buffer = modelsBuffers[i*meshesCount + meshId].buffer;
+			modelsInfo[meshId].offset = 0;
+			modelsInfo[meshId].range = sizeof(RvModelBufferObject);
+
+			descriptorWrites[meshWritesOffset+3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset+3].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset+3].dstBinding = 0;
+			descriptorWrites[meshWritesOffset+3].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset+3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset+3].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset+3].pBufferInfo = &modelsInfo[meshId];
+
+			//Animations Uniform Buffer Info
+			animationsInfo[meshId] = {};
+			animationsInfo[meshId].buffer = animationsBuffers[i*meshesCount + meshId].buffer;
+			animationsInfo[meshId].offset = 0;
+			animationsInfo[meshId].range = sizeof(RvBoneBufferObject);
+
+			descriptorWrites[meshWritesOffset+4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset+4].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset+4].dstBinding = 1;
+			descriptorWrites[meshWritesOffset+4].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset+4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset+4].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset+4].pBufferInfo = &animationsInfo[meshId];
+		}
+
+		//Update the sets for this frame
+		vkUpdateDescriptorSets(device->handle, writesPerFrame, descriptorWrites.data(), 0, nullptr);
+
+		delete materialsInfo;
+		delete imageInfo;
+		delete modelsInfo;
+		delete animationsInfo;
 	}
 
 }
@@ -480,10 +510,10 @@ void Ravine::createDescriptorSetLayout()
 	//Texture Sampler layout
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
 	samplerLayoutBinding.binding = 1;
-	samplerLayoutBinding.descriptorCount = RV_IMAGES_COUNT;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.descriptorCount = 1;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
 
 	//Models Data layout
 	VkDescriptorSetLayoutBinding modelDataLayoutBinding = {};
@@ -861,15 +891,19 @@ void Ravine::createUniformBuffers()
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	size_t framesCount = swapChain->images.size();
 	uniformBuffers.resize(framesCount);
-	materialsBuffers.resize(framesCount);
-	modelsBuffers.resize(framesCount);
-	animationsBuffers.resize(framesCount);
+	materialsBuffers.resize(framesCount*meshesCount);
+	modelsBuffers.resize(framesCount*meshesCount);
+	animationsBuffers.resize(framesCount*meshesCount);
 
 	for (size_t i = 0; i < framesCount; i++) {
 		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		materialsBuffers[i] = device->createDynamicBuffer(sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		modelsBuffers[i] = device->createDynamicBuffer(sizeof(RvModelBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		animationsBuffers[i] = device->createDynamicBuffer(sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		for (size_t j = 0; j < meshesCount; j++)
+		{
+			size_t frameOffset = i * meshesCount;
+			materialsBuffers[frameOffset + j] = device->createDynamicBuffer(sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+			modelsBuffers[frameOffset + j] = device->createDynamicBuffer(sizeof(RvModelBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+			animationsBuffers[frameOffset + j] = device->createDynamicBuffer(sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		}
 	}
 }
 
@@ -1037,7 +1071,8 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
 
 	//Global, Material and Model Descriptor Sets
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 3, &descriptorSets[currentFrame * 3 + 0], 0, nullptr);
+	size_t setsPerFrame = 1 + (meshesCount * 2);
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 	//Set Vertex Buffer for drawing
 	VkDeviceSize offsets[] = { 0 };
@@ -1046,6 +1081,9 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	//Call drawing
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
+		size_t meshSetOffset = meshIndex * 2;
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
@@ -1055,10 +1093,13 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
 
 	//Global, Material and Model Descriptor Sets
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 3, &descriptorSets[currentFrame * 3 + 0], 0, nullptr);
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
+		size_t meshSetOffset = meshIndex * 2;
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
@@ -1199,7 +1240,7 @@ void Ravine::setupFPSCam()
 
 }
 
-void Ravine::updateUniformBuffer(uint32_t currentImage)
+void Ravine::updateUniformBuffer(uint32_t currentFrame)
 {
 	/*
 	Using a UBO this way is not the most efficient way to pass frequently changing values to the shader.
@@ -1297,7 +1338,7 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 #pragma endregion
 
-	//TODO: Proper, per-object uniform with different DescriptorSets or PushConstant ids for indirect access
+
 #pragma region Global Uniforms
 	RvUniformBufferObject ubo = {};
 
@@ -1315,49 +1356,53 @@ void Ravine::updateUniformBuffer(uint32_t currentImage)
 
 	//Transfering uniform data to uniform buffer
 	void* data;
-	vkMapMemory(device->handle, uniformBuffers[currentImage].memory, 0, sizeof(ubo), 0, &data);
+	vkMapMemory(device->handle, uniformBuffers[currentFrame].memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(device->handle, uniformBuffers[currentImage].memory);
+	vkUnmapMemory(device->handle, uniformBuffers[currentFrame].memory);
 #pragma endregion
 
+	//TODO: Change this to a per-material basis instead of per-mesh
+	for (size_t meshId = 0; meshId < meshesCount; meshId++)
+	{
 #pragma region Materials
-	RvMaterialBufferObject materialsUbo = {};
+		RvMaterialBufferObject materialsUbo = {};
 
-	materialsUbo.customColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		materialsUbo.customColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	void* materialsData;
-	vkMapMemory(device->handle, materialsBuffers[currentImage].memory, 0, sizeof(materialsUbo), 0, &materialsData);
-	memcpy(materialsData, &materialsUbo, sizeof(materialsUbo));
-	vkUnmapMemory(device->handle, materialsBuffers[currentImage].memory);
+		void* materialsData;
+		vkMapMemory(device->handle, materialsBuffers[currentFrame*meshesCount + meshId].memory, 0, sizeof(materialsUbo), 0, &materialsData);
+		memcpy(materialsData, &materialsUbo, sizeof(materialsUbo));
+		vkUnmapMemory(device->handle, materialsBuffers[currentFrame*meshesCount + meshId].memory);
 #pragma endregion
 
 #pragma region Models
-	RvModelBufferObject modelsUbo = {};
+		RvModelBufferObject modelsUbo = {};
 
-	//Rotating object 90 degrees per second
-	//modelsUbo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	modelsUbo.model = glm::scale(modelsUbo.model, glm::vec3(0.025f, 0.025f, 0.025f));
+		//Rotating object 90 degrees per second
+		//modelsUbo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelsUbo.model = glm::scale(modelsUbo.model, glm::vec3(1.00f, 1.00f, 1.00f));
 
-	//Transfering model data to gpu buffer
-	void* modelData;
-	vkMapMemory(device->handle, modelsBuffers[currentImage].memory, 0, sizeof(modelsUbo), 0, &modelData);
-	memcpy(modelData, &modelsUbo, sizeof(modelsUbo));
-	vkUnmapMemory(device->handle, modelsBuffers[currentImage].memory);
+		//Transfering model data to gpu buffer
+		void* modelData;
+		vkMapMemory(device->handle, modelsBuffers[currentFrame*meshesCount+meshId].memory, 0, sizeof(modelsUbo), 0, &modelData);
+		memcpy(modelData, &modelsUbo, sizeof(modelsUbo));
+		vkUnmapMemory(device->handle, modelsBuffers[currentFrame*meshesCount + meshId].memory);
 #pragma endregion
 
 #pragma region Animations
-	RvBoneBufferObject bonesUbo = {};
+		RvBoneBufferObject bonesUbo = {};
 
-	for (size_t i = 0; i < meshes[0].boneTransforms.size(); i++)
-	{
-		bonesUbo.transformMatrixes[i] = glm::transpose(glm::make_mat4(&meshes[0].boneTransforms[i].a1));
-	}
+		for (size_t i = 0; i < meshes[0].boneTransforms.size(); i++)
+		{
+			bonesUbo.transformMatrixes[i] = glm::transpose(glm::make_mat4(&meshes[0].boneTransforms[i].a1));
+		}
 
-	void* bonesData;
-	vkMapMemory(device->handle, animationsBuffers[currentImage].memory, 0, sizeof(bonesUbo), 0, &bonesData);
-	memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
-	vkUnmapMemory(device->handle, animationsBuffers[currentImage].memory);
+		void* bonesData;
+		vkMapMemory(device->handle, animationsBuffers[currentFrame*meshesCount + meshId].memory, 0, sizeof(bonesUbo), 0, &bonesData);
+		memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
+		vkUnmapMemory(device->handle, animationsBuffers[currentFrame*meshesCount + meshId].memory);
 #pragma endregion
+	}
 
 }
 

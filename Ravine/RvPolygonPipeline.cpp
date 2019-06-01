@@ -170,6 +170,7 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	pipelineInfo.pDepthStencilState = nullptr; // Optional
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // Optional
+	pipelineInfo.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
 
 	//The uniforms layout
 	pipelineInfo.layout = layout;

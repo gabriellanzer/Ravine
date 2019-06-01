@@ -70,7 +70,7 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 	fmt::print(stdout, "Choosen samples count: {0}\n", sampleCount);
 
 	//Create command pool
-	CreateCommandPool();
+	createCommandPool();
 }
 
 
@@ -78,7 +78,7 @@ RvDevice::~RvDevice()
 {
 }
 
-void RvDevice::CreateCommandPool()
+void RvDevice::createCommandPool()
 {
 	rvTools::QueueFamilyIndices queueFamilyIndices = rvTools::findQueueFamilies(physicalDevice, *surface);
 

@@ -176,9 +176,11 @@
     <ClCompile Include="RvCamera.cpp" />
     <ClCompile Include="RvCmdBuffer.cpp" />
     <ClCompile Include="RvDynamicBuffer.cpp" />
+    <ClCompile Include="RvGraphicsPipeline.cpp" />
     <ClCompile Include="RvGUI.cpp" />
     <ClCompile Include="RvGUIPipeline.cpp" />
     <ClCompile Include="RvLinePipeline.cpp" />
+    <ClCompile Include="RvRenderPass.cpp" />
     <ClCompile Include="RvWireframePipeline.cpp" />
     <ClCompile Include="RvTexture.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
@@ -204,9 +206,11 @@
     <ClInclude Include="RvCamera.h" />
     <ClInclude Include="RvCmdBuffer.h" />
     <ClInclude Include="RvDynamicBuffer.h" />
+    <ClInclude Include="RvGraphicsPipeline.h" />
     <ClInclude Include="RvGUI.h" />
     <ClInclude Include="RvGUIPipeline.h" />
     <ClInclude Include="RvLinePipeline.h" />
+    <ClInclude Include="RvRenderPass.h" />
     <ClInclude Include="RvWireframePipeline.h" />
     <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />

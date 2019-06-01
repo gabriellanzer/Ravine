@@ -17,7 +17,7 @@ class RvDevice
 {
 private:
 	VkSurfaceKHR* surface;
-	void CreateCommandPool();
+	void createCommandPool();
 
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 

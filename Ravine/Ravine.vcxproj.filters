@@ -123,6 +123,12 @@
     <ClCompile Include="RvLinePipeline.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
+    <ClCompile Include="RvGraphicsPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RvRenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -214,6 +220,12 @@
     </ClInclude>
     <ClInclude Include="RvLinePipeline.h">
       <Filter>Header Files\Ravine System</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGraphicsPipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RvRenderPass.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

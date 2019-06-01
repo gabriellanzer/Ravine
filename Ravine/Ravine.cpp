@@ -490,10 +490,10 @@ void Ravine::createDescriptorSets()
 		//Update the sets for this frame
 		vkUpdateDescriptorSets(device->handle, writesPerFrame, descriptorWrites.data(), 0, nullptr);
 
-		delete materialsInfo;
-		delete imageInfo;
-		delete modelsInfo;
-		delete animationsInfo;
+		delete[] materialsInfo;
+		delete[] imageInfo;
+		delete[] modelsInfo;
+		delete[] animationsInfo;
 	}
 
 }

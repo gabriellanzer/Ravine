@@ -120,6 +120,10 @@ private:
 	bool keyUpPressed = false;
 	bool keyDownPressed = false;
 
+	//Odd edges parameters
+	size_t edgesSelected = 1;
+	size_t edgesOffset = 0;
+
 #pragma region Attributes
 
 	//Vulkan Instance
@@ -146,7 +150,7 @@ private:
 	vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
 	vector<RvPersistentBuffer> indexBuffers;
-	RvDynamicBuffer oddLinesIndexBuffer;
+	vector<RvPersistentBuffer> oddIndexBuffers;
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM

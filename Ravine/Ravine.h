@@ -146,7 +146,6 @@ private:
 	vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
 	vector<RvPersistentBuffer> indexBuffers;
-	RvDynamicBuffer oddLinesIndexBuffer;
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM

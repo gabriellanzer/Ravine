@@ -434,13 +434,13 @@ void Ravine::createDescriptorSets()
 			materialsInfo[meshId].offset = 0;
 			materialsInfo[meshId].range = sizeof(RvMaterialBufferObject);
 
-			descriptorWrites[meshWritesOffset+1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+1].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
-			descriptorWrites[meshWritesOffset+1].dstBinding = 0;
-			descriptorWrites[meshWritesOffset+1].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[meshWritesOffset+1].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+1].pBufferInfo = &materialsInfo[meshId];
+			descriptorWrites[meshWritesOffset + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 1].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset + 1].dstBinding = 0;
+			descriptorWrites[meshWritesOffset + 1].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset + 1].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 1].pBufferInfo = &materialsInfo[meshId];
 
 			//Image Info
 			imageInfo[meshId] = {};
@@ -450,41 +450,41 @@ void Ravine::createDescriptorSets()
 			imageInfo[meshId].imageView = textures[textureId].view;
 			imageInfo[meshId].sampler = textureSampler;
 
-			descriptorWrites[meshWritesOffset+2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+2].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
-			descriptorWrites[meshWritesOffset+2].dstBinding = 1;
-			descriptorWrites[meshWritesOffset+2].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[meshWritesOffset+2].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+2].pImageInfo = &imageInfo[meshId];
+			descriptorWrites[meshWritesOffset + 2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 2].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset + 2].dstBinding = 1;
+			descriptorWrites[meshWritesOffset + 2].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[meshWritesOffset + 2].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 2].pImageInfo = &imageInfo[meshId];
 
 			//Models Uniform Buffer Info
 			modelsInfo[meshId] = {};
-			modelsInfo[meshId].buffer = modelsBuffers[i*meshesCount + meshId].buffer;
+			modelsInfo[meshId].buffer = modelsBuffers[i * meshesCount + meshId].buffer;
 			modelsInfo[meshId].offset = 0;
 			modelsInfo[meshId].range = sizeof(RvModelBufferObject);
 
-			descriptorWrites[meshWritesOffset+3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+3].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
-			descriptorWrites[meshWritesOffset+3].dstBinding = 0;
-			descriptorWrites[meshWritesOffset+3].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[meshWritesOffset+3].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+3].pBufferInfo = &modelsInfo[meshId];
+			descriptorWrites[meshWritesOffset + 3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 3].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset + 3].dstBinding = 0;
+			descriptorWrites[meshWritesOffset + 3].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset + 3].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 3].pBufferInfo = &modelsInfo[meshId];
 
 			//Animations Uniform Buffer Info
 			animationsInfo[meshId] = {};
-			animationsInfo[meshId].buffer = animationsBuffers[i*meshesCount + meshId].buffer;
+			animationsInfo[meshId].buffer = animationsBuffers[i * meshesCount + meshId].buffer;
 			animationsInfo[meshId].offset = 0;
 			animationsInfo[meshId].range = sizeof(RvBoneBufferObject);
 
-			descriptorWrites[meshWritesOffset+4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+4].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
-			descriptorWrites[meshWritesOffset+4].dstBinding = 1;
-			descriptorWrites[meshWritesOffset+4].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[meshWritesOffset+4].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+4].pBufferInfo = &animationsInfo[meshId];
+			descriptorWrites[meshWritesOffset + 4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 4].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset + 4].dstBinding = 1;
+			descriptorWrites[meshWritesOffset + 4].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset + 4].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 4].pBufferInfo = &animationsInfo[meshId];
 		}
 
 		//Update the sets for this frame
@@ -898,9 +898,9 @@ void Ravine::createUniformBuffers()
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	size_t framesCount = swapChain->images.size();
 	uniformBuffers.resize(framesCount);
-	materialsBuffers.resize(framesCount*meshesCount);
-	modelsBuffers.resize(framesCount*meshesCount);
-	animationsBuffers.resize(framesCount*meshesCount);
+	materialsBuffers.resize(framesCount * meshesCount);
+	modelsBuffers.resize(framesCount * meshesCount);
+	animationsBuffers.resize(framesCount * meshesCount);
 
 	for (size_t i = 0; i < framesCount; i++) {
 		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
@@ -1194,6 +1194,11 @@ void Ravine::drawFrame()
 	//semaphores are used to syncronize operations within or across command queues - thus our best fit.
 
 	//Handle resize and such
+	if (window->framebufferResized)
+	{
+		swapChain->framebufferResized = true;
+		window->framebufferResized = false;
+	}
 	uint32_t frameIndex;
 	if (!swapChain->AcquireNextFrame(frameIndex)) {
 		recreateSwapChain();
@@ -1376,9 +1381,9 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		materialsUbo.customColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 		void* materialsData;
-		vkMapMemory(device->handle, materialsBuffers[currentFrame*meshesCount + meshId].memory, 0, sizeof(materialsUbo), 0, &materialsData);
+		vkMapMemory(device->handle, materialsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(materialsUbo), 0, &materialsData);
 		memcpy(materialsData, &materialsUbo, sizeof(materialsUbo));
-		vkUnmapMemory(device->handle, materialsBuffers[currentFrame*meshesCount + meshId].memory);
+		vkUnmapMemory(device->handle, materialsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
 
 #pragma region Models
@@ -1390,9 +1395,9 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 		//Transfering model data to gpu buffer
 		void* modelData;
-		vkMapMemory(device->handle, modelsBuffers[currentFrame*meshesCount+meshId].memory, 0, sizeof(modelsUbo), 0, &modelData);
+		vkMapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(modelsUbo), 0, &modelData);
 		memcpy(modelData, &modelsUbo, sizeof(modelsUbo));
-		vkUnmapMemory(device->handle, modelsBuffers[currentFrame*meshesCount + meshId].memory);
+		vkUnmapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
 
 #pragma region Animations
@@ -1404,9 +1409,9 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		}
 
 		void* bonesData;
-		vkMapMemory(device->handle, animationsBuffers[currentFrame*meshesCount + meshId].memory, 0, sizeof(bonesUbo), 0, &bonesData);
+		vkMapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(bonesUbo), 0, &bonesData);
 		memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
-		vkUnmapMemory(device->handle, animationsBuffers[currentFrame*meshesCount + meshId].memory);
+		vkUnmapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
 	}
 

@@ -14,12 +14,8 @@ using eastl::vector;
 #include "RvDevice.h"
 #include "RvFramebufferAttachment.h"
 
-//Structure for Swap Chain Support query of details
-struct SwapChainSupportDetails {
-	VkSurfaceCapabilitiesKHR capabilities;
-	vector<VkSurfaceFormatKHR> formats;
-	vector<VkPresentModeKHR> presentModes;
-};
+//Forward declaration of Swap Chain Support details struct
+struct SwapChainSupportDetails;
 
 struct RvSwapChain
 {
@@ -30,11 +26,11 @@ private:
 
 	size_t currentFrame = 0;
 
-	bool framebufferResized = false;
 public:
 	//Extent values
 	uint32_t WIDTH;
 	uint32_t HEIGHT;
+	bool framebufferResized = false;
 
 	//Number of maximum simultaneous frames
 	#define RV_MAX_FRAMES_IN_FLIGHT 3
@@ -90,6 +86,13 @@ public:
 	{
 		return handle;
 	}
+};
+
+struct SwapChainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	vector<VkSurfaceFormatKHR> formats;
+	vector<VkPresentModeKHR> presentModes;
 };
 
 #endif

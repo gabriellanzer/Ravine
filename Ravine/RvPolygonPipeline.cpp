@@ -133,7 +133,7 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
 	VkDynamicState dynamicStates[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR
+		VK_DYNAMIC_STATE_SCISSOR,
 	};
 
 	VkPipelineDynamicStateCreateInfo dynamicState = {};

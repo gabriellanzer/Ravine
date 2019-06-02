@@ -9,6 +9,11 @@
 
 using eastl::vector;
 
+//Ravine Includes
+#include "RVDevice.h"
+#include "RvSwapChain.h"
+#include "RvFramebufferAttachment.h"
+
 //Forward declaration for Subpass usage
 struct RvSubpass;
 
@@ -22,13 +27,30 @@ private:
 	//Subpasses define implicit memory barriers and attachments
 	vector<RvSubpass> subpasses;
 
+	//Framebuffers and their attachments
+	vector<VkFramebuffer> framebuffers;
+	vector<RvFramebufferAttachment> framebufferAttachments;
+
+	//Proper creation of framebuffers for each of the SwapChain images
+	void CreateFramebuffers(const vector<VkImage>& swapChainImages);
+
 public:
 
 	RvRenderPass();
 	~RvRenderPass();
 
-	//Attaches a Subpass to event to this 
+	//Actualy RenderPass construction on given device, based on SwapChain extent
+	//this call also constructs the framebuffers attached to this RenderPass in
+	//such a way that they are replicated accordingly to inflight frames defined
+	//by the swapchain
+	void Construct(const RvDevice& device, const RvSwapChain& swapchain);
+
+	//Attaches a Subpass into this RenderPass
 	void AttachSubpass(RvSubpass subpass);
+
+	//Creates a framebuffer attachment that will be added into each framebuffer
+	//once the RenderPass actually gets created
+	void AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
 
 };
 

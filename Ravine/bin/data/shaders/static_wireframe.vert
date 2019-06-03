@@ -15,5 +15,6 @@ layout(location = 0) in vec3 inPosition;
 
 void main()
 {
+	gl_PointSize = 20.0f;
     gl_Position = proj * view * model * vec4(inPosition, 1.0);
 }

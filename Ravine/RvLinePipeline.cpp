@@ -50,7 +50,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Input_assembly
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 	//Viewports and Scissors (describes the region of the framebuffer that the output will be rendered to)
@@ -81,7 +81,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterizer.depthClampEnable = VK_FALSE; //VK_FALSE discards fragments outside of near/far plane frustum
 	rasterizer.rasterizerDiscardEnable = VK_FALSE; //VK_TRUE discards any geometry rendered here
-	rasterizer.polygonMode = VK_POLYGON_MODE_LINE; //Could be FILL, LINE or POINT (requires GPU feature enabling)
+	rasterizer.polygonMode = VK_POLYGON_MODE_POINT; //Could be FILL, LINE or POINT (requires GPU feature enabling)
 	rasterizer.lineWidth = 2.0f;
 	rasterizer.cullMode = VK_CULL_MODE_NONE;
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face

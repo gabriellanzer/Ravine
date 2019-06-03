@@ -8,6 +8,7 @@
 #include <EASTL/set.h>
 #include <EASTL/algorithm.h>
 #include <EASTL/string.h>
+#include <EASTL/sort.h>
 
 //GLM Includes
 #include <glm\gtc\matrix_transform.hpp>
@@ -874,11 +875,27 @@ void Ravine::createVertexBuffer()
 		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertex_count, sizeof(RvSkinnedVertexColored),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
-		delete[] meshes[i].vertices;
-		meshes[i].vertex_count = 0;
+		//delete[] meshes[i].vertices;
+		//meshes[i].vertex_count = 0;
 	}
 
 }
+
+struct EdgeContraction
+{
+	uint32_t even, odd;
+	double cost;
+
+	EdgeContraction() : even(UINT32_MAX), odd(UINT32_MAX), cost(FLT_MAX)
+	{
+
+	}
+
+	EdgeContraction(uint32_t even, uint32_t odd, double cost) : even(even), odd(odd), cost(cost)
+	{
+
+	}
+};
 
 void Ravine::createIndexBuffer()
 {
@@ -887,19 +904,175 @@ void Ravine::createIndexBuffer()
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		size_t linesCount = meshes[i].index_count * static_cast<size_t>(2);
-		uint32_t* linesIndices = new uint32_t[linesCount];
-		for (size_t j = 0; j < meshes[i].index_count; j += 3)
+
+		//Calculate vertex quadratic matrix based on each face
+		vector<glm::mat4> vertexQuadric(meshes[i].index_count);
+		for (size_t j = 0; j < meshes[i].index_count; j += 3) //For each face (3 ids)
 		{
-			linesIndices[j * 2 + 0] = meshes[i].indices[j + 0];
-			linesIndices[j * 2 + 1] = meshes[i].indices[j + 1];
-			linesIndices[j * 2 + 2] = meshes[i].indices[j + 1];
-			linesIndices[j * 2 + 3] = meshes[i].indices[j + 2];
-			linesIndices[j * 2 + 4] = meshes[i].indices[j + 2];
-			linesIndices[j * 2 + 5] = meshes[i].indices[j + 0];
+			uint32_t& aId = meshes[i].indices[j + 0];
+			uint32_t& bId = meshes[i].indices[j + 1];
+			uint32_t& cId = meshes[i].indices[j + 2];
+
+			//Calculate plane coeficients
+			glm::vec3& a = meshes[i].vertices[aId].pos;
+			glm::vec3& b = meshes[i].vertices[bId].pos;
+			glm::vec3& c = meshes[i].vertices[cId].pos;
+			glm::vec3 ba = b - a;
+			glm::vec3 ca = c - a;
+			glm::vec3 nor = glm::normalize(glm::cross(ba, ca));
+			glm::vec4 plane = glm::vec4(nor, glm::dot(nor, -a)); //ABCD coeficients
+			//Calculate error quadric influence of this face on each vertex
+			glm::mat4 errorQuadric;
+			errorQuadric[0][0] = plane[0] * plane[0]; //A²
+			errorQuadric[1][0] = errorQuadric[0][1] = plane[0] * plane[1]; //AB
+			errorQuadric[2][0] = errorQuadric[0][2] = plane[0] * plane[2]; //AC
+			errorQuadric[3][0] = errorQuadric[0][3] = plane[0] * plane[3]; //AD
+			errorQuadric[1][1] = plane[1] * plane[1]; //B²
+			errorQuadric[1][2] = errorQuadric[2][1] = plane[1] * plane[2]; //BC
+			errorQuadric[1][3] = errorQuadric[3][1] = plane[1] * plane[3]; //BD
+			errorQuadric[2][2] = plane[2] * plane[2]; //C²
+			errorQuadric[2][3] = errorQuadric[3][2] = plane[2] * plane[3]; //CD
+			errorQuadric[3][3] = plane[3] * plane[3]; //D²
+			vertexQuadric[aId] += errorQuadric;
+			vertexQuadric[bId] += errorQuadric;
+			vertexQuadric[cId] += errorQuadric;
 		}
-		oddIndexBuffers.push_back(device->createPersistentBuffer(linesIndices, sizeof(uint32_t) * linesCount, sizeof(uint32_t),
+
+		//Calculate contraction cost per edge
+		vector<EdgeContraction> contractions(meshes[i].index_count);
+		vector<vector<uint32_t>> vNeighbours(meshes[i].vertex_count);
+		for (size_t j = 0; j < meshes[i].index_count; j += 3) //For each face (3 ids)
+		{
+			//Calculate triangle equation
+			uint32_t aId = meshes[i].indices[j + 0];
+			uint32_t bId = meshes[i].indices[j + 1];
+			uint32_t cId = meshes[i].indices[j + 2];
+
+			//Hold Neighbours for later
+			vNeighbours[aId].push_back(bId);
+			vNeighbours[bId].push_back(aId);
+			vNeighbours[bId].push_back(cId);
+			vNeighbours[cId].push_back(bId);
+			vNeighbours[cId].push_back(aId);
+			vNeighbours[aId].push_back(cId);
+
+			//Edges are 'ab', 'bc' and 'ca'
+			glm::vec4 a = glm::vec4(meshes[i].vertices[aId].pos, 1);
+			glm::vec4 b = glm::vec4(meshes[i].vertices[bId].pos, 1);
+			glm::vec4 c = glm::vec4(meshes[i].vertices[cId].pos, 1);
+
+			//Cost for 'ab'
+			{
+				glm::mat4 combinedError = vertexQuadric[aId] + vertexQuadric[bId];
+				double costA = glm::dot(a, combinedError * a);
+				double costB = glm::dot(b, combinedError * b);
+				if (costA < costB) //'a' is even, 'b' is odd
+				{
+					contractions[j + 0] = { aId, bId, costA };
+				}
+				else //'b' is even, 'a' is odd
+				{
+					contractions[j + 0] = { bId, aId, costB };
+				}
+			}
+
+			//Cost for 'bc'
+			{
+				glm::mat4 combinedError = vertexQuadric[bId] + vertexQuadric[cId];
+				double costB = glm::dot(b, combinedError * b);
+				double costC = glm::dot(c, combinedError * c);
+				if (costB < costC) //'b' is even, 'c' is odd
+				{
+					contractions[j + 1] = { bId, cId, costB };
+				}
+				else //'c' is even, 'b' is odd
+				{
+					contractions[j + 1] = { cId, bId, costC };
+				}
+			}
+
+			//Cost for 'ca'
+			{
+				glm::mat4 combinedError = vertexQuadric[cId] + vertexQuadric[aId];
+				double costC = glm::dot(c, combinedError * c);
+				double costA = glm::dot(a, combinedError * a);
+				if (costC < costA) //'c' is even, 'a' is odd
+				{
+					contractions[j + 2] = { cId, aId, costC };
+				}
+				else //'a' is even, 'c' is odd
+				{
+					contractions[j + 2] = { aId, cId, costA };
+				}
+			}
+		}
+
+		//Order based on smallest costs first
+		eastl::sort(contractions.begin(), contractions.end(),
+			[](const EdgeContraction& a, const EdgeContraction& b) -> bool
+			{
+				return a.cost < b.cost;
+			});
+
+		unordered_set<uint32_t> oddsList;
+		vector<uint32_t> edgesToColapse;
+		//Reserve estimation
+		edgesToColapse.reserve(contractions.size() / 3);
+		for (size_t j = 0; j < contractions.size(); j++)
+		{
+			EdgeContraction& contraction = contractions[j];
+			//Check if this is actually an odd and not an even vertex
+			bool isOdd = true;
+			vector<uint32_t>& neighbours = vNeighbours[contraction.odd];
+			if (oddsList.find(contraction.odd) != oddsList.end()) //Check already added
+			{
+				isOdd = false;
+				continue;
+			}
+			else
+			{
+				//Check if any neighbour is odd
+				for (uint32_t k = 0; k < neighbours.size(); k++)
+				{
+					if (oddsList.find(neighbours[k]) != oddsList.end())
+					{
+						isOdd = false;
+						break;
+					}
+				}
+			}
+
+			//Found an odd!
+			if (isOdd)
+			{
+				//Add this contraction to the list
+				oddsList.insert(contraction.odd);
+				edgesToColapse.push_back(contraction.odd);
+				edgesToColapse.push_back(contraction.even);
+			}
+		}
+
+		oddIndexBuffers.push_back(device->createPersistentBuffer(edgesToColapse.data(), sizeof(uint32_t) * edgesToColapse.size(), sizeof(uint32_t),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
+
+		//Remap test
+		uint32_t* remap = new uint32_t[meshes[i].vertex_count];
+		for (size_t j = 0; j < meshes[i].vertex_count; j++)
+		{
+			remap[j] = j;
+		}
+		for (size_t j = 0; j < edgesToColapse.size(); j+=2)
+		{
+			remap[edgesToColapse[j]] = edgesToColapse[j + 1];
+		}
+
+		//Apply remap
+		for (size_t j = 0; j < meshes[i].index_count; j++)
+		{
+			meshes[i].indices[j] = remap[meshes[i].indices[j]];
+		}
+
 		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
@@ -1088,16 +1261,15 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 		throw std::runtime_error("Failed to begin recording command buffer!");
 	}
 
+	VkDeviceSize offsets[] = { 0 };
+	size_t setsPerFrame = 1 + (meshesCount * 2);
+
 	//Basic Drawing Commands
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
 	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
 
 	//Global, Material and Model Descriptor Sets
-	size_t setsPerFrame = 1 + (meshesCount * 2);
 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
-
-	//Set Vertex Buffer for drawing
-	VkDeviceSize offsets[] = { 0 };
 
 	//Call drawing
 	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
@@ -1110,21 +1282,21 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 	}
 
-	////Perform the same with wireframe rendering
-	//vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
+	//Perform the same with wireframe rendering
+	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
 
-	////Global, Material and Model Descriptor Sets
-	//vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+	//Global, Material and Model Descriptor Sets
+	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
-	//for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
-	//{
-	//	size_t meshSetOffset = meshIndex * 2;
-	//	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	{
+		size_t meshSetOffset = meshIndex * 2;
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-	//	vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-	//	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-	//	vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
-	//}
+		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+	}
 
 	//Perform the same with lines rendering
 	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
@@ -1139,9 +1311,7 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], oddIndexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		size_t actualOffset = eastl::min(oddIndexBuffers[meshIndex].instancesCount, edgesOffset);
-		size_t edgesShown = eastl::clamp(edgesSelected, size_t{ 1 }, oddIndexBuffers[meshIndex].instancesCount - actualOffset);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(edgesShown), 1, static_cast<uint32_t>(actualOffset), 0, 0);
+		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(oddIndexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 	}
 
 	//Stop recording Command Buffer
@@ -1392,7 +1562,7 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 	if (glfwGetKey(*window, GLFW_KEY_HOME) == GLFW_PRESS)
 	{
 		edgesOffset += 2;
-		fmt::print(stdout,"Edges Offset Count: {0}\n", edgesOffset);
+		fmt::print(stdout, "Edges Offset Count: {0}\n", edgesOffset);
 	}
 	else if (glfwGetKey(*window, GLFW_KEY_END) == GLFW_PRESS)
 	{

@@ -16,6 +16,7 @@
 using eastl::string;
 using eastl::vector;
 using eastl::array;
+using eastl::unordered_set;
 
 //Vulkan Include
 #include <vulkan\vulkan.h>

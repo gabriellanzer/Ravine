@@ -35,6 +35,7 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 	deviceFeatures.sampleRateShading = VK_TRUE; //Enable sample shading feature for the device
 	deviceFeatures.fillModeNonSolid = VK_TRUE;	//Enable drawing of lines (wireframe) and points
 	deviceFeatures.wideLines = VK_TRUE;			//Enable rasterization of lines with width != 1.0
+	deviceFeatures.largePoints = VK_TRUE;		//Enable rasterization of points with size != 1.0
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

@@ -9,7 +9,6 @@
 
 //EASTL Includes
 #include <EASTL/vector.h>
-#include <EASTL/algorithm.h>
 #include <EASTL/string.h>
 
 //Ravine Includes

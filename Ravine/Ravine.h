@@ -6,11 +6,8 @@
 #include <GLFW/glfw3.h>
 
 //EASTL includes
-#include <EASTL/allocator.h>
 #include <EASTL/vector.h>
 #include <EASTL/array.h>
-#include <EASTL/unordered_set.h>
-#include <EASTL/map.h>
 #include <EASTL/string.h>
 
 using eastl::string;
@@ -21,19 +18,13 @@ using eastl::array;
 #include <vulkan\vulkan.h>
 
 //FMT Includes
-#include <fmt/printf.h>
 
 //GLM includes
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 //Types dependencies
 #include "RvDataTypes.h"
-#include "RvUniformTypes.h"
 
 //VK Wrappers
 #include "RvTools.h"

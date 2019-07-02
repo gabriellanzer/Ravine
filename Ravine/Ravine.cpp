@@ -4,13 +4,12 @@
 #include <stdexcept>
 
 //EASTL Includes
-#include <EASTL/functional.h>
 #include <EASTL/set.h>
-#include <EASTL/algorithm.h>
 #include <EASTL/string.h>
 
 //GLM Includes
 #include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtc\type_ptr.hpp>
 
 //STB Includes
 #define STB_IMAGE_IMPLEMENTATION
@@ -20,6 +19,7 @@
 #include "RvTime.h"
 #include "RvConfig.h"
 #include "RvDebug.h"
+#include "RvUniformTypes.h"
 
 //ShaderC Includes
 #include "shaderc/shaderc.h"
@@ -30,6 +30,9 @@
 
 //Specific usages of ASSIMP library
 using Assimp::Importer;
+
+//FMT Includes
+#include "fmt/printf.h"
 
 Ravine::Ravine()
 {
@@ -55,7 +58,7 @@ void Ravine::framebufferResizeCallback(GLFWwindow* window, int width, int height
 {
 	auto rvWindowTemp = reinterpret_cast<RvWindow*>(glfwGetWindowUserPointer(window));
 	rvWindowTemp->framebufferResized = true;
-	rvWindowTemp->extent = { (uint32_t)width, (uint32_t)height };
+	rvWindowTemp->extent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
 
 vector<const char*> Ravine::getRequiredInstanceExtensions()

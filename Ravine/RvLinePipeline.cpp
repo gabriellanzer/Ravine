@@ -1,8 +1,5 @@
 #include "RvLinePipeline.h"
 
-//STD Includes
-#include <vector>
-
 //Data Types
 #include "RVDataTypes.h"
 

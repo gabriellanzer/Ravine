@@ -6,6 +6,9 @@
 //ImGUI Includes
 #include "imgui.h"
 
+//STD Includes
+#include <stdexcept>
+
 RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass) : device(&device)
 {
 	//Create Pipeline cache

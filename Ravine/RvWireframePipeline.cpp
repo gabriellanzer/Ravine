@@ -1,7 +1,6 @@
 #include "RvWireframePipeline.h"
 
 //STD Includes
-#include <vector>
 
 //Data Types
 #include "RVDataTypes.h"

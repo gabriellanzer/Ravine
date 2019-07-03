@@ -1,8 +1,8 @@
-#include "RVSwapChain.h"
+#include "RvSwapChain.h"
 
 //EASTL Includes
-#include <EASTL/algorithm.h>
-#include <EASTL/array.h>
+#include <eastl/algorithm.h>
+#include <eastl/array.h>
 using eastl::array;
 
 //STD Includes
@@ -420,5 +420,4 @@ bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 }
 
 RvSwapChain::~RvSwapChain()
-{
-}
+= default;

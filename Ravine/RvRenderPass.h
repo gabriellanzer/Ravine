@@ -5,12 +5,12 @@
 #include <vulkan/vulkan.h>
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 
 using eastl::vector;
 
 //Ravine Includes
-#include "RVDevice.h"
+#include "RvDevice.h"
 #include "RvSwapChain.h"
 #include "RvFramebufferAttachment.h"
 
@@ -39,7 +39,7 @@ public:
 	RvRenderPass();
 	~RvRenderPass();
 
-	//Actualy RenderPass construction on given device, based on SwapChain extent
+	//Actually RenderPass construction on given device, based on SwapChain extent
 	//this call also constructs the framebuffers attached to this RenderPass in
 	//such a way that they are replicated accordingly to inflight frames defined
 	//by the swapchain

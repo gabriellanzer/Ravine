@@ -1,7 +1,7 @@
 ﻿#include "RvTools.h"
 
 //EASTL Includes
-#include <EASTL/algorithm.h>
+#include <eastl/algorithm.h>
 
 //STD Includes
 #include <stdexcept>

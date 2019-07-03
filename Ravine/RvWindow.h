@@ -9,7 +9,7 @@
 #include <vulkan/vulkan.h>
 
 //EASTL Includes
-#include <EASTL/string.h>
+#include <eastl/string.h>
 using eastl::string;
 
 //STD Includes

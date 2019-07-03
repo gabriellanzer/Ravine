@@ -1,14 +1,10 @@
 #include "RvRenderPass.h"
 
 RvRenderPass::RvRenderPass()
-{
-
-}
+= default;
 
 RvRenderPass::~RvRenderPass()
-{
-
-}
+= default;
 
 RvSubpass::RvSubpass() : description(), dependency()
 {
@@ -49,6 +45,4 @@ RvSubpass::RvSubpass() : description(), dependency()
 }
 
 RvSubpass::~RvSubpass()
-{
-
-}
+= default;

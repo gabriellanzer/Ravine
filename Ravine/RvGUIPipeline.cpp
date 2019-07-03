@@ -6,7 +6,10 @@
 //ImGUI Includes
 #include "imgui.h"
 
-RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass) : device(&device)
+//STD Include
+#include <stdexcept>
+
+RvGuiPipeline::RvGuiPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass) : device(&device)
 {
 	//Create Pipeline cache
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
@@ -219,11 +222,16 @@ RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountF
 	}
 }
 
-RvGUIPipeline::~RvGUIPipeline()
+RvGuiPipeline::~RvGuiPipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);
 	vkDestroyPipelineCache(device->handle, pipelineCache, nullptr);
 	vkDestroyPipelineLayout(device->handle, layout, nullptr);
 	vkDestroyPipeline(device->handle, handle, nullptr);
+}
+
+RvGuiPipeline::operator VkPipeline() const
+{
+	return handle;
 }

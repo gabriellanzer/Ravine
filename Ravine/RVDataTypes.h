@@ -8,10 +8,10 @@
 #include <glm/mat4x4.hpp>
 
 //EASTL Includes
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
-#include <EASTL/map.h>
-#include <EASTL/string.h>
+#include <eastl/array.h>
+#include <eastl/vector.h>
+#include <eastl/map.h>
+#include <eastl/string.h>
 
 //Vulkan Includes
 #include <vulkan/vulkan.h>

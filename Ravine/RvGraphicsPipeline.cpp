@@ -5,5 +5,4 @@ RvGraphicsPipeline::RvGraphicsPipeline(VkDescriptorSetLayout descriptorSetLayout
 }
 
 RvGraphicsPipeline::~RvGraphicsPipeline()
-{
-}
+= default;

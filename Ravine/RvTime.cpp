@@ -29,10 +29,8 @@ double RvTime::deltaTime()
 }
 
 RvTime::RvTime()
-{
-}
+= default;
 
 
 RvTime::~RvTime()
-{
-}
+= default;

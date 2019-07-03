@@ -9,13 +9,13 @@
 //GLFW Includes
 #include <glfw/glfw3.h>
 
-RvGUI::RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window), swapChainImagesCount(swapChain.images.size())
+RvGui::RvGui(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window), swapChainImagesCount(swapChain.images.size())
 {
 	ImGui::CreateContext();
 	io = &ImGui::GetIO();
 }
 
-RvGUI::~RvGUI()
+RvGui::~RvGui()
 {
 	//Freeup Pipeline
 	delete guiPipeline;
@@ -50,7 +50,7 @@ RvGUI::~RvGUI()
 	guiPipeline = nullptr;
 }
 
-void RvGUI::Init(VkSampleCountFlagBits samplesCount)
+void RvGui::init(VkSampleCountFlagBits samplesCount)
 {
 	//Color scheme
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -70,16 +70,16 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	extent.height = swapChain->HEIGHT;
 
 	//Load Font Texture
-	CreateFontTexture();
+	createFontTexture();
 
 	//Setup Sampler
-	CreateTextureSampler();
+	createTextureSampler();
 
 	//Descriptors define how date is acessed by the pipeline
-	CreateDescriptorPool(); //They are allocated in a pool by the device
-	CreateDescriptorSetLayout(); //The Layout indicate which binding is used in which pipeline stage
-	CreateDescriptorSet(); //The descriptor set holds information regarding data location and types
-	CreatePushConstants(); //Create the structure that defines the push constant range
+	createDescriptorPool(); //They are allocated in a pool by the device
+	createDescriptorSetLayout(); //The Layout indicate which binding is used in which pipeline stage
+	createDescriptorSet(); //The descriptor set holds information regarding data location and types
+	createPushConstants(); //Create the structure that defines the push constant range
 
 	//Reset Buffers
 	swapChainImagesCount = swapChain->images.size();
@@ -87,13 +87,13 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	indexBuffer.resize(swapChainImagesCount);
 
 	//Create Cmd Buffers for drwaing
-	CreateCmdBuffers();
+	createCmdBuffers();
 
 	//Create GUI Graphics Pipeline
-	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
+	guiPipeline = new RvGuiPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
 }
 
-void RvGUI::AcquireFrame()
+void RvGui::acquireFrame()
 {
 	double mouseX, mouseY;
 	glfwGetCursorPos(*window, &mouseX, &mouseY);
@@ -107,13 +107,13 @@ void RvGUI::AcquireFrame()
 	ImGui::NewFrame();
 }
 
-void RvGUI::SubmitFrame()
+void RvGui::submitFrame()
 {
 	//Render generates draw buffers
 	ImGui::Render();
 }
 
-void RvGUI::CreateFrameBuffers()
+void RvGui::createFrameBuffers()
 {
 	//Resize FrameBuffer data arrays
 	framebuffers.resize(swapChainImagesCount);
@@ -135,7 +135,7 @@ void RvGUI::CreateFrameBuffers()
 	}
 }
 
-void RvGUI::CreateCmdBuffers()
+void RvGui::createCmdBuffers()
 {
 	//Resize according to swapChain size
 	cmdBuffers.resize(swapChainImagesCount);
@@ -152,7 +152,7 @@ void RvGUI::CreateCmdBuffers()
 	}
 }
 
-void RvGUI::CreateTextureSampler()
+void RvGui::createTextureSampler()
 {
 	VkSamplerCreateInfo samplerCreateInfo = {};
 	samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -191,7 +191,7 @@ void RvGUI::CreateTextureSampler()
 	}
 }
 
-void RvGUI::CreateFontTexture()
+void RvGui::createFontTexture()
 {
 	//Get font data
 	unsigned char* fontData;
@@ -202,7 +202,7 @@ void RvGUI::CreateFontTexture()
 	fontTexture = device->createTexture(fontData, texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM);
 }
 
-void RvGUI::CreateDescriptorPool()
+void RvGui::createDescriptorPool()
 {
 	VkDescriptorPoolSize poolSize = {};
 	poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -219,7 +219,7 @@ void RvGUI::CreateDescriptorPool()
 	}
 }
 
-void RvGUI::CreateDescriptorSetLayout()
+void RvGui::createDescriptorSetLayout()
 {
 	//Texture Sampler layout
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
@@ -242,7 +242,7 @@ void RvGUI::CreateDescriptorSetLayout()
 	}
 }
 
-void RvGUI::CreateDescriptorSet()
+void RvGui::createDescriptorSet()
 {
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -274,7 +274,7 @@ void RvGUI::CreateDescriptorSet()
 	vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(1), &descriptorWrites, 0, nullptr);
 }
 
-void RvGUI::CreatePushConstants()
+void RvGui::createPushConstants()
 {
 	pushConstantRange = {};
 	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -282,7 +282,7 @@ void RvGUI::CreatePushConstants()
 	pushConstantRange.offset = 0;
 }
 
-void RvGUI::UpdateBuffers(uint32_t frameIndex)
+void RvGui::updateBuffers(uint32_t frameIndex)
 {
 	ImDrawData* imDrawData = ImGui::GetDrawData();
 
@@ -331,7 +331,7 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	//Free-up memory
-	delete vtxRsc;
+	delete[] vtxRsc;
 #pragma endregion
 
 #pragma region Index Buffer
@@ -351,15 +351,15 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 
 	//Create buffer on GPU
 	indexBuffer[frameIndex] = device->createPersistentBuffer(idxRsc, indexBufferSize, sizeof(ImDrawIdx),
-		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	//Free-up memory
-	delete idxRsc;
+	delete[] idxRsc;
 #pragma endregion
 
 }
 
-void RvGUI::RecordCmdBuffers(uint32_t frameIndex)
+void RvGui::recordCmdBuffers(uint32_t frameIndex)
 {
 	ImGuiIO& io = ImGui::GetIO();
 

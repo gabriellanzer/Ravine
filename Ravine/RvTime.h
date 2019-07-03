@@ -1,7 +1,7 @@
 #pragma once
 
 //EASTL Includes
-#include <EASTL/chrono.h>
+#include <eastl/chrono.h>
 
 //GLFW Include
 #include <glfw\glfw3.h>

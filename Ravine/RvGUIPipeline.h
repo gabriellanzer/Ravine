@@ -8,10 +8,10 @@
 #include "RvDevice.h"
 #include "RvDataTypes.h"
 
-struct RvGUIPipeline
+struct RvGuiPipeline
 {
-	RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass);
-	~RvGUIPipeline();
+	RvGuiPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass);
+	~RvGuiPipeline();
 
 	RvDevice* device;
 	VkPipeline handle;
@@ -22,9 +22,7 @@ struct RvGUIPipeline
 	VkPipelineLayout layout;
 	VkPipelineCache pipelineCache;
 
-	operator VkPipeline() {
-		return handle;
-	}
+	explicit operator VkPipeline() const;
 };
 
 #endif

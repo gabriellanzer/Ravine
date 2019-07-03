@@ -8,9 +8,9 @@
 #include <shaderc/shaderc.h>
 
 //EASTL Includes
-#include <EASTL/vector.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/string.h>
+#include <eastl/vector.h>
+#include <eastl/algorithm.h>
+#include <eastl/string.h>
 
 //Ravine Includes
 #include "RvSwapChain.h"

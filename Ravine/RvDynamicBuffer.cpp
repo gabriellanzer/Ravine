@@ -3,10 +3,8 @@
 
 
 RvDynamicBuffer::RvDynamicBuffer()
-{
-}
+= default;
 
 
 RvDynamicBuffer::~RvDynamicBuffer()
-{
-}
+= default;

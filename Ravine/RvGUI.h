@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 
 //ImGUI Includes
 #include "imgui.h"
@@ -20,7 +20,7 @@
 #include "RvTexture.h"
 #include "RvGUIPipeline.h"
 
-struct RvGUI
+struct RvGui
 {
 	//External Parameters
 	ImGuiIO* io;
@@ -36,7 +36,7 @@ struct RvGUI
 	VkSampler textureSampler;
 
 	//Pipeline Attributes
-	RvGUIPipeline* guiPipeline;
+	RvGuiPipeline* guiPipeline;
 	VkDescriptorPool descriptorPool;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorSet descriptorSet;
@@ -66,24 +66,24 @@ struct RvGUI
 	//std::vector<VkCommandBuffer> commandBuffers;
 	//void CreateFrameBuffers();
 
-	RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window);
-	~RvGUI();
+	RvGui(RvDevice& device, RvSwapChain& swapChain, RvWindow& window);
+	~RvGui();
 
-	void Init(VkSampleCountFlagBits samplesCount);
-	void AcquireFrame();
-	void SubmitFrame();
-	void UpdateBuffers(uint32_t frameIndex);
-	void RecordCmdBuffers(uint32_t frameIndex);
+	void init(VkSampleCountFlagBits samplesCount);
+	void acquireFrame();
+	void submitFrame();
+	void updateBuffers(uint32_t frameIndex);
+	void recordCmdBuffers(uint32_t frameIndex);
 
 private:
-	void CreateFrameBuffers();
-	void CreateCmdBuffers();
-	void CreateTextureSampler();
-	void CreateFontTexture();
-	void CreateDescriptorPool();
-	void CreateDescriptorSetLayout();
-	void CreateDescriptorSet();
-	void CreatePushConstants();
+	void createFrameBuffers();
+	void createCmdBuffers();
+	void createTextureSampler();
+	void createFontTexture();
+	void createDescriptorPool();
+	void createDescriptorSetLayout();
+	void createDescriptorSet();
+	void createPushConstants();
 
 };
 

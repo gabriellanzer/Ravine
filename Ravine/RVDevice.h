@@ -2,7 +2,7 @@
 #define RAVINE_DEVICE_H
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 using eastl::vector;
 
 //Vulkan Includes
@@ -43,7 +43,9 @@ public:
 	//Attributes
 	VkSampleCountFlagBits sampleCount;
 
-	//Should be used instead of destroying in destructor
+	/**
+	 * \brief Should be used instead of destroying in destructor
+	 */
 	void Clear();
 
 	RvTexture createTexture(void *pixels, size_t width, size_t heigh, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM);

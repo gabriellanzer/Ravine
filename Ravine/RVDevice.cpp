@@ -1,8 +1,8 @@
-#include "RVDevice.h"
+#include "RvDevice.h"
 
 //EASTL Includes
-#include <EASTL/algorithm.h>
-#include <EASTL/set.h>
+#include <eastl/algorithm.h>
+#include <eastl/set.h>
 
 using eastl::set;
 
@@ -11,9 +11,9 @@ using eastl::set;
 
 //Ravine System Includes
 #include "RvTools.h"
-#include "RVConfig.h"
+#include "RvConfig.h"
 
-RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : physicalDevice(physicalDevice), surface(&surface)
+RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : surface(&surface), physicalDevice(physicalDevice)
 {
 	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(physicalDevice, surface);
 
@@ -44,12 +44,12 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(rvCfg::DeviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = rvCfg::DeviceExtensions.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(rvCfg::DEVICE_EXTENSIONS.size());
+	createInfo.ppEnabledExtensionNames = rvCfg::DEVICE_EXTENSIONS.data();
 
 #ifdef VALIDATION_LAYERS_ENABLED
-		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
-		createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::VALIDATION_LAYERS.size());
+		createInfo.ppEnabledLayerNames = rvCfg::VALIDATION_LAYERS.data();
 #else
 		createInfo.enabledLayerCount = 0;
 #endif
@@ -67,7 +67,7 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	//TODO: This should be dynamically chosen
 	sampleCount = getMaxUsableSampleCount();
-	fmt::print(stdout, "Choosen samples count: {0}\n", sampleCount);
+	fmt::print(stdout, "Chosen samples count: {0}\n", sampleCount);
 
 	//Create command pool
 	createCommandPool();
@@ -75,8 +75,7 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 
 RvDevice::~RvDevice()
-{
-}
+= default;
 
 void RvDevice::createCommandPool()
 {
@@ -183,12 +182,13 @@ RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferU
 RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
 {
 	// Staging Buffer
-	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 
 	// Copying data
 	void* stagingData;
 	vkMapMemory(handle, stagingBuffer.memory, 0, bufferSize, 0, &stagingData);
-	memcpy(stagingData, (void*)data, (size_t)bufferSize);
+	memcpy(stagingData, static_cast<void*>(data), static_cast<size_t>(bufferSize));
 	vkUnmapMemory(handle, stagingBuffer.memory);
 
 	// Persistent buffer
@@ -248,7 +248,8 @@ VkFormat RvDevice::findDepthFormat()
 
 VkSampleCountFlagBits RvDevice::getMaxUsableSampleCount()
 {
-	VkSampleCountFlags counts = eastl::min(deviceProperties.limits.framebufferColorSampleCounts, deviceProperties.limits.framebufferDepthSampleCounts);
+	VkSampleCountFlags counts = eastl::min(deviceProperties.limits.framebufferColorSampleCounts,
+	                                       deviceProperties.limits.framebufferDepthSampleCounts);
 	if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
 	if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
 	if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }

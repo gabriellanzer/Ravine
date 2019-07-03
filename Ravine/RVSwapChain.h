@@ -2,7 +2,7 @@
 #define RV_SWAPCHAIN_H
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 using eastl::vector;
 #include "EASTL_new.h"
 

@@ -4,8 +4,7 @@
 #include <glm\gtc\matrix_transform.hpp>
 
 RvCamera::~RvCamera()
-{
-}
+= default;
 
 
 RvCamera::RvCamera(glm::vec3 camPos, float horizontalRot, float verticalRot)

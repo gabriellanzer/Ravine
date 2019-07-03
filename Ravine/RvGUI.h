@@ -14,9 +14,9 @@
 #include <glm/glm.hpp>
 
 //Ravine Includes
-#include "RvDevice.h"
+#include "RVDevice.h"
 #include "RvWindow.h"
-#include "RvSwapChain.h"
+#include "RVSwapChain.h"
 #include "RvTexture.h"
 #include "RvGUIPipeline.h"
 

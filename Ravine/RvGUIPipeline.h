@@ -6,7 +6,6 @@
 
 //Ravine Systems
 #include "RvDevice.h"
-#include "RvDataTypes.h"
 
 struct RvGuiPipeline
 {

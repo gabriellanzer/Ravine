@@ -4,7 +4,6 @@
 #include <eastl/chrono.h>
 
 //GLFW Include
-#include <glfw\glfw3.h>
 
 class RvTime
 {

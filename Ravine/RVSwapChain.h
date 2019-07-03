@@ -4,7 +4,6 @@
 //EASTL Includes
 #include <eastl/vector.h>
 using eastl::vector;
-#include "EASTL_new.h"
 
 //Vulkan Includes
 #include <vulkan/vulkan.h>

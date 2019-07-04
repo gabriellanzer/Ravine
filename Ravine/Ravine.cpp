@@ -87,7 +87,7 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, true, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
 
 	stbi_set_flip_vertically_on_load(true);
 }
@@ -588,7 +588,7 @@ bool Ravine::loadScene(const string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath.c_str(), aiProcess_CalcTangentSpace | \
-		aiProcess_GenSmoothNormals | \
+		aiProcess_GenNormals | \
 		aiProcess_JoinIdenticalVertices | \
 		aiProcess_ImproveCacheLocality | \
 		aiProcess_LimitBoneWeights | \
@@ -636,11 +636,11 @@ bool Ravine::loadScene(const string& filePath)
 		const aiVector3D* uvs = mesh->mTextureCoords[0];
 		bool hasColors = mesh->HasVertexColors(0);
 		const aiColor4D* cols = mesh->mColors[0];
-
+		bool hasNormals = mesh->HasNormals();
 		const aiVector3D* norms = &mesh->mNormals[0];
 
 		//Treat each case for optimal performance
-		if (hasCoords && hasColors)
+		if (hasCoords && hasColors && hasNormals)
 		{
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
@@ -652,6 +652,40 @@ bool Ravine::loadScene(const string& filePath)
 
 				//Vertex colors
 				meshes[i].vertices[j].color = { cols[j].r, cols[j].g, cols[j].b };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+			}
+		}
+		else if (hasCoords && hasNormals)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+			}
+		}
+		else if (hasNormals)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { 0, 0 };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
 				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
@@ -671,7 +705,7 @@ bool Ravine::loadScene(const string& filePath)
 				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
-				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+				meshes[i].vertices[j].normal = { 0, 0, 0 };
 			}
 		}
 		else
@@ -688,7 +722,7 @@ bool Ravine::loadScene(const string& filePath)
 				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
-				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+				meshes[i].vertices[j].normal = { 0, 0, 0 };
 			}
 		}
 
@@ -1171,7 +1205,7 @@ void Ravine::mainLoop() {
 	while (!glfwWindowShouldClose(*window)) {
 		RvTime::update();
 
-		fpsTitle = "Ravine - Milliseconds " + eastl::to_string(RvTime::deltaTime() * 1000.0);
+		fpsTitle = "Ravine - FPS " + eastl::to_string(1.0/RvTime::deltaTime());
 		glfwSetWindowTitle(*window, fpsTitle.c_str());
 
 		glfwPollEvents();
@@ -1180,6 +1214,26 @@ void Ravine::mainLoop() {
 	}
 
 	vkDeviceWaitIdle(device->handle);
+}
+
+static void DrawTestWindow()
+{
+	static bool showPipelinesMenu = false;
+	ImGui::BeginMainMenuBar();
+	if(ImGui::MenuItem("Pipelines Menu", 0, false, !showPipelinesMenu))
+	{
+		showPipelinesMenu = !showPipelinesMenu;
+	}
+	ImGui::EndMainMenuBar();
+
+	if(showPipelinesMenu)
+	{
+		if(ImGui::Begin("Pipelines Menu", &showPipelinesMenu, ImGuiWindowFlags_NoCollapse))
+		{
+			ImGui::End();
+		}
+	}
+
 }
 
 void Ravine::drawFrame()
@@ -1216,8 +1270,9 @@ void Ravine::drawFrame()
 	gui->acquireFrame();
 	//DRAW THE GUI HERE
 
-	ImGui::ShowDemoWindow();
-
+	//ImGui::ShowDemoWindow();
+	DrawTestWindow();
+	
 	//BUT NOT AFTER HERE
 	gui->submitFrame();
 

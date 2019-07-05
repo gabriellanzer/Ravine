@@ -49,8 +49,8 @@ struct RvGui
 
 	//Buffer Attributes
 	VkPushConstantRange pushConstantRange;
-	vector<RvPersistentBuffer> vertexBuffer;
-	vector<RvPersistentBuffer> indexBuffer;
+	vector<RvDynamicBuffer> vertexBuffer;
+	vector<RvDynamicBuffer> indexBuffer;
 
 	//The GUI CommandBuffers for each frame
 	vector<VkCommandBuffer> cmdBuffers;

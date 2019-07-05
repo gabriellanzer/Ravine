@@ -1674,7 +1674,7 @@ void Ravine::cleanup()
 	delete device;
 
 #ifdef VALIDATION_LAYERS_ENABLED
-	rvDebug::DestroyDebugReportCallbackEXT(instance, rvDebug::callback, nullptr);
+	rvDebug::destroyDebugReportCallbackExt(instance, rvDebug::callback, nullptr);
 #endif
 
 	//Destroy VK surface and instance

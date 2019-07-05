@@ -60,6 +60,8 @@ namespace rvTools
 
 	void copyBuffer(RvDevice& device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+	void copyToMemory(RvDevice& device, char* data, const VkDeviceMemory dstMemory, const VkDeviceSize size);
+
 	VkShaderModule createShaderModule(VkDevice device, const vector<char>& code);
 
 };

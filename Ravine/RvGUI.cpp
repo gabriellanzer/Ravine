@@ -320,12 +320,8 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 	lastVtxCrc[frameIndex] = vtxCrc;
 
 #pragma region Vertex Buffer
-	//Cleanup from old buffer
-	vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
-	vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
-	vertexBuffer[frameIndex].~RvPersistentBuffer();
 
-	//Allocate new one
+	//Allocate new CPU Vertex Buffer
 	ImDrawVert* vtxRsc = new ImDrawVert[imDrawData->TotalVtxCount];
 	ImDrawVert* vtxItt = vtxRsc;
 	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
@@ -334,20 +330,26 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 		vtxItt += cmd_list->VtxBuffer.Size;
 	}
 
-	//Create buffer on GPU
-	vertexBuffer[frameIndex] = device->createPersistentBuffer(vtxRsc, vertexBufferSize, sizeof(ImDrawVert),
-		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	//Recreate Buffers if allocated size is not enough
+	if(vertexBuffer[frameIndex].bufferSize < vertexBufferSize)
+	{
+		//Cleanup from old buffer
+		vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
+		vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
+
+		//Create buffer on GPU
+		vertexBuffer[frameIndex] = device->createDynamicBuffer(vertexBufferSize,
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+
+	//Copy data to buffers
+	rvTools::copyToMemory(*device, reinterpret_cast<char*>(vtxRsc), vertexBuffer[frameIndex].memory, vertexBufferSize);
 
 	//Free-up memory
 	delete[] vtxRsc;
 #pragma endregion
 
 #pragma region Index Buffer
-	//Cleanup from old buffer
-	vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
-	vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
-	indexBuffer[frameIndex].~RvPersistentBuffer();
-
 	//Allocate new one
 	ImDrawIdx* idxRsc = new ImDrawIdx[imDrawData->TotalIdxCount];
 	ImDrawIdx* idxItt = idxRsc;
@@ -357,9 +359,20 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 		idxItt += cmd_list->IdxBuffer.Size;
 	}
 
-	//Create buffer on GPU
-	indexBuffer[frameIndex] = device->createPersistentBuffer(idxRsc, indexBufferSize, sizeof(ImDrawIdx),
-		static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	//Recreate Buffers if allocated size is not enough
+	if(indexBuffer[frameIndex].bufferSize < indexBufferSize)
+	{
+		//Cleanup from old buffer
+		vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
+		vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
+
+		//Create buffer on GPU
+		indexBuffer[frameIndex] = device->createDynamicBuffer(indexBufferSize,
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+	
+	//Copy data to buffers
+	rvTools::copyToMemory(*device, reinterpret_cast<char*>(idxRsc), indexBuffer[frameIndex].memory, indexBufferSize);
 
 	//Free-up memory
 	delete[] idxRsc;

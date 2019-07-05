@@ -218,6 +218,9 @@ private:
 	//Main application loop
 	void mainLoop();
 
+	//Gui Calls
+	void showMenuBar();
+
 	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();
 

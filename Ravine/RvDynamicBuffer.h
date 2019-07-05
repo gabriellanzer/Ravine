@@ -9,8 +9,8 @@ struct RvDynamicBuffer
 	RvDynamicBuffer();
 	~RvDynamicBuffer();
 
-	VkBuffer buffer;
-	VkDeviceMemory memory;
+	VkBuffer handle = VK_NULL_HANDLE;
+	VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
 #endif

@@ -1,10 +1,20 @@
 #include "RvRenderPass.h"
 
+void RvRenderPass::createFramebuffers(const vector<VkImage>& swapChainImages)
+{
+
+}
+
 RvRenderPass::RvRenderPass()
 = default;
 
 RvRenderPass::~RvRenderPass()
 = default;
+
+void RvRenderPass::addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo)
+{
+
+}
 
 RvSubpass::RvSubpass() : description(), dependency()
 {

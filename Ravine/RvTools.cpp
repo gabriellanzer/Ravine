@@ -83,10 +83,10 @@ namespace rvTools {
 		transitionImageLayout(*device, texture.handle, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 
 		//Transfering buffer data to image object
-		copyBufferToImage(device, stagingBuffer.buffer, texture.handle, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+		copyBufferToImage(device, stagingBuffer.handle, texture.handle, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
 		//Clearing staging buffer
-		vkDestroyBuffer(device->handle, stagingBuffer.buffer, nullptr);
+		vkDestroyBuffer(device->handle, stagingBuffer.handle, nullptr);
 		vkFreeMemory(device->handle, stagingBuffer.memory, nullptr);
 
 		//Transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps

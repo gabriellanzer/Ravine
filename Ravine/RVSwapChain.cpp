@@ -131,7 +131,12 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 	}
 }
 
-void RvSwapChain::Clear()
+RvSwapChain::operator VkSwapchainKHR_T*() const
+{
+	return handle;
+}
+
+void RvSwapChain::clear()
 {
 	//Destroy attachments
 	for (size_t i = 0; i < framebufferAttachments.size(); i++)
@@ -152,10 +157,10 @@ void RvSwapChain::Clear()
 	}
 	vkDestroySwapchainKHR(device->handle, handle, nullptr);
 
-	DestroySyncObjects();
+	destroySyncObjects();
 }
 
-void RvSwapChain::CreateImageViews()
+void RvSwapChain::createImageViews()
 {
 	//Match the size
 	imageViews.resize(images.size());
@@ -165,7 +170,7 @@ void RvSwapChain::CreateImageViews()
 	}
 }
 
-void RvSwapChain::CreateRenderPass()
+void RvSwapChain::createRenderPass()
 {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
 
@@ -266,7 +271,7 @@ void RvSwapChain::CreateRenderPass()
 	}
 }
 
-void RvSwapChain::AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo)
+void RvSwapChain::addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo)
 {
 	RvFramebufferAttachment newAttachment = {};
 	device->createImage(
@@ -283,7 +288,7 @@ void RvSwapChain::AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo cre
 	framebufferAttachments.push_back(newAttachment);
 }
 
-void RvSwapChain::CreateFramebuffers()
+void RvSwapChain::createFramebuffers()
 {
 	//Create a framebuffer for each image view in the swapchain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Framebuffers
@@ -316,7 +321,7 @@ void RvSwapChain::CreateFramebuffers()
 	}
 }
 
-void RvSwapChain::CreateSyncObjects()
+void RvSwapChain::createSyncObjects()
 {
 	imageAvailableSemaphores.resize(RV_MAX_FRAMES_IN_FLIGHT);
 	renderFinishedSemaphores.resize(RV_MAX_FRAMES_IN_FLIGHT);
@@ -340,7 +345,7 @@ void RvSwapChain::CreateSyncObjects()
 	}
 }
 
-void RvSwapChain::DestroySyncObjects()
+void RvSwapChain::destroySyncObjects()
 {
 	for (size_t i = 0; i < RV_MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(device->handle, renderFinishedSemaphores[i], nullptr);
@@ -349,7 +354,7 @@ void RvSwapChain::DestroySyncObjects()
 	}
 }
 
-bool RvSwapChain::AcquireNextFrame(uint32_t& frameIndex)
+bool RvSwapChain::acquireNextFrame(uint32_t& frameIndex)
 {
 	//Wait for in-flight fences
 	vkWaitForFences(device->handle, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
@@ -368,7 +373,7 @@ bool RvSwapChain::AcquireNextFrame(uint32_t& frameIndex)
 	return true;
 }
 
-bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex)
+bool RvSwapChain::submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex)
 {
 	//Submitting the command queue
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Submitting_the_command_buffer

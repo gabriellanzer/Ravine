@@ -60,19 +60,19 @@ public:
 	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
 	~RvSwapChain();
 
-	void Clear();
+	void clear();
 
-	void CreateImageViews();
-	void CreateRenderPass();
-	void AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
-	void CreateFramebuffers();
+	void createImageViews();
+	void createRenderPass();
+	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	void createFramebuffers();
 
-	void CreateSyncObjects();
+	void createSyncObjects();
 
-	void DestroySyncObjects();
+	void destroySyncObjects();
 
-	bool AcquireNextFrame(uint32_t& frameIndex);
-	bool SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
+	bool acquireNextFrame(uint32_t& frameIndex);
+	bool submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
 
 
 	VkSurfaceFormatKHR chooseSurfaceFormat(const vector<VkSurfaceFormatKHR>& availableFormats);
@@ -81,10 +81,7 @@ public:
 
 	VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-	operator VkSwapchainKHR()
-	{
-		return handle;
-	}
+	explicit operator VkSwapchainKHR() const;
 };
 
 struct SwapChainSupportDetails

@@ -87,7 +87,7 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, true, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
 
 	stbi_set_flip_vertically_on_load(true);
 }
@@ -113,8 +113,8 @@ void Ravine::initVulkan() {
 
 	//Rendering pipeline
 	swapChain = new RvSwapChain(*device, window->surface, window->extent.width, window->extent.height, NULL);
-	swapChain->CreateImageViews();
-	swapChain->CreateRenderPass();
+	swapChain->createImageViews();
+	swapChain->createRenderPass();
 	createDescriptorSetLayout();
 
 	//Shaders Loading
@@ -144,7 +144,7 @@ void Ravine::initVulkan() {
 
 	createMultiSamplingResources();
 	createDepthResources();
-	swapChain->CreateFramebuffers();
+	swapChain->createFramebuffers();
 	loadTextureImages();
 	createTextureSampler();
 	createVertexBuffer();
@@ -153,7 +153,7 @@ void Ravine::initVulkan() {
 	createDescriptorPool();
 	createDescriptorSets();
 	allocateCommandBuffers();
-	swapChain->CreateSyncObjects();
+	swapChain->createSyncObjects();
 
 	//GUI Management
 	gui = new RvGui(*device, *swapChain, *window);
@@ -312,9 +312,9 @@ void Ravine::recreateSwapChain() {
 	//Storing handle
 	RvSwapChain* oldSwapchain = swapChain;
 	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
-	swapChain->CreateSyncObjects();
-	swapChain->CreateImageViews();
-	swapChain->CreateRenderPass();
+	swapChain->createSyncObjects();
+	swapChain->createImageViews();
+	swapChain->createRenderPass();
 
 	VkDescriptorSetLayout* descriptorSetLayouts = new VkDescriptorSetLayout[3]
 	{
@@ -325,14 +325,14 @@ void Ravine::recreateSwapChain() {
 
 	createMultiSamplingResources();
 	createDepthResources();
-	swapChain->CreateFramebuffers();
+	swapChain->createFramebuffers();
 	allocateCommandBuffers();
 	RvGui* oldGui = gui;
 	gui = new RvGui(*device, *swapChain, *window);
 	gui->init(device->getMaxUsableSampleCount());
 	delete oldGui;
 	//Deleting old swapchain
-	oldSwapchain->Clear();
+	oldSwapchain->clear();
 	delete oldSwapchain;
 }
 
@@ -399,7 +399,7 @@ void Ravine::createDescriptorSets()
 	for (size_t i = 0; i < framesCount; i++)
 	{
 		VkDescriptorBufferInfo globalUniformsInfo = {};
-		globalUniformsInfo.buffer = uniformBuffers[i].buffer;
+		globalUniformsInfo.buffer = uniformBuffers[i].handle;
 		globalUniformsInfo.offset = 0;
 		globalUniformsInfo.range = sizeof(RvUniformBufferObject);
 
@@ -430,7 +430,7 @@ void Ravine::createDescriptorSets()
 
 			//Materials Uniform Buffer Info
 			materialsInfo[meshId] = {};
-			materialsInfo[meshId].buffer = materialsBuffers[i].buffer;
+			materialsInfo[meshId].buffer = materialsBuffers[i].handle;
 			materialsInfo[meshId].offset = 0;
 			materialsInfo[meshId].range = sizeof(RvMaterialBufferObject);
 
@@ -460,7 +460,7 @@ void Ravine::createDescriptorSets()
 
 			//Models Uniform Buffer Info
 			modelsInfo[meshId] = {};
-			modelsInfo[meshId].buffer = modelsBuffers[i * meshesCount + meshId].buffer;
+			modelsInfo[meshId].buffer = modelsBuffers[i * meshesCount + meshId].handle;
 			modelsInfo[meshId].offset = 0;
 			modelsInfo[meshId].range = sizeof(RvModelBufferObject);
 
@@ -474,7 +474,7 @@ void Ravine::createDescriptorSets()
 
 			//Animations Uniform Buffer Info
 			animationsInfo[meshId] = {};
-			animationsInfo[meshId].buffer = animationsBuffers[i * meshesCount + meshId].buffer;
+			animationsInfo[meshId].buffer = animationsBuffers[i * meshesCount + meshId].handle;
 			animationsInfo[meshId].offset = 0;
 			animationsInfo[meshId].range = sizeof(RvBoneBufferObject);
 
@@ -1003,7 +1003,7 @@ void Ravine::createDepthResources()
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	createInfo.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	swapChain->AddFramebufferAttachment(createInfo);
+	swapChain->addFramebufferAttachment(createInfo);
 }
 
 void Ravine::createMultiSamplingResources()
@@ -1021,7 +1021,7 @@ void Ravine::createMultiSamplingResources()
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	createInfo.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	swapChain->AddFramebufferAttachment(createInfo);
+	swapChain->addFramebufferAttachment(createInfo);
 }
 
 void Ravine::allocateCommandBuffers() {
@@ -1171,7 +1171,7 @@ void Ravine::mainLoop() {
 	while (!glfwWindowShouldClose(*window)) {
 		RvTime::update();
 
-		fpsTitle = "Ravine - Milliseconds " + eastl::to_string(RvTime::deltaTime() * 1000.0);
+		fpsTitle = "Ravine 1.0a - FPS " + eastl::to_string(RvTime::framesPerSecond());
 		glfwSetWindowTitle(*window, fpsTitle.c_str());
 
 		glfwPollEvents();
@@ -1180,6 +1180,35 @@ void Ravine::mainLoop() {
 	}
 
 	vkDeviceWaitIdle(device->handle);
+}
+
+void Ravine::showMenuBar()
+{
+	ImGui::BeginMainMenuBar();
+
+	ImGui::Text("Ravine 0.1a");
+	ImGui::Separator();
+	//ImGui::Text(("FPS " + eastl::to_string(RvTime::framesPerSecond())).c_str());
+	//ImGui::Separator();
+
+	static bool test = false;
+	if (ImGui::MenuItem("Graphics Pipeline", 0, false, !test))
+	{
+		test = !test;
+	}
+
+	ImGui::EndMainMenuBar();
+
+	if (test)
+	{
+		if (ImGui::Begin("Graphics Pipeline", &test))
+		{
+
+			ImGui::End();
+		}
+	}
+
+
 }
 
 void Ravine::drawFrame()
@@ -1200,7 +1229,7 @@ void Ravine::drawFrame()
 		window->framebufferResized = false;
 	}
 	uint32_t frameIndex;
-	if (!swapChain->AcquireNextFrame(frameIndex)) {
+	if (!swapChain->acquireNextFrame(frameIndex)) {
 		recreateSwapChain();
 	}
 
@@ -1216,7 +1245,7 @@ void Ravine::drawFrame()
 	gui->acquireFrame();
 	//DRAW THE GUI HERE
 
-	ImGui::ShowDemoWindow();
+	showMenuBar();
 
 	//BUT NOT AFTER HERE
 	gui->submitFrame();
@@ -1230,7 +1259,7 @@ void Ravine::drawFrame()
 	//Make sure to record all new Commands
 	recordCommandBuffers(frameIndex);
 
-	if (!swapChain->SubmitNextFrame(primaryCmdBuffers.data(), frameIndex)) {
+	if (!swapChain->submitNextFrame(primaryCmdBuffers.data(), frameIndex)) {
 		recreateSwapChain();
 	}
 }
@@ -1435,7 +1464,7 @@ void Ravine::cleanupSwapChain() {
 	vkDestroyPipelineLayout(device->handle, staticLineGraphicsPipeline->layout, nullptr);
 
 	//Destroy swap chain and all it's images
-	swapChain->Clear();
+	swapChain->clear();
 	delete swapChain;
 }
 
@@ -1464,25 +1493,25 @@ void Ravine::cleanup()
 
 	//Destroying uniforms buffers
 	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, uniformBuffers[i].buffer, nullptr);
+		vkDestroyBuffer(device->handle, uniformBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, uniformBuffers[i].memory, nullptr);
 	}
 
 	//Destroying materials buffers
 	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, materialsBuffers[i].buffer, nullptr);
+		vkDestroyBuffer(device->handle, materialsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, materialsBuffers[i].memory, nullptr);
 	}
 
 	//Destroying models buffers
 	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, modelsBuffers[i].buffer, nullptr);
+		vkDestroyBuffer(device->handle, modelsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, modelsBuffers[i].memory, nullptr);
 	}
 
 	//Destroying animations buffers
 	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, animationsBuffers[i].buffer, nullptr);
+		vkDestroyBuffer(device->handle, animationsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, animationsBuffers[i].memory, nullptr);
 	}
 

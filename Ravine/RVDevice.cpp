@@ -175,7 +175,7 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
 {
 	RvDynamicBuffer newBuffer;
-	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.buffer, newBuffer.memory);
+	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
 	return newBuffer;
 }
 
@@ -196,10 +196,10 @@ RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bu
 	createBuffer(bufferSize, usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
 
 	// Copying data to persistent buffer
-	rvTools::copyBuffer(*this, stagingBuffer.buffer, newBuffer.handle, bufferSize);
+	rvTools::copyBuffer(*this, stagingBuffer.handle, newBuffer.handle, bufferSize);
 
 	//Clearing staging buffer
-	vkDestroyBuffer(handle, stagingBuffer.buffer, nullptr);
+	vkDestroyBuffer(handle, stagingBuffer.handle, nullptr);
 	vkFreeMemory(handle, stagingBuffer.memory, nullptr);
 
 	return newBuffer;

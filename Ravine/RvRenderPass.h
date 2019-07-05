@@ -32,7 +32,7 @@ private:
 	vector<RvFramebufferAttachment> framebufferAttachments;
 
 	//Proper creation of framebuffers for each of the SwapChain images
-	void CreateFramebuffers(const vector<VkImage>& swapChainImages);
+	void createFramebuffers(const vector<VkImage>& swapChainImages);
 
 public:
 
@@ -43,14 +43,14 @@ public:
 	//this call also constructs the framebuffers attached to this RenderPass in
 	//such a way that they are replicated accordingly to inflight frames defined
 	//by the swapchain
-	void Construct(const RvDevice& device, const RvSwapChain& swapchain);
+	void construct(const RvDevice& device, const RvSwapChain& swapchain);
 
 	//Attaches a Subpass into this RenderPass
-	void AttachSubpass(RvSubpass subpass);
+	void attachSubpass(RvSubpass subpass);
 
 	//Creates a framebuffer attachment that will be added into each framebuffer
 	//once the RenderPass actually gets created
-	void AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
 
 };
 

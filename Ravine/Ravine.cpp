@@ -87,7 +87,7 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, true, framebufferResizeCallback);
 
 	stbi_set_flip_vertically_on_load(true);
 }
@@ -588,7 +588,7 @@ bool Ravine::loadScene(const string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath.c_str(), aiProcess_CalcTangentSpace | \
-		aiProcess_GenSmoothNormals | \
+		aiProcess_GenNormals | \
 		aiProcess_JoinIdenticalVertices | \
 		aiProcess_ImproveCacheLocality | \
 		aiProcess_LimitBoneWeights | \
@@ -636,11 +636,11 @@ bool Ravine::loadScene(const string& filePath)
 		const aiVector3D* uvs = mesh->mTextureCoords[0];
 		bool hasColors = mesh->HasVertexColors(0);
 		const aiColor4D* cols = mesh->mColors[0];
-
+		bool hasNormals = mesh->HasNormals();
 		const aiVector3D* norms = &mesh->mNormals[0];
 
 		//Treat each case for optimal performance
-		if (hasCoords && hasColors)
+		if (hasCoords && hasColors && hasNormals)
 		{
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
@@ -652,6 +652,40 @@ bool Ravine::loadScene(const string& filePath)
 
 				//Vertex colors
 				meshes[i].vertices[j].color = { cols[j].r, cols[j].g, cols[j].b };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+			}
+		}
+		else if (hasCoords && hasNormals)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+			}
+		}
+		else if (hasNormals)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { 0, 0 };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
 				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
@@ -671,7 +705,7 @@ bool Ravine::loadScene(const string& filePath)
 				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
-				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+				meshes[i].vertices[j].normal = { 0, 0, 0 };
 			}
 		}
 		else
@@ -688,7 +722,7 @@ bool Ravine::loadScene(const string& filePath)
 				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
-				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+				meshes[i].vertices[j].normal = { 0, 0, 0 };
 			}
 		}
 
@@ -1075,40 +1109,107 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	//Basic Drawing Commands
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+	const size_t setsPerFrame = 1 + (meshesCount * 2);
+	const VkDeviceSize offsets[] = { 0 };
 
-	//Global, Material and Model Descriptor Sets
-	size_t setsPerFrame = 1 + (meshesCount * 2);
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
-
-	//Set Vertex Buffer for drawing
-	VkDeviceSize offsets[] = { 0 };
-
-	//Call drawing
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	if (staticSolidPipelineEnabled)
 	{
-		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
 
-		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
 	}
 
-	//Perform the same with wireframe rendering
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
-
-	//Global, Material and Model Descriptor Sets
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
-
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	if (staticWiredPipelineEnabled)
 	{
-		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
 
-		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
+	}
+
+	if (skinnedSolidPipelineEnabled)
+	{
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
+	}
+
+
+	if (skinnedSolidPipelineEnabled)
+	{
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
+	}
+
+	if (skinnedWiredPipelineEnabled)
+	{
+		//Perform the same with wireframe rendering
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
 	}
 
 	//Stop recording Command Buffer
@@ -1171,8 +1272,7 @@ void Ravine::mainLoop() {
 	while (!glfwWindowShouldClose(*window)) {
 		RvTime::update();
 
-		fpsTitle = "Ravine 1.0a - FPS " + eastl::to_string(RvTime::framesPerSecond());
-		glfwSetWindowTitle(*window, fpsTitle.c_str());
+		glfwSetWindowTitle(*window, "Ravine 1.0a");
 
 		glfwPollEvents();
 
@@ -1182,33 +1282,58 @@ void Ravine::mainLoop() {
 	vkDeviceWaitIdle(device->handle);
 }
 
-void Ravine::showMenuBar()
+void Ravine::drawGuiElements()
 {
+	static bool showPipelinesMenu = false;
 	ImGui::BeginMainMenuBar();
-
-	ImGui::Text("Ravine 0.1a");
+	ImGui::TextUnformatted("Ravine Vulkan Prototype - Version 0.1a");
 	ImGui::Separator();
-	//ImGui::Text(("FPS " + eastl::to_string(RvTime::framesPerSecond())).c_str());
-	//ImGui::Separator();
 
-	static bool test = false;
-	if (ImGui::MenuItem("Graphics Pipeline", 0, false, !test))
+	if (ImGui::MenuItem("Configurations Menu", 0, false, !showPipelinesMenu))
 	{
-		test = !test;
+		showPipelinesMenu = !showPipelinesMenu;
 	}
+	ImGui::Separator();
 
+	static double lastUpdateTime = 0;
+	lastUpdateTime += RvTime::deltaTime();
+	static string lastFps = "0";
+	if (lastUpdateTime > 0.1)
+	{
+		lastUpdateTime = 0;
+		lastFps = "FPS - " + eastl::to_string(RvTime::framesPerSecond());
+	}
+	ImGui::TextUnformatted(lastFps.c_str());
+	if (ImGui::MenuItem("Exit Ravine", 0, false))
+	{
+		glfwSetWindowShouldClose(*window, true);
+	}
 	ImGui::EndMainMenuBar();
 
-	if (test)
+	if (showPipelinesMenu)
 	{
-		if (ImGui::Begin("Graphics Pipeline", &test))
+		if (ImGui::Begin("Configurations Menu", &showPipelinesMenu, { 400, 300 }, -1, ImGuiWindowFlags_NoCollapse))
 		{
+			ImGui::TextUnformatted("Graphics Pipelines");
+			{
+				ImGui::Checkbox("Skinned Opaque Pipeline", &skinnedSolidPipelineEnabled);
+				ImGui::Checkbox("Skinned Wireframe Pipeline", &skinnedWiredPipelineEnabled);
+				ImGui::Checkbox("Static Opaque Pipeline", &staticSolidPipelineEnabled);
+				ImGui::Checkbox("Static Wireframe Pipeline", &staticWiredPipelineEnabled);
+				ImGui::Separator();
+			}
+
+			ImGui::TextUnformatted("Uniforms");
+			{
+				ImGui::DragFloat3("Position", value_ptr(uniformPosition), 0.01f);
+				ImGui::DragFloat3("Scale", value_ptr(uniformScale), 0.001f, 0.00001f, 1000.0f);
+				ImGui::DragFloat3("Rotation", value_ptr(uniformRotation), 1.f, -180.f, 180.f);
+				ImGui::Separator();
+			}
 
 			ImGui::End();
 		}
 	}
-
-
 }
 
 void Ravine::drawFrame()
@@ -1238,14 +1363,11 @@ void Ravine::drawFrame()
 		boneTransform(RvTime::elapsedTime(), meshes[0].boneTransforms);
 	}
 
-	//Update the uniforms for the given frame
-	updateUniformBuffer(frameIndex);
-
 	//Start GUI recording
 	gui->acquireFrame();
 	//DRAW THE GUI HERE
 
-	showMenuBar();
+	drawGuiElements();
 
 	//BUT NOT AFTER HERE
 	gui->submitFrame();
@@ -1255,6 +1377,9 @@ void Ravine::drawFrame()
 
 	//Record GUI Draw Commands into CMD Buffers
 	gui->recordCmdBuffers(frameIndex);
+
+	//Update the uniforms for the given frame
+	updateUniformBuffer(frameIndex);
 
 	//Make sure to record all new Commands
 	recordCommandBuffers(frameIndex);
@@ -1292,16 +1417,25 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 	glfwGetCursorPos(*window, &mouseX, &mouseY);
 	glm::quat lookRot = glm::vec3(0, 0, 0);
+	glm::vec4 translation = glm::vec4(0);
 
-	if (glfwGetKey(*window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+	bool imGuiHasKeyCtx = ImGui::GetIO().WantCaptureKeyboard;
+	static bool shiftDown = false;
+	if ((glfwGetKey(*window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) && !imGuiHasKeyCtx)
 	{
+		if (!shiftDown)
+		{
+			shiftDown = true;
+			glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+
 		//Delta Mouse Positions
 		double deltaX = mouseX - lastMouseX;
 		double deltaY = mouseY - lastMouseY;
 
 		//Calculate look rotation update
-		camera->horRot -= deltaX * 30.0 * RvTime::deltaTime();
-		camera->verRot -= deltaY * 30.0 * RvTime::deltaTime();
+		camera->horRot -= deltaX * 16.0 * RvTime::deltaTime();
+		camera->verRot -= deltaY * 16.0 * RvTime::deltaTime();
 
 		//Limit vertical angle
 		camera->verRot = F_MAX(F_MIN(89.9, camera->verRot), -89.9);
@@ -1309,36 +1443,35 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		//Define rotation quaternion starting form look rotation
 		lookRot = glm::rotate(lookRot, glm::radians(camera->horRot), glm::vec3(0, 1, 0));
 		lookRot = glm::rotate(lookRot, glm::radians(camera->verRot), glm::vec3(1, 0, 0));
+
+		//Calculate translation
+		if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
+			translation.z -= 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
+			translation.x -= 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
+			translation.z += 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
+			translation.x += 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+			translation.y -= 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
+			translation.y += 2.0 * RvTime::deltaTime();
+	}
+	else if (shiftDown)
+	{
+		shiftDown = false;
+		glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
 	//Update Last Mouse coordinates
 	lastMouseX = mouseX;
 	lastMouseY = mouseY;
-
-	//Calculate translation
-	glm::vec4 translation = glm::vec4(0);
-	if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
-		translation.z -= 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
-		translation.x -= 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
-		translation.z += 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
-		translation.x += 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-		translation.y -= 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		translation.y += 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_R) == GLFW_PRESS) {
-		camera->horRot = 90.0f;
-		camera->verRot = 0.0f;
-	}
 
 	// ANIM INTERPOL
 	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS) {
@@ -1356,14 +1489,14 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		fmt::print(stdout, "{0}\n", animInterpolation);
 	}
 	// SWAP ANIMATIONS
-	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && keyUpPressed == false) {
+	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && !keyUpPressed) {
 		keyUpPressed = true;
 		meshes[0].curAnimId = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
 	}
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE) {
 		keyUpPressed = false;
 	}
-	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && keyDownPressed == false) {
+	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && !keyDownPressed) {
 		keyDownPressed = true;
 		meshes[0].curAnimId = (meshes[0].curAnimId - 1) % meshes[0].animations.size();
 	}
@@ -1371,13 +1504,9 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		keyDownPressed = false;
 	}
 
-	if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(*window, true);
-
 	camera->Translate(lookRot * translation);
 
 #pragma endregion
-
 
 #pragma region Global Uniforms
 	RvUniformBufferObject ubo = {};
@@ -1418,9 +1547,12 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 #pragma region Models
 		RvModelBufferObject modelsUbo = {};
 
-		//Rotating object 90 degrees per second
-		//modelsUbo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		modelsUbo.model = glm::scale(modelsUbo.model, glm::vec3(0.01f, 0.01f, 0.01f));
+		//Model matrix updates
+		modelsUbo.model = glm::translate(glm::mat4(1.0f), uniformPosition);
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		modelsUbo.model = glm::scale(modelsUbo.model, uniformScale);
 
 		//Transfering model data to gpu buffer
 		void* modelData;

@@ -93,6 +93,16 @@ private:
 	//GUI
 	RvGui* gui;
 
+	//PROTOTYPE PRESENTATION STUFF
+	bool staticSolidPipelineEnabled = false;
+	bool staticWiredPipelineEnabled = false;
+	bool skinnedSolidPipelineEnabled = true;
+	bool skinnedWiredPipelineEnabled = false;
+	glm::vec3 uniformPosition = glm::vec3(0);
+	glm::vec3 uniformScale = glm::vec3(0.01f, 0.01f, 0.01f);
+	glm::vec3 uniformRotation = glm::vec3(0, 0, 0);
+	//PROTOTYPE PRESENTATION STUFF
+
 	const aiScene* scene;
 	//Todo: Move to MESH
 	RvSkinnedMeshColored* meshes;
@@ -219,7 +229,7 @@ private:
 	void mainLoop();
 
 	//Gui Calls
-	void showMenuBar();
+	void drawGuiElements();
 
 	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();

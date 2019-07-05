@@ -129,6 +129,9 @@
     <ClCompile Include="RvRenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="imgui_impl_glfw.cpp">
+      <Filter>Header Files\ImGUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleFileLibraries\stb_image.h">
@@ -226,6 +229,9 @@
     </ClInclude>
     <ClInclude Include="RvRenderPass.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

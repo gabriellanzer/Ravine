@@ -9,6 +9,8 @@
 //GLFW Includes
 #include <glfw/glfw3.h>
 
+#include "imgui_impl_glfw.h"
+
 RvGui::RvGui(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window), swapChainImagesCount(swapChain.images.size())
 {
 	ImGui::CreateContext();
@@ -48,10 +50,14 @@ RvGui::~RvGui()
 	window = nullptr;
 	io = nullptr;
 	guiPipeline = nullptr;
+
+	ImGui_ImplGlfw_Shutdown();
 }
 
 void RvGui::init(VkSampleCountFlagBits samplesCount)
 {
+	ImGui_ImplGlfw_InitForVulkan(*window, true);
+
 	//Color scheme
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
@@ -95,14 +101,16 @@ void RvGui::init(VkSampleCountFlagBits samplesCount)
 
 void RvGui::acquireFrame()
 {
-	double mouseX, mouseY;
-	glfwGetCursorPos(*window, &mouseX, &mouseY);
-	io->DisplaySize = ImVec2((float)swapChain->WIDTH, (float)swapChain->HEIGHT);
-	io->DeltaTime = RvTime::deltaTime();
+	ImGui_ImplGlfw_NewFrame();
 
-	io->MousePos = ImVec2(mouseX, mouseY);
-	io->MouseDown[0] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_LEFT);
-	io->MouseDown[1] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_RIGHT);
+	//double mouseX, mouseY;
+	//glfwGetCursorPos(*window, &mouseX, &mouseY);
+	//io->DisplaySize = ImVec2((float)swapChain->WIDTH, (float)swapChain->HEIGHT);
+	//io->DeltaTime = RvTime::deltaTime();
+
+	//io->MousePos = ImVec2(mouseX, mouseY);
+	//io->MouseDown[0] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_LEFT);
+	//io->MouseDown[1] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_RIGHT);
 
 	ImGui::NewFrame();
 }

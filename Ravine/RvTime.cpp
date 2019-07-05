@@ -1,5 +1,8 @@
 #include "RvTime.h"
 
+//ImGui Includes
+#include "imgui.h"
+
 eastl::chrono::high_resolution_clock::time_point RvTime::startTime;
 eastl::chrono::high_resolution_clock::time_point RvTime::lastFrameTime;
 eastl::chrono::high_resolution_clock::time_point RvTime::currentFrameTime;
@@ -30,7 +33,7 @@ void RvTime::update()
 	{
 		totalTime += time * 0.01;
 	}
-	internalFps = static_cast<int>(1.0/totalTime);
+	internalFps = static_cast<int>(1.0 / totalTime);
 }
 
 double RvTime::elapsedTime()
@@ -48,9 +51,6 @@ int RvTime::framesPerSecond()
 	return internalFps;
 }
 
-RvTime::RvTime()
-= default;
+RvTime::RvTime() = default;
 
-
-RvTime::~RvTime()
-= default;
+RvTime::~RvTime() = default;

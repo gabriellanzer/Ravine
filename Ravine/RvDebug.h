@@ -21,7 +21,7 @@ namespace rvDebug
 	//Create DebugReport callback handler and check validation layer support
 	void setupDebugCallback(VkInstance instance);
 
-	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+	void destroyDebugReportCallbackExt(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 };
 
 #endif

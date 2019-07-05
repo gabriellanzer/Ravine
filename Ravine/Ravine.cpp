@@ -12,7 +12,7 @@
 
 //STB Includes
 #define STB_IMAGE_IMPLEMENTATION
-#include "SingleFileLibraries/stb_image.h"
+#include "stb_image.h"
 
 //Ravine Systems Includes
 #include "RvTime.h"
@@ -1670,7 +1670,7 @@ void Ravine::cleanup()
 	delete staticGraphicsPipeline;
 
 	//Destroy vulkan logical device and validation layer
-	device->Clear();
+	device->clear();
 	delete device;
 
 #ifdef VALIDATION_LAYERS_ENABLED

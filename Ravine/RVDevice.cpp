@@ -91,7 +91,8 @@ void RvDevice::createCommandPool()
 	}
 }
 
-void RvDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
+void RvDevice::createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
+                            VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
 	//Defining buffer creation info
 	VkBufferCreateInfo bufferCreateInfo = {};
@@ -122,7 +123,7 @@ void RvDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
 	vkBindBufferMemory(handle, buffer, bufferMemory, 0);
 }
 
-void RvDevice::Clear()
+void RvDevice::clear()
 {
 	//Destroy command pool actually destroys all CMD Buffers
 	vkDestroyCommandPool(handle, commandPool, nullptr);
@@ -172,14 +173,14 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 	vkBindImageMemory(handle, image, imageMemory, 0);
 }
 
-RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
+RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags)
 {
-	RvDynamicBuffer newBuffer;
-	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
+	RvDynamicBuffer newBuffer(bufferSize);
+	createBuffer(bufferSize, usageFlags, memoryPropertyFlags, newBuffer.handle, newBuffer.memory);
 	return newBuffer;
 }
 
-RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
+RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags)
 {
 	// Staging Buffer
 	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
@@ -193,7 +194,7 @@ RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bu
 
 	// Persistent buffer
 	RvPersistentBuffer newBuffer(bufferSize, sizeOfDataType);
-	createBuffer(bufferSize, usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
+	createBuffer(bufferSize, usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, memoryPropertyFlags, newBuffer.handle, newBuffer.memory);
 
 	// Copying data to persistent buffer
 	rvTools::copyBuffer(*this, stagingBuffer.handle, newBuffer.handle, bufferSize);

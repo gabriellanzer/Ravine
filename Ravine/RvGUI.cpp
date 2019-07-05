@@ -369,8 +369,6 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 
 void RvGui::recordCmdBuffers(uint32_t frameIndex)
 {
-	ImGuiIO& io = ImGui::GetIO();
-
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
@@ -394,14 +392,14 @@ void RvGui::recordCmdBuffers(uint32_t frameIndex)
 	vkCmdBindPipeline(cmdBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->handle);
 
 	VkViewport viewport = {};
-	viewport.width = io.DisplaySize.x;
-	viewport.height = io.DisplaySize.y;
+	viewport.width = io->DisplaySize.x;
+	viewport.height = io->DisplaySize.y;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(cmdBuffers[frameIndex], 0, 1, &viewport);
 
 	//UI scale and translate via push constants
-	pushConstBlock.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
+	pushConstBlock.scale = glm::vec2(2.0f / io->DisplaySize.x, 2.0f / io->DisplaySize.y);
 	pushConstBlock.translate = glm::vec2(-1.0f);
 	vkCmdPushConstants(cmdBuffers[frameIndex], guiPipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstBlock), &pushConstBlock);
 

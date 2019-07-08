@@ -1,30 +1,26 @@
 #ifndef RAVINE_H
 #define RAVINE_H
 
+//Vulkan Include
+#include "volk.h"
+
 //GLFW Includes
 #define GLFW_INCLUDE_VULKAN
 #include <glfw/glfw3.h>
 
 //EASTL includes
-#include <eastl/allocator.h>
 #include <eastl/vector.h>
 #include <eastl/array.h>
-#include <eastl/unordered_set.h>
-#include <eastl/map.h>
 #include <eastl/string.h>
 
 using eastl::string;
 using eastl::vector;
 using eastl::array;
 
-//Vulkan Include
-#include <vulkan/vulkan.h>
-
 //Types dependencies
 #include "RvDataTypes.h"
 
 //VK Wrappers
-#include "RvTools.h"
 #include "RvAnimationTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"

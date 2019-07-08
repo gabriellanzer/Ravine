@@ -2,7 +2,6 @@
 
 //EASTL Includes
 #include <eastl/chrono.h>
-#include <eastl/string.h>
 
 /**
  * \brief Class that handles high resolution time measurements.

@@ -2,14 +2,13 @@
 #define RAVINE_TOOLS_H
 
 //Vulkan Includes
-#include <vulkan\vulkan.h>
+#include "volk.h"
 
 //ShaderC Includes
 #include <shaderc/shaderc.h>
 
 //EASTL Includes
 #include <eastl/vector.h>
-#include <eastl/algorithm.h>
 #include <eastl/string.h>
 
 //Ravine Includes

@@ -11,7 +11,7 @@
 #include <eastl/string.h>
 
 //Vulkan Includes
-#include <vulkan/vulkan.h>
+#include "volk.h"
 
 //Assimp Includes
 #include <assimp/scene.h>

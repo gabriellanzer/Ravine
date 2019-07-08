@@ -2,7 +2,7 @@
 #define RV_GUI_H
 
 //Vulkan Includes
-#include <vulkan/vulkan.h>
+#include "volk.h"
 
 //EASTL Includes
 #include <eastl/vector.h>
@@ -14,9 +14,9 @@
 #include <glm/glm.hpp>
 
 //Ravine Includes
-#include "RVDevice.h"
+#include "RvDevice.h"
 #include "RvWindow.h"
-#include "RVSwapChain.h"
+#include "RvSwapChain.h"
 #include "RvTexture.h"
 #include "RvGUIPipeline.h"
 

@@ -165,6 +165,9 @@
     <ClCompile Include="EASTL_new.cpp">
       <Filter>Source Files\External</Filter>
     </ClCompile>
+    <ClCompile Include="volk.c">
+      <Filter>Source Files\External</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ravine.h">
@@ -271,6 +274,9 @@
     </ClInclude>
     <ClInclude Include="RvDynamicBuffer.h">
       <Filter>Header Files\Ravine System\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="volk.h">
+      <Filter>Header Files\External</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

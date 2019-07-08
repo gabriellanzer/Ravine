@@ -162,6 +162,12 @@ void Ravine::initVulkan() {
 
 void Ravine::createInstance() {
 
+	//Initialize Volk
+	if (volkInitialize() != VK_SUCCESS) {
+		throw std::runtime_error("Failed to initialize Volk!\
+			Ensure your driver is up to date and supports Vulkan!");
+	}
+
 	//Check validation layer support
 #ifdef VALIDATION_LAYERS_ENABLED
 	if (!rvCfg::checkValidationLayerSupport()) {
@@ -224,6 +230,9 @@ void Ravine::createInstance() {
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create instance!");
 	}
+
+	//Initialize Entry-points on Volk
+	volkLoadInstance(instance);
 }
 
 void Ravine::pickPhysicalDevice()
@@ -250,7 +259,7 @@ void Ravine::pickPhysicalDevice()
 	}
 }
 
-bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
+bool Ravine::isDeviceSuitable(const VkPhysicalDevice device) {
 
 	//Debug Physical Device Properties
 	VkPhysicalDeviceProperties deviceProperties;
@@ -280,7 +289,7 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	return isSuitable;
 }
 
-bool Ravine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool Ravine::checkDeviceExtensionSupport(const VkPhysicalDevice device) {
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 

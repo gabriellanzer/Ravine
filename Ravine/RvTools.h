@@ -16,7 +16,7 @@
 #include "RvDevice.h"
 #include "RvTexture.h"
 
-struct SwapChainSupportDetails;
+struct RvSwapChainSupportDetails;
 using eastl::string;
 using eastl::vector;
 
@@ -41,7 +41,8 @@ namespace rvTools
 		int presentFamily = -1;
 
 		//Is this struct complete to be used?
-		bool isComplete() {
+		bool isComplete() const
+		{
 			return graphicsFamily >= 0 && presentFamily >= 0;
 		}
 	};
@@ -49,7 +50,7 @@ namespace rvTools
 	//TODO: Move to Device
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
+	RvSwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 	vector<char> readFile(const string& filename);
 	
@@ -62,6 +63,8 @@ namespace rvTools
 	void copyToMemory(RvDevice& device, char* data, const VkDeviceMemory dstMemory, const VkDeviceSize size);
 
 	VkShaderModule createShaderModule(VkDevice device, const vector<char>& code);
+
+	RvFramebufferAttachment createFramebufferAttachment(const RvDevice& device, const RvFramebufferAttachmentCreateInfo& createInfo);
 
 };
 

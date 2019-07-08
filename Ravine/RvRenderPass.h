@@ -11,7 +11,6 @@ using eastl::vector;
 
 //Ravine Includes
 #include "RvDevice.h"
-#include "RvSwapChain.h"
 #include "RvFramebufferAttachment.h"
 
 //Forward declaration for Subpass usage
@@ -30,28 +29,51 @@ private:
 	//Framebuffers and their attachments
 	vector<VkFramebuffer> framebuffers;
 	vector<RvFramebufferAttachment> framebufferAttachments;
+	vector<RvFramebufferAttachment> sharedFramebufferAttachments;
+	vector<RvFramebufferAttachmentCreateInfo> framebufferAttachmentsCreateInfos;
+	vector<RvFramebufferAttachmentCreateInfo> sharedFramebufferAttachmentsCreateInfos;
 
-	//Proper creation of framebuffers for each of the SwapChain images
-	void createFramebuffers(const vector<VkImage>& swapChainImages);
+	//RvDevice reference
+	const RvDevice* device = nullptr;
 
 public:
 
 	RvRenderPass();
 	~RvRenderPass();
 
-	//Actually RenderPass construction on given device, based on SwapChain extent
-	//this call also constructs the framebuffers attached to this RenderPass in
-	//such a way that they are replicated accordingly to inflight frames defined
-	//by the swapchain
-	void construct(const RvDevice& device, const RvSwapChain& swapchain);
+	/**
+	 * \brief Actually RenderPass construction on given device for the number of desired frames.
+	 * \param device The device to create the VkFrameBuffers and VkRenderPass instances.
+	 * \param framesCount Amount of frames to be created based on RvFrameBufferAttachmentCreateInfo.
+	 * \param sizeAndLayers Size of the framebuffer (width and height) and amount of layers (depth).
+	 * \param swapchainImages Optional images array that will be appended to the VkFrameBufferAttachments
+	 * with their respective attaching per frame (array size must match framesCount).
+	 */
+	void construct(const RvDevice& device, const uint32_t framesCount, const VkExtent3D& sizeAndLayers, const VkImageView* swapchainImages = VK_NULL_HANDLE);
 
-	//Attaches a Subpass into this RenderPass
-	void attachSubpass(RvSubpass subpass);
+	/**
+	 * \brief 
+	 */
+	void clear();
+	
+	/**
+	 * \brief Attaches a Subpass into this RenderPass.
+	 * \param subpass 
+	 */
+	void attachSubpass(const RvSubpass& subpass);
 
-	//Creates a framebuffer attachment that will be added into each framebuffer
-	//once the RenderPass actually gets created
+	/**
+	 * \brief Creates a framebuffer attachment that will be added into each framebuffer
+	 * once the RenderPass actually gets created
+	 * \param createInfo 
+	 */
 	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
 
+	/**
+	 * \brief 
+	 * \param createInfo 
+	 */
+	void addSharedFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
 };
 
 struct RvSubpass

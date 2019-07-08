@@ -132,15 +132,15 @@ void RvDevice::clear()
 	vkDestroyDevice(handle, nullptr);
 }
 
-void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory)
+void RvDevice::createImage(VkExtent3D extent, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory) const
 {
 	//Defining image creation info
 	VkImageCreateInfo imageCreateInfo = {};
 	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageCreateInfo.extent.width = width;
-	imageCreateInfo.extent.height = height;
-	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.extent.width = extent.width;
+	imageCreateInfo.extent.height = extent.height;
+	imageCreateInfo.extent.depth = extent.depth;
 	imageCreateInfo.mipLevels = mipLevels;
 	imageCreateInfo.arrayLayers = 1;
 	imageCreateInfo.format = format;
@@ -211,7 +211,7 @@ RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height, VkF
 	return rvTools::createTexture(this, pixels, width, height, format);
 }
 
-uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
 {
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
 		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {

@@ -8,7 +8,6 @@ using eastl::array;
 //STD Includes
 #include <stdexcept>
 
-
 RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain) : renderPass()
 {
 	//TODO: Use new constructor thingy
@@ -18,7 +17,7 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	this->HEIGHT = HEIGHT;
 
 	//Check swap chain support
-	SwapChainSupportDetails swapChainSupport = rvTools::querySupport(device.physicalDevice, surface);
+	RvSwapChainSupportDetails swapChainSupport = rvTools::querySupport(device.physicalDevice, surface);
 
 	//Define swap chain setup data
 	VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
@@ -46,7 +45,10 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 
 	//Define queue sharing modes based on ids comparison
 	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(device.physicalDevice, surface);
-	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
+	uint32_t queueFamilyIndices[] = {
+		static_cast<uint32_t>(indices.graphicsFamily),
+		static_cast<uint32_t>(indices.presentFamily)
+	};
 
 	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -67,7 +69,7 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 
-	//TODO: Change that to create another swap chain when resize screen
+	//Pointer to old swapchain to enable speed-up things
 	createInfo.oldSwapchain = oldSwapChain;
 
 	//Create swap chain with given information
@@ -98,7 +100,7 @@ VkSurfaceFormatKHR RvSwapChain::chooseSurfaceFormat(const vector<VkSurfaceFormat
 	return availableFormats[0];
 }
 
-VkPresentModeKHR RvSwapChain::choosePresentMode(const vector<VkPresentModeKHR> availablePresentModes) {
+VkPresentModeKHR RvSwapChain::choosePresentMode(const vector<VkPresentModeKHR>& availablePresentModes) {
 
 	//FIFO v-sync might not be available on some drivers
 	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -131,7 +133,7 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 	}
 }
 
-RvSwapChain::operator VkSwapchainKHR_T*() const
+RvSwapChain::operator VkSwapchainKHR() const
 {
 	return handle;
 }
@@ -275,7 +277,7 @@ void RvSwapChain::addFramebufferAttachment(RvFramebufferAttachmentCreateInfo cre
 {
 	RvFramebufferAttachment newAttachment = {};
 	device->createImage(
-		extent.width, extent.height, createInfo.mipLevels, device->sampleCount, createInfo.format,
+		createInfo.extent, createInfo.mipLevels, device->sampleCount, createInfo.format,
 		createInfo.tilling,
 		createInfo.usage,
 		createInfo.memoryProperties,
@@ -299,9 +301,9 @@ void RvSwapChain::createFramebuffers()
 		//TODO: Maybe this can be optimized butting the vector outside and adding/removing imageViews for each iteration
 		vector<VkImageView> attachments;
 
-		for (size_t j = 0; j < framebufferAttachments.size(); j++)
+		for (RvFramebufferAttachment& framebufferAttachment : framebufferAttachments)
 		{
-			attachments.push_back(framebufferAttachments[j].imageView);
+			attachments.push_back(framebufferAttachment.imageView);
 		}
 
 		attachments.push_back(imageViews[i]);
@@ -357,16 +359,17 @@ void RvSwapChain::destroySyncObjects()
 bool RvSwapChain::acquireNextFrame(uint32_t& frameIndex)
 {
 	//Wait for in-flight fences
-	vkWaitForFences(device->handle, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkWaitForFences(device->handle, 1, &inFlightFences[currentFrame], VK_TRUE, eastl::numeric_limits<uint64_t>::max());
 	vkResetFences(device->handle, 1, &inFlightFences[currentFrame]);
 
 	//Acquiring an image from the swap chain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Acquiring_an_image_from_the_swap_chain
-	VkResult result = vkAcquireNextImageKHR(device->handle, handle, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &frameIndex);
+	const VkResult result = vkAcquireNextImageKHR(device->handle, handle, eastl::numeric_limits<uint64_t>::max(),
+	                                        imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &frameIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		return false;
 	}
-	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+	if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
@@ -411,12 +414,12 @@ bool RvSwapChain::submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 
 	presentInfo.pResults = nullptr; // Optional
 
-	VkResult result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
+	const VkResult result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 		framebufferResized = false;
 		return false;
 	}
-	else if (result != VK_SUCCESS) {
+	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to present swap chain image!");
 	}
 

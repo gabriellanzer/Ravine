@@ -14,7 +14,7 @@ using eastl::vector;
 #include "RvFramebufferAttachment.h"
 
 //Forward declaration of Swap Chain Support details struct
-struct SwapChainSupportDetails;
+struct RvSwapChainSupportDetails;
 
 struct RvSwapChain
 {
@@ -53,7 +53,7 @@ public:
 	//Queue fences
 	vector<VkFence> inFlightFences;
 
-	//Queues semaphors
+	//Queues semaphores
 	vector<VkSemaphore> imageAvailableSemaphores;
 	vector<VkSemaphore> renderFinishedSemaphores;
 
@@ -77,14 +77,14 @@ public:
 
 	VkSurfaceFormatKHR chooseSurfaceFormat(const vector<VkSurfaceFormatKHR>& availableFormats);
 
-	VkPresentModeKHR choosePresentMode(const vector<VkPresentModeKHR> availablePresentModes);
+	VkPresentModeKHR choosePresentMode(const vector<VkPresentModeKHR>& availablePresentModes);
 
 	VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	explicit operator VkSwapchainKHR() const;
 };
 
-struct SwapChainSupportDetails
+struct RvSwapChainSupportDetails
 {
 	VkSurfaceCapabilitiesKHR capabilities;
 	vector<VkSurfaceFormatKHR> formats;

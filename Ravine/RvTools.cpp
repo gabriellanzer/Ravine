@@ -66,10 +66,11 @@ namespace rvTools {
 		Floor - handles case where the dimension is not power of 2
 		+1 - Add a mip level for the original level
 		*/
-		size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(eastl::max(width, height)))) + 1;
+		const size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(eastl::max(width, height)))) + 1;
 
 		//Creating new image
-		device->createImage(width, height, mipLevels,
+		const VkExtent3D extent {width, height, 1};
+		device->createImage(extent, mipLevels,
 			VK_SAMPLE_COUNT_1_BIT,
 			format, VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -295,9 +296,9 @@ namespace rvTools {
 		return indices;
 	}
 
-	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface)
+	RvSwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface)
 	{
-		SwapChainSupportDetails details;
+		RvSwapChainSupportDetails details;
 
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
@@ -493,18 +494,13 @@ namespace rvTools {
 		return shaderModule;
 	}
 
-	RvFramebufferAttachment createFrameBufferAttachment(RvDevice* device, uint32_t width, uint32_t height, RvFramebufferAttachmentCreateInfo createInfo)
+	RvFramebufferAttachment createFramebufferAttachment(const RvDevice& device, const RvFramebufferAttachmentCreateInfo& createInfo)
 	{
 		RvFramebufferAttachment newAttachment = {};
-		device->createImage(
-			width, height, createInfo.mipLevels, device->sampleCount, createInfo.format,
-			createInfo.tilling,
-			createInfo.usage,
-			createInfo.memoryProperties,
-			createInfo.createFlag,
-			newAttachment.image, newAttachment.memory);
-		newAttachment.imageView = createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
-		transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
+		device.createImage(createInfo.extent, createInfo.mipLevels, device.sampleCount, createInfo.format, createInfo.tilling, createInfo.usage,
+			createInfo.memoryProperties, createInfo.createFlag, newAttachment.image, newAttachment.memory);
+		newAttachment.imageView = createImageView(device.handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
+		transitionImageLayout(device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
 
 		return newAttachment;
 	}

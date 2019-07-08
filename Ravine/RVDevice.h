@@ -48,12 +48,14 @@ public:
 	void clear();
 
 	RvTexture createTexture(void *pixels, size_t width, size_t height, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM);
-	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory);
+	void createImage(VkExtent3D extent, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling,
+		VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage& image, VkDeviceMemory& imageMemory) const; 
 	
 	RvDynamicBuffer createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags);
-	RvPersistentBuffer createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags);
+	RvPersistentBuffer createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, 
+		VkMemoryPropertyFlagBits memoryPropertyFlags);
 
-	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 	VkFormat findSupportedFormat(const vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 	VkSampleCountFlagBits getMaxUsableSampleCount();

@@ -22,7 +22,12 @@
 #endif
 
 #ifndef VULKAN_H_
+#if defined(_WIN32)
+#	include <vulkan/vk_platform.h>
+#	include <vulkan/vulkan_core.h>
+#else
 #	include <vulkan/vulkan.h>
+#endif
 #endif
 
 #ifdef __cplusplus

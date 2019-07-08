@@ -272,7 +272,7 @@ bool Ravine::isDeviceSuitable(const VkPhysicalDevice device) {
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = rvTools::querySupport(device, window->surface);
+		RvSwapChainSupportDetails swapChainSupport = rvTools::querySupport(device, window->surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
@@ -1033,36 +1033,20 @@ void Ravine::createTextureSampler()
 
 void Ravine::createDepthResources()
 {
-	VkFormat depthFormat = device->findDepthFormat();
-
-	RvFramebufferAttachmentCreateInfo createInfo = {};
-	createInfo.layerCount = 1;
-	createInfo.mipLevels = 1;
-	createInfo.format = depthFormat;
-	createInfo.tilling = VK_IMAGE_TILING_OPTIMAL;
-	createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	createInfo.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	createInfo.aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
-	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	createInfo.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	RvFramebufferAttachmentCreateInfo createInfo = rvDefaultDepthAttachment;
+	createInfo.format = device->findDepthFormat();
+	createInfo.extent.width = swapChain->extent.width;
+	createInfo.extent.height = swapChain->extent.height;
 
 	swapChain->addFramebufferAttachment(createInfo);
 }
 
 void Ravine::createMultiSamplingResources()
 {
-	VkFormat colorFormat = swapChain->imageFormat;
-
-	RvFramebufferAttachmentCreateInfo createInfo = {};
-	createInfo.layerCount = 1;
-	createInfo.mipLevels = 1;
-	createInfo.format = colorFormat;
-	createInfo.tilling = VK_IMAGE_TILING_OPTIMAL;
-	createInfo.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	createInfo.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	createInfo.aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
-	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	createInfo.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	RvFramebufferAttachmentCreateInfo createInfo = rvDefaultResolveAttachment;
+	createInfo.format = swapChain->imageFormat;
+	createInfo.extent.width = swapChain->extent.width;
+	createInfo.extent.height = swapChain->extent.height;
 
 	swapChain->addFramebufferAttachment(createInfo);
 }

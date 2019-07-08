@@ -173,9 +173,6 @@
     <ClInclude Include="Ravine.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RvGraphicsPipeline.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EASTL_new.h">
       <Filter>Header Files\External</Filter>
     </ClInclude>
@@ -277,6 +274,9 @@
     </ClInclude>
     <ClInclude Include="volk.h">
       <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGraphicsPipeline.h">
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

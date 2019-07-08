@@ -15,6 +15,7 @@
 #include "RvSwapChain.h"
 #include "RvDevice.h"
 #include "RvTexture.h"
+#include "RvFramebufferAttachment.h"
 
 struct RvSwapChainSupportDetails;
 using eastl::string;

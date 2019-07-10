@@ -49,7 +49,7 @@ Ravine::Ravine()
 Ravine::~Ravine()
 = default;
 
-void Ravine::Run()
+void Ravine::run()
 {
 	RvTime::initialize();
 	initWindow();
@@ -88,7 +88,7 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, true, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
 
 	stbi_set_flip_vertically_on_load(true);
 }
@@ -101,7 +101,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	string modelName = "guard.fbx";
+	string modelName = "cacimba.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		fmt::print(stdout, "{0} loaded!\n", modelName.c_str());
@@ -148,8 +148,8 @@ void Ravine::initVulkan() {
 	swapChain->createFramebuffers();
 	loadTextureImages();
 	createTextureSampler();
-	createVertexBuffer();
 	createIndexBuffer();
+	createVertexBuffer();
 	createUniformBuffers();
 	createDescriptorPool();
 	createDescriptorSets();
@@ -597,9 +597,10 @@ void Ravine::createDescriptorSetLayout()
 bool Ravine::loadScene(const string& filePath)
 {
 	Importer importer;
-	importer.ReadFile(filePath.c_str(), aiProcess_CalcTangentSpace | \
-		aiProcess_GenNormals | \
-		aiProcess_JoinIdenticalVertices | \
+	importer.ReadFile(filePath.c_str(), 
+		/*aiProcess_CalcTangentSpace |*/ \
+		/*aiProcess_GenNormals |*/ \
+		/*aiProcess_JoinIdenticalVertices |*/ \
 		aiProcess_ImproveCacheLocality | \
 		aiProcess_LimitBoneWeights | \
 		aiProcess_RemoveRedundantMaterials | \
@@ -611,6 +612,7 @@ bool Ravine::loadScene(const string& filePath)
 		aiProcess_FindInstances | \
 		aiProcess_ValidateDataStructure | \
 		aiProcess_OptimizeMeshes | \
+		aiProcess_OptimizeGraph | \
 		0);
 	scene = importer.GetOrphanedScene();
 
@@ -915,13 +917,15 @@ void Ravine::createVertexBuffer()
 	vertexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertex_count, sizeof(RvSkinnedVertexColored),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		);
-		//delete[] meshes[i].vertices;
-		//meshes[i].vertex_count = 0;
-	}
+		vertexBuffers.push_back(device->createPersistentBuffer(
+			meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertex_count, sizeof(RvSkinnedVertexColored),
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		));
 
+		delete[] meshes[i].vertices;
+		meshes[i].index_count = 0;
+	}
 }
 
 struct EdgeContraction
@@ -934,7 +938,7 @@ struct EdgeContraction
 
 	}
 
-	EdgeContraction(uint32_t even, uint32_t odd, double cost) : even(even), odd(odd), cost(cost)
+	EdgeContraction(const uint32_t& even, const uint32_t& odd, const double& cost) : even(even), odd(odd), cost(cost)
 	{
 
 	}
@@ -956,14 +960,14 @@ void Ravine::createIndexBuffer()
 			uint32_t& bId = meshes[i].indices[j + 1];
 			uint32_t& cId = meshes[i].indices[j + 2];
 
-			//Calculate plane coeficients
+			//Calculate plane coefficients
 			glm::vec3& a = meshes[i].vertices[aId].pos;
 			glm::vec3& b = meshes[i].vertices[bId].pos;
 			glm::vec3& c = meshes[i].vertices[cId].pos;
 			glm::vec3 ba = b - a;
 			glm::vec3 ca = c - a;
 			glm::vec3 nor = glm::normalize(glm::cross(ba, ca));
-			glm::vec4 plane = glm::vec4(nor, glm::dot(nor, -a)); //ABCD coeficients
+			glm::vec4 plane = glm::vec4(nor, glm::dot(nor, -a)); //ABCD planar coefficients
 			//Calculate error quadric influence of this face on each vertex
 			glm::mat4 errorQuadric;
 			errorQuadric[0][0] = plane[0] * plane[0]; //A²
@@ -976,6 +980,7 @@ void Ravine::createIndexBuffer()
 			errorQuadric[2][2] = plane[2] * plane[2]; //C²
 			errorQuadric[2][3] = errorQuadric[3][2] = plane[2] * plane[3]; //CD
 			errorQuadric[3][3] = plane[3] * plane[3]; //D²
+			//Accumulate the error quadric for each vertex
 			vertexQuadric[aId] += errorQuadric;
 			vertexQuadric[bId] += errorQuadric;
 			vertexQuadric[cId] += errorQuadric;
@@ -983,7 +988,7 @@ void Ravine::createIndexBuffer()
 
 		//Calculate contraction cost per edge
 		vector<EdgeContraction> contractions(meshes[i].index_count);
-		vector<vector<uint32_t>> vNeighbours(meshes[i].vertex_count);
+		vector<vector<uint32_t>> vNeighbors(meshes[i].vertex_count);
 		for (size_t j = 0; j < meshes[i].index_count; j += 3) //For each face (3 ids)
 		{
 			//Calculate triangle equation
@@ -991,13 +996,13 @@ void Ravine::createIndexBuffer()
 			uint32_t bId = meshes[i].indices[j + 1];
 			uint32_t cId = meshes[i].indices[j + 2];
 
-			//Hold Neighbours for later
-			vNeighbours[aId].push_back(bId);
-			vNeighbours[bId].push_back(aId);
-			vNeighbours[bId].push_back(cId);
-			vNeighbours[cId].push_back(bId);
-			vNeighbours[cId].push_back(aId);
-			vNeighbours[aId].push_back(cId);
+			//Hold Neighbors for later
+			vNeighbors[aId].push_back(bId);
+			vNeighbors[bId].push_back(aId);
+			vNeighbors[bId].push_back(cId);
+			vNeighbors[cId].push_back(bId);
+			vNeighbors[cId].push_back(aId);
+			vNeighbors[aId].push_back(cId);
 
 			//Edges are 'ab', 'bc' and 'ca'
 			glm::vec4 a = glm::vec4(meshes[i].vertices[aId].pos, 1);
@@ -1053,35 +1058,32 @@ void Ravine::createIndexBuffer()
 		//Order based on smallest costs first
 		eastl::sort(contractions.begin(), contractions.end(),
 			[](const EdgeContraction& a, const EdgeContraction& b) -> bool
-			{
-				return a.cost < b.cost;
-			});
+		{
+			return a.cost < b.cost;
+		});
 
 		unordered_set<uint32_t> oddsList;
-		vector<uint32_t> edgesToColapse;
+		vector<uint32_t> edgesToCollapse;
 		//Reserve estimation
-		edgesToColapse.reserve(contractions.size() / 3);
-		for (size_t j = 0; j < contractions.size(); j++)
+		edgesToCollapse.reserve(contractions.size() / 3);
+		for (EdgeContraction& contraction : contractions)
 		{
-			EdgeContraction& contraction = contractions[j];
 			//Check if this is actually an odd and not an even vertex
 			bool isOdd = true;
-			vector<uint32_t>& neighbours = vNeighbours[contraction.odd];
+			vector<uint32_t>& neighbors = vNeighbors[contraction.odd];
 			if (oddsList.find(contraction.odd) != oddsList.end()) //Check already added
 			{
 				isOdd = false;
 				continue;
 			}
-			else
+
+			//Check if any neighbor is odd
+			for (unsigned int neighbor : neighbors)
 			{
-				//Check if any neighbour is odd
-				for (uint32_t k = 0; k < neighbours.size(); k++)
+				if (oddsList.find(neighbor) != oddsList.end())
 				{
-					if (oddsList.find(neighbours[k]) != oddsList.end())
-					{
-						isOdd = false;
-						break;
-					}
+					isOdd = false;
+					break;
 				}
 			}
 
@@ -1090,35 +1092,22 @@ void Ravine::createIndexBuffer()
 			{
 				//Add this contraction to the list
 				oddsList.insert(contraction.odd);
-				edgesToColapse.push_back(contraction.odd);
-				edgesToColapse.push_back(contraction.even);
+				edgesToCollapse.push_back(contraction.odd);
+				edgesToCollapse.push_back(contraction.even);
 			}
 		}
 
-		oddIndexBuffers.push_back(device->createPersistentBuffer(edgesToColapse.data(), sizeof(uint32_t) * edgesToColapse.size(), sizeof(uint32_t),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		);
+		oddIndexBuffers.push_back(device->createPersistentBuffer(
+			edgesToCollapse.data(), sizeof(uint32_t) * edgesToCollapse.size(), sizeof(uint32_t),
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		));
 
-		//Remap test
-		uint32_t* remap = new uint32_t[meshes[i].vertex_count];
-		for (size_t j = 0; j < meshes[i].vertex_count; j++)
-		{
-			remap[j] = j;
-		}
-		for (size_t j = 0; j < edgesToColapse.size(); j+=2)
-		{
-			remap[edgesToColapse[j]] = edgesToColapse[j + 1];
-		}
-
-		//Apply remap
-		for (size_t j = 0; j < meshes[i].index_count; j++)
-		{
-			meshes[i].indices[j] = remap[meshes[i].indices[j]];
-		}
-
-		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
-			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		);
+		indexBuffers.push_back(device->createPersistentBuffer(
+			meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		));
 		delete[] meshes[i].indices;
 		meshes[i].index_count = 0;
 	}
@@ -1173,7 +1162,8 @@ void Ravine::loadTextureImages()
 
 		textures[i] = device->createTexture(pixels, texWidth, texHeight);
 
-		stbi_image_free(pixels);
+		free(pixels);
+
 	}
 }
 
@@ -1904,4 +1894,4 @@ void Ravine::cleanup()
 
 	//Finish GLFW
 	glfwTerminate();
-}
+	}

@@ -6,7 +6,7 @@ int main()
 	Ravine app;
 
 	try {
-		app.Run();
+		app.run();
 	}
 	catch (const std::runtime_error& e) {
 		fmt::print(stderr, e.what());

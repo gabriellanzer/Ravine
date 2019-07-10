@@ -49,10 +49,10 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : sur
 	createInfo.ppEnabledExtensionNames = rvCfg::DEVICE_EXTENSIONS.data();
 
 #ifdef VALIDATION_LAYERS_ENABLED
-		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::VALIDATION_LAYERS.size());
-		createInfo.ppEnabledLayerNames = rvCfg::VALIDATION_LAYERS.data();
+	createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::VALIDATION_LAYERS.size());
+	createInfo.ppEnabledLayerNames = rvCfg::VALIDATION_LAYERS.data();
 #else
-		createInfo.enabledLayerCount = 0;
+	createInfo.enabledLayerCount = 0;
 #endif
 
 	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &handle) != VK_SUCCESS) {
@@ -93,7 +93,7 @@ void RvDevice::createCommandPool()
 }
 
 void RvDevice::createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
-                            VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+	VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
 	//Defining buffer creation info
 	VkBufferCreateInfo bufferCreateInfo = {};
@@ -184,7 +184,7 @@ RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferU
 RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags)
 {
 	// Staging Buffer
-	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 
 	// Copying data
@@ -251,7 +251,7 @@ VkFormat RvDevice::findDepthFormat()
 VkSampleCountFlagBits RvDevice::getMaxUsableSampleCount()
 {
 	VkSampleCountFlags counts = eastl::min(deviceProperties.limits.framebufferColorSampleCounts,
-	                                       deviceProperties.limits.framebufferDepthSampleCounts);
+		deviceProperties.limits.framebufferDepthSampleCounts);
 	if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
 	if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
 	if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }

@@ -2,27 +2,26 @@
 #include "volk.h"
 
 #ifdef _WIN32
+	typedef const char* LPCSTR;
+	typedef struct HINSTANCE__* HINSTANCE;
+	typedef HINSTANCE HMODULE;
+	#ifdef _WIN64
+		typedef __int64 (__stdcall* FARPROC)();
+	#else
+		typedef int (__stdcall* FARPROC)();
+	#endif
+#else
+#	include <dlfcn.h>
+#endif
 
-typedef void* HANDLER;
-typedef void* HINSTANCE;
-typedef void* HWND;
-typedef void* HMONITOR;
-typedef void* HMODULE;
-typedef const wchar_t* LPCWSTR;
-typedef unsigned long DWORD;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct _SECURITY_ATTRIBUTES {
-	DWORD nLength;
-	void* lpSecurityDescriptor;
-	int bInheritHandle;
-} SECURITY_ATTRIBUTES;
-
-typedef int64_t (__stdcall* FARPROC)(void);
-
-void* __stdcall LoadLibraryA(const char* lpFileName);
-FARPROC* __stdcall GetProcAddress(void* hModule, const char* lProcName);
-void* __stdcall GetModuleHandleA(const char* lpModuleName);
-void* __stdcall GetActiveWindow();
+#ifdef _WIN32
+__declspec(dllimport) HMODULE __stdcall LoadLibraryA(LPCSTR);
+__declspec(dllimport) FARPROC __stdcall GetProcAddress(HMODULE, LPCSTR);
+#endif
 
 static void volkGenLoadLoader(void* context, PFN_vkVoidFunction (*load)(void*, const char*));
 static void volkGenLoadInstance(void* context, PFN_vkVoidFunction (*load)(void*, const char*));
@@ -38,13 +37,6 @@ static PFN_vkVoidFunction vkGetDeviceProcAddrStub(void* context, const char* nam
 {
 	return vkGetDeviceProcAddr((VkDevice)context, name);
 }
-#else
-#	include <dlfcn.h>
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 VkResult volkInitialize(void)
 {

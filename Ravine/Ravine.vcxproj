@@ -87,8 +87,8 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\lib\x86\;..\lib\x86\Debug\;</AdditionalLibraryDirectories>
@@ -105,8 +105,8 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\lib\x64\;..\lib\x64\Debug\;</AdditionalLibraryDirectories>
@@ -125,8 +125,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -148,8 +148,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -169,6 +169,8 @@
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_vulkan.cpp" />
     <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
@@ -176,9 +178,11 @@
     <ClCompile Include="RvCamera.cpp" />
     <ClCompile Include="RvCmdBuffer.cpp" />
     <ClCompile Include="RvDynamicBuffer.cpp" />
-    <ClCompile Include="RvGUI.cpp" />
-    <ClCompile Include="RvGUIPipeline.cpp" />
+    <ClCompile Include="RvGraphicsPipeline.cpp" />
+    <ClCompile Include="RvGui.cpp" />
+    <ClCompile Include="RvGuiPipeline.cpp" />
     <ClCompile Include="RvLinePipeline.cpp" />
+    <ClCompile Include="RvRenderPass.cpp" />
     <ClCompile Include="RvWireframePipeline.cpp" />
     <ClCompile Include="RvTexture.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
@@ -190,11 +194,15 @@
     <ClCompile Include="RvWindow.cpp" />
     <ClCompile Include="RvTime.cpp" />
     <ClCompile Include="RvTools.cpp" />
-    <ClCompile Include="SingleFileLibraries\spirv_reflect.c" />
+    <ClCompile Include="spirv_reflect.c" />
+    <ClCompile Include="volk.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EASTL_new.h" />
+    <ClInclude Include="imconfig.h" />
     <ClInclude Include="imgui.h" />
+    <ClInclude Include="imgui_impl_glfw.h" />
+    <ClInclude Include="imgui_impl_vulkan.h" />
     <ClInclude Include="imgui_internal.h" />
     <ClInclude Include="imstb_rectpack.h" />
     <ClInclude Include="imstb_textedit.h" />
@@ -204,9 +212,11 @@
     <ClInclude Include="RvCamera.h" />
     <ClInclude Include="RvCmdBuffer.h" />
     <ClInclude Include="RvDynamicBuffer.h" />
-    <ClInclude Include="RvGUI.h" />
-    <ClInclude Include="RvGUIPipeline.h" />
+    <ClInclude Include="RvGraphicsPipeline.h" />
+    <ClInclude Include="RvGui.h" />
+    <ClInclude Include="RvGuiPipeline.h" />
     <ClInclude Include="RvLinePipeline.h" />
+    <ClInclude Include="RvRenderPass.h" />
     <ClInclude Include="RvWireframePipeline.h" />
     <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />
@@ -219,10 +229,11 @@
     <ClInclude Include="RvSwapChain.h" />
     <ClInclude Include="RvUniformTypes.h" />
     <ClInclude Include="RvWindow.h" />
-    <ClInclude Include="SingleFileLibraries\spirv_reflect.h" />
-    <ClInclude Include="SingleFileLibraries\stb_image.h" />
     <ClInclude Include="RvTime.h" />
     <ClInclude Include="RvTools.h" />
+    <ClInclude Include="spirv_reflect.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="volk.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag" />

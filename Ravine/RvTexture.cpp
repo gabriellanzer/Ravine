@@ -3,14 +3,11 @@
 
 
 RvTexture::RvTexture()
-{
-}
+= default;
 
 
 RvTexture::~RvTexture()
-{
-
-}
+= default;
 
 void RvTexture::Free()
 {

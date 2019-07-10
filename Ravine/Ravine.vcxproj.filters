@@ -13,32 +13,62 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\Shaders">
-      <UniqueIdentifier>{4a6ffd5e-0ec7-49fc-ba48-f3f58792b665}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Ravine System">
       <UniqueIdentifier>{f2382bb2-d864-4e40-9bbf-3869eb1102b2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Ravine System">
       <UniqueIdentifier>{669ad292-3ec7-44c0-98d8-3345b57b2eac}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\ImGUI">
+    <Filter Include="Source Files\Ravine System\Pipelines">
+      <UniqueIdentifier>{2c121daf-5942-42ae-a85b-a8e146d90a51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\External">
+      <UniqueIdentifier>{acf49e52-8784-4ccd-bb0b-911ffb591ddb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\External">
+      <UniqueIdentifier>{b6b08aef-0f4c-494e-9c73-af3365e2d86e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\External\StbLibs">
+      <UniqueIdentifier>{7c0f817e-846c-466d-bc24-1da107f290da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\External\ImGUI">
       <UniqueIdentifier>{399e4d1c-e983-4fb4-a289-001f9b98a561}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Shaders\Gui">
+    <Filter Include="Source Files\External\ImGUI">
+      <UniqueIdentifier>{ceb5e518-04e5-49c6-811c-c25071fb14a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\Data">
+      <UniqueIdentifier>{2430d2a4-0c76-46bc-a122-9b292b26f960}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\Internal">
+      <UniqueIdentifier>{f3a2e030-b1a5-4f61-bba1-3b7b13476b0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\Core">
+      <UniqueIdentifier>{d50fbb86-d167-442c-8be9-0d56411fe399}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\Shaders">
+      <UniqueIdentifier>{4a6ffd5e-0ec7-49fc-ba48-f3f58792b665}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\Shaders\Gui">
       <UniqueIdentifier>{ed2aaccc-c559-43fa-9f81-60e254de1138}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Shaders\Static">
+    <Filter Include="Source Files\Ravine System\Shaders\Static">
       <UniqueIdentifier>{770e3f84-d14c-447b-8dc4-6509581a881d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Shaders\Skinned">
+    <Filter Include="Source Files\Ravine System\Shaders\Skinned">
       <UniqueIdentifier>{8db2bc66-5d38-4329-b289-5d8f7389ac35}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Ravine System\GUI">
-      <UniqueIdentifier>{9bf9175a-2b1a-41f7-b9df-2b683e786dfa}</UniqueIdentifier>
+    <Filter Include="Header Files\Ravine System\Data">
+      <UniqueIdentifier>{7b361668-f556-4652-978c-bee26c4aaac7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Ravine System\GUI">
-      <UniqueIdentifier>{d537db77-51c1-4d1c-be4f-837de8de0848}</UniqueIdentifier>
+    <Filter Include="Header Files\Ravine System\Internal">
+      <UniqueIdentifier>{5e51f950-e36d-41ae-90a7-625ba8ceaac9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Ravine System\Core">
+      <UniqueIdentifier>{578a845d-cd16-4b8a-b530-4dcb31cd9306}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Ravine System\Pipelines">
+      <UniqueIdentifier>{fc07786f-9b74-46ec-ae3f-fa5cd2d0069d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -48,198 +78,231 @@
     <ClCompile Include="Ravine.cpp">
       <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
-    <ClCompile Include="RvDevice.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvSwapChain.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvTools.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_demo.cpp">
-      <Filter>Header Files\ImGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_draw.cpp">
-      <Filter>Header Files\ImGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_widgets.cpp">
-      <Filter>Header Files\ImGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui.cpp">
-      <Filter>Header Files\ImGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="RvAnimationTools.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvCamera.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvCmdBuffer.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvConfig.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvDebug.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvDynamicBuffer.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvPersistentBuffer.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvTexture.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvWindow.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvGUI.cpp">
-      <Filter>Source Files\Ravine System\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="RvGUIPipeline.cpp">
-      <Filter>Source Files\Ravine System\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="RvTime.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvPolygonPipeline.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="RvWireframePipeline.cpp">
-      <Filter>Source Files\Ravine System</Filter>
-    </ClCompile>
-    <ClCompile Include="EASTL_new.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SingleFileLibraries\spirv_reflect.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="crc32.hpp">
-      <Filter>Header Files\Ravine System</Filter>
+    <ClCompile Include="RvGraphicsPipeline.cpp">
+      <Filter>Source Files\Ravine System\Pipelines</Filter>
     </ClCompile>
     <ClCompile Include="RvLinePipeline.cpp">
-      <Filter>Source Files\Ravine System</Filter>
+      <Filter>Source Files\Ravine System\Pipelines</Filter>
+    </ClCompile>
+    <ClCompile Include="RvPolygonPipeline.cpp">
+      <Filter>Source Files\Ravine System\Pipelines</Filter>
+    </ClCompile>
+    <ClCompile Include="RvWireframePipeline.cpp">
+      <Filter>Source Files\Ravine System\Pipelines</Filter>
+    </ClCompile>
+    <ClCompile Include="crc32.hpp">
+      <Filter>Header Files\External</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_glfw.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_vulkan.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="spirv_reflect.c">
+      <Filter>Source Files\External</Filter>
+    </ClCompile>
+    <ClCompile Include="RvAnimationTools.cpp">
+      <Filter>Source Files\Ravine System\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="RvTools.cpp">
+      <Filter>Source Files\Ravine System\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="RvTime.cpp">
+      <Filter>Source Files\Ravine System\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="RvConfig.cpp">
+      <Filter>Source Files\Ravine System\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="RvDebug.cpp">
+      <Filter>Source Files\Ravine System\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="RvCamera.cpp">
+      <Filter>Source Files\Ravine System\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="RvTexture.cpp">
+      <Filter>Source Files\Ravine System\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="RvSwapChain.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvWindow.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvDevice.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvCmdBuffer.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvRenderPass.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvDynamicBuffer.cpp">
+      <Filter>Source Files\Ravine System\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="RvPersistentBuffer.cpp">
+      <Filter>Source Files\Ravine System\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="EASTL_new.cpp">
+      <Filter>Source Files\External</Filter>
+    </ClCompile>
+    <ClCompile Include="volk.c">
+      <Filter>Source Files\External</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGui.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGuiPipeline.cpp">
+      <Filter>Source Files\Ravine System\Pipelines</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SingleFileLibraries\stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Ravine.h">
       <Filter>Header Files\Ravine System</Filter>
     </ClInclude>
-    <ClInclude Include="RvDataTypes.h">
-      <Filter>Header Files\Ravine System</Filter>
+    <ClInclude Include="EASTL_new.h">
+      <Filter>Header Files\External</Filter>
     </ClInclude>
-    <ClInclude Include="RvDevice.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvSwapChain.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvUniformTypes.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvFramebufferAttachment.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvConfig.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvTools.h">
-      <Filter>Header Files\Ravine System</Filter>
+    <ClInclude Include="imconfig.h">
+      <Filter>Header Files\External\ImGUI</Filter>
     </ClInclude>
     <ClInclude Include="imgui.h">
-      <Filter>Header Files\ImGUI</Filter>
+      <Filter>Header Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Header Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_vulkan.h">
+      <Filter>Header Files\External\ImGUI</Filter>
     </ClInclude>
     <ClInclude Include="imgui_internal.h">
-      <Filter>Header Files\ImGUI</Filter>
+      <Filter>Header Files\External\ImGUI</Filter>
     </ClInclude>
     <ClInclude Include="imstb_rectpack.h">
-      <Filter>Header Files\ImGUI</Filter>
+      <Filter>Header Files\External\ImGUI</Filter>
     </ClInclude>
     <ClInclude Include="imstb_textedit.h">
-      <Filter>Header Files\ImGUI</Filter>
+      <Filter>Header Files\External\ImGUI</Filter>
     </ClInclude>
     <ClInclude Include="imstb_truetype.h">
-      <Filter>Header Files\ImGUI</Filter>
+      <Filter>Header Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files\External\StbLibs</Filter>
+    </ClInclude>
+    <ClInclude Include="spirv_reflect.h">
+      <Filter>Header Files\External</Filter>
     </ClInclude>
     <ClInclude Include="RvAnimationTools.h">
-      <Filter>Header Files\Ravine System</Filter>
+      <Filter>Header Files\Ravine System\Internal</Filter>
     </ClInclude>
     <ClInclude Include="RvCamera.h">
-      <Filter>Header Files\Ravine System</Filter>
+      <Filter>Header Files\Ravine System\Data</Filter>
     </ClInclude>
     <ClInclude Include="RvCmdBuffer.h">
-      <Filter>Header Files\Ravine System</Filter>
+      <Filter>Header Files\Ravine System\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RvConfig.h">
+      <Filter>Header Files\Ravine System\Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="RvDataTypes.h">
+      <Filter>Header Files\Ravine System\Data</Filter>
     </ClInclude>
     <ClInclude Include="RvDebug.h">
-      <Filter>Header Files\Ravine System</Filter>
+      <Filter>Header Files\Ravine System\Internal</Filter>
     </ClInclude>
-    <ClInclude Include="RvDynamicBuffer.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvPersistentBuffer.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvTexture.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvWindow.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvGUI.h">
-      <Filter>Header Files\Ravine System\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="RvGUIPipeline.h">
-      <Filter>Header Files\Ravine System\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="RvTime.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvPolygonPipeline.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="RvWireframePipeline.h">
-      <Filter>Header Files\Ravine System</Filter>
-    </ClInclude>
-    <ClInclude Include="EASTL_new.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SingleFileLibraries\spirv_reflect.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="RvDevice.h">
+      <Filter>Header Files\Ravine System\Core</Filter>
     </ClInclude>
     <ClInclude Include="RvLinePipeline.h">
-      <Filter>Header Files\Ravine System</Filter>
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
+    </ClInclude>
+    <ClInclude Include="RvFramebufferAttachment.h">
+      <Filter>Header Files\Ravine System\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="RvPersistentBuffer.h">
+      <Filter>Header Files\Ravine System\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="RvPolygonPipeline.h">
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
+    </ClInclude>
+    <ClInclude Include="RvRenderPass.h">
+      <Filter>Header Files\Ravine System\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RvSwapChain.h">
+      <Filter>Header Files\Ravine System\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTexture.h">
+      <Filter>Header Files\Ravine System\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTime.h">
+      <Filter>Header Files\Ravine System\Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="RvTools.h">
+      <Filter>Header Files\Ravine System\Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="RvUniformTypes.h">
+      <Filter>Header Files\Ravine System\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="RvWireframePipeline.h">
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
+    </ClInclude>
+    <ClInclude Include="RvWindow.h">
+      <Filter>Header Files\Ravine System\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RvDynamicBuffer.h">
+      <Filter>Header Files\Ravine System\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="volk.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGraphicsPipeline.h">
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGui.h">
+      <Filter>Header Files\Ravine System\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGuiPipeline.h">
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag">
-      <Filter>Source Files\Shaders\Gui</Filter>
+      <Filter>Source Files\Ravine System\Shaders\Gui</Filter>
     </None>
     <None Include="bin\data\shaders\gui.vert">
-      <Filter>Source Files\Shaders\Gui</Filter>
+      <Filter>Source Files\Ravine System\Shaders\Gui</Filter>
     </None>
     <None Include="bin\data\shaders\skinned_tex_color.vert">
-      <Filter>Source Files\Shaders\Skinned</Filter>
+      <Filter>Source Files\Ravine System\Shaders\Skinned</Filter>
     </None>
     <None Include="bin\data\shaders\static_tex_color.vert">
-      <Filter>Source Files\Shaders\Static</Filter>
+      <Filter>Source Files\Ravine System\Shaders\Static</Filter>
     </None>
     <None Include="bin\data\shaders\phong_tex_color.frag">
-      <Filter>Source Files\Shaders</Filter>
+      <Filter>Source Files\Ravine System\Shaders</Filter>
     </None>
     <None Include="bin\data\shaders\skinned_wireframe.vert">
-      <Filter>Source Files\Shaders\Skinned</Filter>
+      <Filter>Source Files\Ravine System\Shaders\Skinned</Filter>
     </None>
     <None Include="bin\data\shaders\solid_color.frag">
-      <Filter>Source Files\Shaders</Filter>
+      <Filter>Source Files\Ravine System\Shaders</Filter>
     </None>
     <None Include="bin\data\shaders\static_wireframe.vert">
-      <Filter>Source Files\Shaders\Static</Filter>
+      <Filter>Source Files\Ravine System\Shaders\Static</Filter>
     </None>
   </ItemGroup>
 </Project>

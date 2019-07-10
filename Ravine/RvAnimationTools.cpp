@@ -6,7 +6,7 @@ namespace rvTools
 	namespace animation
 	{
 		// Find animation for a given node
-		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const string nodeName)
+		const aiNodeAnim* findNodeAnim(const aiAnimation* animation, const string& nodeName)
 		{
 			for (uint32_t i = 0; i < animation->mNumChannels; i++)
 			{
@@ -19,10 +19,10 @@ namespace rvTools
 			return nullptr;
 		}
 
-		aiMatrix4x4 interpolateTranslation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
+		aiMatrix4x4 interpolateTranslation(double interpol, double time, double otherTime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
 		{
 			aiVector3D translation;
-			aiVector3D othertranslation;
+			aiVector3D otherTranslation;
 
 			if (pNodeAnim->mNumPositionKeys == 1)
 			{
@@ -34,51 +34,51 @@ namespace rvTools
 
 			if (otherNodeAnim->mNumPositionKeys == 1)
 			{
-				othertranslation = otherNodeAnim->mPositionKeys[0].mValue;
+				otherTranslation = otherNodeAnim->mPositionKeys[0].mValue;
 				aiMatrix4x4 mat;
-				aiMatrix4x4::Translation(othertranslation, mat);
+				aiMatrix4x4::Translation(otherTranslation, mat);
 				return mat;
 			}
 
 			uint32_t frameIndex = 0;
 			for (uint32_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++)
 			{
-				if (time < (float)pNodeAnim->mPositionKeys[i + 1].mTime)
+				if (time < pNodeAnim->mPositionKeys[i + 1].mTime)
 				{
 					frameIndex = i;
 					break;
 				}
 			}
 
-			uint32_t otherframeIndex = 0;
+			uint32_t otherFrameIndex = 0;
 			for (uint32_t i = 0; i < otherNodeAnim->mNumPositionKeys - 1; i++)
 			{
-				if (othertime < (float)otherNodeAnim->mPositionKeys[i + 1].mTime)
+				if (otherTime < otherNodeAnim->mPositionKeys[i + 1].mTime)
 				{
-					otherframeIndex = i;
+					otherFrameIndex = i;
 					break;
 				}
 			}
 
 			aiVectorKey currentFrame = pNodeAnim->mPositionKeys[frameIndex];
 			aiVectorKey nextFrame = pNodeAnim->mPositionKeys[(frameIndex + 1) % pNodeAnim->mNumPositionKeys];
-			float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+			float delta = (time - currentFrame.mTime) / (nextFrame.mTime - currentFrame.mTime);
 			const aiVector3D& start = currentFrame.mValue;
 			const aiVector3D& end = nextFrame.mValue;
 			translation = (start + delta * (end - start));
 
-			aiVectorKey othercurrentFrame = otherNodeAnim->mPositionKeys[otherframeIndex];
-			aiVectorKey othernextFrame = otherNodeAnim->mPositionKeys[(otherframeIndex + 1) % otherNodeAnim->mNumPositionKeys];
-			float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
-			const aiVector3D& otherstart = othercurrentFrame.mValue;
-			const aiVector3D& otherend = othernextFrame.mValue;
-			if (otherstart == otherend) {
+			aiVectorKey otherCurrentFrame = otherNodeAnim->mPositionKeys[otherFrameIndex];
+			aiVectorKey otherNextFrame = otherNodeAnim->mPositionKeys[(otherFrameIndex + 1) % otherNodeAnim->mNumPositionKeys];
+			float otherDelta = (otherTime - otherCurrentFrame.mTime) / (otherNextFrame.mTime - otherCurrentFrame.mTime);
+			const aiVector3D& otherStart = otherCurrentFrame.mValue;
+			const aiVector3D& otherEnd = otherNextFrame.mValue;
+			if (otherStart == otherEnd) {
 				aiMatrix4x4 mat;
 				aiMatrix4x4::Translation(translation, mat);
 				return mat;
 			}
-			othertranslation = (otherstart + otherdelta * (otherend - otherstart));
-			aiVector3D mixTranslation = (translation + interpol * (othertranslation - translation));
+			otherTranslation = (otherStart + otherDelta * (otherEnd - otherStart));
+			aiVector3D mixTranslation = (translation + static_cast<float>(interpol) * (otherTranslation - translation));
 
 			aiMatrix4x4 mat;
 			aiMatrix4x4::Translation(mixTranslation, mat);
@@ -86,10 +86,10 @@ namespace rvTools
 			return mat;
 		}
 
-		aiMatrix4x4 interpolateRotation(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
+		aiMatrix4x4 interpolateRotation(double interpol, double time, double otherTime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
 		{
 			aiQuaternion rotation;
-			aiQuaternion otherrotation;
+			aiQuaternion otherRotation;
 
 			if (pNodeAnim->mNumRotationKeys == 1)
 			{
@@ -107,54 +107,54 @@ namespace rvTools
 			uint32_t frameIndex = 0;
 			for (uint32_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++)
 			{
-				if (time < (float)pNodeAnim->mRotationKeys[i + 1].mTime)
+				if (time < pNodeAnim->mRotationKeys[i + 1].mTime)
 				{
 					frameIndex = i;
 					break;
 				}
 			}
-			uint32_t otherframeIndex = 0;
+			uint32_t otherFrameIndex = 0;
 			for (uint32_t i = 0; i < otherNodeAnim->mNumRotationKeys - 1; i++)
 			{
-				if (othertime < (float)otherNodeAnim->mRotationKeys[i + 1].mTime)
+				if (otherTime < otherNodeAnim->mRotationKeys[i + 1].mTime)
 				{
-					otherframeIndex = i;
+					otherFrameIndex = i;
 					break;
 				}
 			}
 
 			aiQuatKey currentFrame = pNodeAnim->mRotationKeys[frameIndex];
 			aiQuatKey nextFrame = pNodeAnim->mRotationKeys[(frameIndex + 1) % pNodeAnim->mNumRotationKeys];
-			float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+			float delta = (time - currentFrame.mTime) / (nextFrame.mTime - currentFrame.mTime);
 			const aiQuaternion& start = currentFrame.mValue;
 			const aiQuaternion& end = nextFrame.mValue;
 			aiQuaternion::Interpolate(rotation, start, end, delta);
 			rotation.Normalize();
 
-			aiQuatKey othercurrentFrame = otherNodeAnim->mRotationKeys[otherframeIndex];
-			aiQuatKey othernextFrame = otherNodeAnim->mRotationKeys[(otherframeIndex + 1) % otherNodeAnim->mNumRotationKeys];
-			float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
-			const aiQuaternion& otherstart = othercurrentFrame.mValue;
-			const aiQuaternion& otherend = othernextFrame.mValue;
-			if (otherstart == otherend) {
+			aiQuatKey otherCurrentFrame = otherNodeAnim->mRotationKeys[otherFrameIndex];
+			aiQuatKey otherNextFrame = otherNodeAnim->mRotationKeys[(otherFrameIndex + 1) % otherNodeAnim->mNumRotationKeys];
+			float otherDelta = (otherTime - otherCurrentFrame.mTime) / (otherNextFrame.mTime - otherCurrentFrame.mTime);
+			const aiQuaternion& otherStart = otherCurrentFrame.mValue;
+			const aiQuaternion& otherEnd = otherNextFrame.mValue;
+			if (otherStart == otherEnd) {
 				aiMatrix4x4 mat(rotation.GetMatrix());
 				return mat;
 			}
 
-			aiQuaternion::Interpolate(otherrotation, otherstart, otherend, otherdelta);
-			otherrotation.Normalize();
+			aiQuaternion::Interpolate(otherRotation, otherStart, otherEnd, otherDelta);
+			otherRotation.Normalize();
 
 			aiQuaternion mixQuaternion;
-			aiQuaternion::Interpolate(mixQuaternion, rotation, otherrotation, interpol);
+			aiQuaternion::Interpolate(mixQuaternion, rotation, otherRotation, interpol);
 
 			aiMatrix4x4 mat(mixQuaternion.GetMatrix());
 			return mat;
 		}
 		
-		aiMatrix4x4 interpolateScale(float interpol, float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
+		aiMatrix4x4 interpolateScale(double interpol, double time, double otherTime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim)
 		{
 			aiVector3D scale;
-			aiVector3D otherscale;
+			aiVector3D otherScale;
 
 			if (pNodeAnim->mNumScalingKeys == 1)
 			{
@@ -174,41 +174,41 @@ namespace rvTools
 			uint32_t frameIndex = 0;
 			for (uint32_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++)
 			{
-				if (time < (float)pNodeAnim->mScalingKeys[i + 1].mTime)
+				if (time < pNodeAnim->mScalingKeys[i + 1].mTime)
 				{
 					frameIndex = i;
 					break;
 				}
 			}
-			uint32_t otherframeIndex = 0;
+			uint32_t otherFrameIndex = 0;
 			for (uint32_t i = 0; i < otherNodeAnim->mNumScalingKeys - 1; i++)
 			{
-				if (othertime < (float)otherNodeAnim->mScalingKeys[i + 1].mTime)
+				if (otherTime < otherNodeAnim->mScalingKeys[i + 1].mTime)
 				{
-					otherframeIndex = i;
+					otherFrameIndex = i;
 					break;
 				}
 			}
 
 			aiVectorKey currentFrame = pNodeAnim->mScalingKeys[frameIndex];
 			aiVectorKey nextFrame = pNodeAnim->mScalingKeys[(frameIndex + 1) % pNodeAnim->mNumScalingKeys];
-			float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+			float delta = (time - currentFrame.mTime) / (nextFrame.mTime - currentFrame.mTime);
 			const aiVector3D& start = currentFrame.mValue;
 			const aiVector3D& end = nextFrame.mValue;
 			scale = (start + delta * (end - start));
 
-			aiVectorKey othercurrentFrame = otherNodeAnim->mScalingKeys[otherframeIndex];
-			aiVectorKey othernextFrame = otherNodeAnim->mScalingKeys[(otherframeIndex + 1) % otherNodeAnim->mNumScalingKeys];
-			float otherdelta = (othertime - (float)othercurrentFrame.mTime) / (float)(othernextFrame.mTime - othercurrentFrame.mTime);
-			const aiVector3D& otherstart = othercurrentFrame.mValue;
-			const aiVector3D& otherend = othernextFrame.mValue;
-			if (otherstart == otherend) {
+			aiVectorKey otherCurrentFrame = otherNodeAnim->mScalingKeys[otherFrameIndex];
+			aiVectorKey otherNextFrame = otherNodeAnim->mScalingKeys[(otherFrameIndex + 1) % otherNodeAnim->mNumScalingKeys];
+			float otherDelta = (otherTime - otherCurrentFrame.mTime) / (otherNextFrame.mTime - otherCurrentFrame.mTime);
+			const aiVector3D& otherStart = otherCurrentFrame.mValue;
+			const aiVector3D& otherEnd = otherNextFrame.mValue;
+			if (otherStart == otherEnd) {
 				aiMatrix4x4 mat;
 				aiMatrix4x4::Scaling(scale, mat);
 				return mat;
 			}
-			otherscale = (otherstart + otherdelta * (otherend - otherstart));
-			aiVector3D mixScale = (scale + interpol * (otherscale - scale));
+			otherScale = (otherStart + otherDelta * (otherEnd - otherStart));
+			aiVector3D mixScale = (scale + static_cast<float>(interpol) * (otherScale - scale));
 
 			aiMatrix4x4 mat;
 			aiMatrix4x4::Scaling(mixScale, mat);
@@ -216,7 +216,7 @@ namespace rvTools
 		}
 
 		// Returns a 4x4 matrix with interpolated translation between current and next frame
-		aiMatrix4x4 interpolateTranslation(float time, const aiNodeAnim* pNodeAnim)
+		aiMatrix4x4 interpolateTranslation(double time, const aiNodeAnim* pNodeAnim)
 		{
 			aiVector3D translation;
 
@@ -229,7 +229,7 @@ namespace rvTools
 				uint32_t frameIndex = 0;
 				for (uint32_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++)
 				{
-					if (time < (float)pNodeAnim->mPositionKeys[i + 1].mTime)
+					if (time < pNodeAnim->mPositionKeys[i + 1].mTime)
 					{
 						frameIndex = i;
 						break;
@@ -239,7 +239,7 @@ namespace rvTools
 				aiVectorKey currentFrame = pNodeAnim->mPositionKeys[frameIndex];
 				aiVectorKey nextFrame = pNodeAnim->mPositionKeys[(frameIndex + 1) % pNodeAnim->mNumPositionKeys];
 
-				float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+				float delta = (time - currentFrame.mTime) / (nextFrame.mTime - currentFrame.mTime);
 
 				const aiVector3D& start = currentFrame.mValue;
 				const aiVector3D& end = nextFrame.mValue;
@@ -253,7 +253,7 @@ namespace rvTools
 		}
 
 		// Returns a 4x4 matrix with interpolated rotation between current and next frame
-		aiMatrix4x4 interpolateRotation(float time, const aiNodeAnim* pNodeAnim)
+		aiMatrix4x4 interpolateRotation(double time, const aiNodeAnim* pNodeAnim)
 		{
 			aiQuaternion rotation;
 
@@ -266,7 +266,7 @@ namespace rvTools
 				uint32_t frameIndex = 0;
 				for (uint32_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++)
 				{
-					if (time < (float)pNodeAnim->mRotationKeys[i + 1].mTime)
+					if (time < pNodeAnim->mRotationKeys[i + 1].mTime)
 					{
 						frameIndex = i;
 						break;
@@ -276,7 +276,7 @@ namespace rvTools
 				aiQuatKey currentFrame = pNodeAnim->mRotationKeys[frameIndex];
 				aiQuatKey nextFrame = pNodeAnim->mRotationKeys[(frameIndex + 1) % pNodeAnim->mNumRotationKeys];
 
-				float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+				float delta = (time - currentFrame.mTime) / (nextFrame.mTime - currentFrame.mTime);
 
 				const aiQuaternion& start = currentFrame.mValue;
 				const aiQuaternion& end = nextFrame.mValue;
@@ -290,7 +290,7 @@ namespace rvTools
 		}
 
 		// Returns a 4x4 matrix with interpolated scaling between current and next frame
-		aiMatrix4x4 interpolateScale(float time, const aiNodeAnim* pNodeAnim)
+		aiMatrix4x4 interpolateScale(double time, const aiNodeAnim* pNodeAnim)
 		{
 			aiVector3D scale;
 
@@ -303,7 +303,7 @@ namespace rvTools
 				uint32_t frameIndex = 0;
 				for (uint32_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++)
 				{
-					if (time < (float)pNodeAnim->mScalingKeys[i + 1].mTime)
+					if (time < pNodeAnim->mScalingKeys[i + 1].mTime)
 					{
 						frameIndex = i;
 						break;
@@ -313,7 +313,7 @@ namespace rvTools
 				aiVectorKey currentFrame = pNodeAnim->mScalingKeys[frameIndex];
 				aiVectorKey nextFrame = pNodeAnim->mScalingKeys[(frameIndex + 1) % pNodeAnim->mNumScalingKeys];
 
-				float delta = (time - (float)currentFrame.mTime) / (float)(nextFrame.mTime - currentFrame.mTime);
+				float delta = (time - currentFrame.mTime) / (nextFrame.mTime - currentFrame.mTime);
 
 				const aiVector3D& start = currentFrame.mValue;
 				const aiVector3D& end = nextFrame.mValue;
@@ -326,31 +326,34 @@ namespace rvTools
 			return mat;
 		}
 
-		uint16_t FindRotation(double AnimationTime, const aiNodeAnim * pNodeAnim)
+		uint16_t findRotation(double animationTime, const aiNodeAnim * pNodeAnim)
 		{
 			for (uint16_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
-				if (AnimationTime < (float)pNodeAnim->mRotationKeys[i + 1].mTime) {
+				if (animationTime < pNodeAnim->mRotationKeys[i + 1].mTime) {
 					return i;
 				}
 			}
+			return UINT16_MAX;
 		}
 
-		uint16_t FindScale(double AnimationTime, const aiNodeAnim * pNodeAnim)
+		uint16_t findScale(double animationTime, const aiNodeAnim * pNodeAnim)
 		{
 			for (uint16_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
-				if (AnimationTime < (float)pNodeAnim->mScalingKeys[i + 1].mTime) {
+				if (animationTime < pNodeAnim->mScalingKeys[i + 1].mTime) {
 					return i;
 				}
 			}
+			return UINT16_MAX;
 		}
 
-		uint16_t FindPosition(double AnimationTime, const aiNodeAnim * pNodeAnim)
+		uint16_t findPosition(double animationTime, const aiNodeAnim * pNodeAnim)
 		{
 			for (uint16_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
-				if (AnimationTime < (float)pNodeAnim->mPositionKeys[i + 1].mTime) {
+				if (animationTime < pNodeAnim->mPositionKeys[i + 1].mTime) {
 					return i;
 				}
 			}
+			return  UINT16_MAX;
 		}
 	}
 }

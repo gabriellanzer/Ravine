@@ -45,7 +45,7 @@ namespace rvDebug
 	}
 
 	//Destroy handle
-	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
+	void destroyDebugReportCallbackExt(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
 		if (callback != NULL) {
 			auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
 			if (func != nullptr) {

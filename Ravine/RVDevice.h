@@ -2,11 +2,11 @@
 #define RAVINE_DEVICE_H
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 using eastl::vector;
 
 //Vulkan Includes
-#include <vulkan\vulkan.h>
+#include "volk.h"
 
 //Ravine includes
 #include "RvPersistentBuffer.h"
@@ -17,8 +17,7 @@ class RvDevice
 {
 private:
 	VkSurfaceKHR* surface;
-	void CreateCommandPool();
-
+	void createCommandPool();
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
 public:
@@ -43,16 +42,20 @@ public:
 	//Attributes
 	VkSampleCountFlagBits sampleCount;
 
-	//Should be used instead of destroying in destructor
-	void Clear();
+	/**
+	 * \brief Should be used instead of destroying in destructor
+	 */
+	void clear();
 
-	RvTexture createTexture(void *pixels, size_t width, size_t heigh, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM);
-	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory);
+	RvTexture createTexture(void *pixels, size_t width, size_t height, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM);
+	void createImage(VkExtent3D extent, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling,
+		VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage& image, VkDeviceMemory& imageMemory) const; 
 	
-	RvDynamicBuffer createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);
-	RvPersistentBuffer createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags);
+	RvDynamicBuffer createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags);
+	RvPersistentBuffer createPersistentBuffer(void* data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, 
+		VkMemoryPropertyFlagBits memoryPropertyFlags);
 
-	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 	VkFormat findSupportedFormat(const vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 	VkSampleCountFlagBits getMaxUsableSampleCount();

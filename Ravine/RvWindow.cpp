@@ -2,7 +2,7 @@
 
 
 RvWindow::RvWindow(uint32_t width, uint32_t height, const string title, bool fullscreen, GLFWframebuffersizefun resizeCallback) :
-	extent({ width, height }), title(title)
+	title(title), extent({ width, height })
 {
 	if (resizeCallback != NULL)
 	{

@@ -1,8 +1,8 @@
-#include "RVDevice.h"
+#include "RvDevice.h"
 
 //EASTL Includes
-#include <EASTL/algorithm.h>
-#include <EASTL/set.h>
+#include <eastl/algorithm.h>
+#include <eastl/set.h>
 
 using eastl::set;
 
@@ -11,9 +11,9 @@ using eastl::set;
 
 //Ravine System Includes
 #include "RvTools.h"
-#include "RVConfig.h"
+#include "RvConfig.h"
 
-RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : physicalDevice(physicalDevice), surface(&surface)
+RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : surface(&surface), physicalDevice(physicalDevice)
 {
 	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(physicalDevice, surface);
 
@@ -45,12 +45,12 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(rvCfg::DeviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = rvCfg::DeviceExtensions.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(rvCfg::DEVICE_EXTENSIONS.size());
+	createInfo.ppEnabledExtensionNames = rvCfg::DEVICE_EXTENSIONS.data();
 
 #ifdef VALIDATION_LAYERS_ENABLED
-		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
-		createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::VALIDATION_LAYERS.size());
+		createInfo.ppEnabledLayerNames = rvCfg::VALIDATION_LAYERS.data();
 #else
 		createInfo.enabledLayerCount = 0;
 #endif
@@ -68,18 +68,17 @@ RvDevice::RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface) : phy
 
 	//TODO: This should be dynamically chosen
 	sampleCount = getMaxUsableSampleCount();
-	fmt::print(stdout, "Choosen samples count: {0}\n", sampleCount);
+	fmt::print(stdout, "Chosen samples count: {0}\n", sampleCount);
 
 	//Create command pool
-	CreateCommandPool();
+	createCommandPool();
 }
 
 
 RvDevice::~RvDevice()
-{
-}
+= default;
 
-void RvDevice::CreateCommandPool()
+void RvDevice::createCommandPool()
 {
 	rvTools::QueueFamilyIndices queueFamilyIndices = rvTools::findQueueFamilies(physicalDevice, *surface);
 
@@ -93,7 +92,8 @@ void RvDevice::CreateCommandPool()
 	}
 }
 
-void RvDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
+void RvDevice::createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
+                            VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
 	//Defining buffer creation info
 	VkBufferCreateInfo bufferCreateInfo = {};
@@ -124,7 +124,7 @@ void RvDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
 	vkBindBufferMemory(handle, buffer, bufferMemory, 0);
 }
 
-void RvDevice::Clear()
+void RvDevice::clear()
 {
 	//Destroy command pool actually destroys all CMD Buffers
 	vkDestroyCommandPool(handle, commandPool, nullptr);
@@ -133,15 +133,15 @@ void RvDevice::Clear()
 	vkDestroyDevice(handle, nullptr);
 }
 
-void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory)
+void RvDevice::createImage(VkExtent3D extent, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageCreateFlagBits createFlagBits, VkImage & image, VkDeviceMemory & imageMemory) const
 {
 	//Defining image creation info
 	VkImageCreateInfo imageCreateInfo = {};
 	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageCreateInfo.extent.width = width;
-	imageCreateInfo.extent.height = height;
-	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.extent.width = extent.width;
+	imageCreateInfo.extent.height = extent.height;
+	imageCreateInfo.extent.depth = extent.depth;
 	imageCreateInfo.mipLevels = mipLevels;
 	imageCreateInfo.arrayLayers = 1;
 	imageCreateInfo.format = format;
@@ -174,33 +174,34 @@ void RvDevice::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
 	vkBindImageMemory(handle, image, imageMemory, 0);
 }
 
-RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
+RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags)
 {
-	RvDynamicBuffer newBuffer;
-	createBuffer(bufferSize, usageFlags, memoryProperyFlags, newBuffer.buffer, newBuffer.memory);
+	RvDynamicBuffer newBuffer(bufferSize);
+	createBuffer(bufferSize, usageFlags, memoryPropertyFlags, newBuffer.handle, newBuffer.memory);
 	return newBuffer;
 }
 
-RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryProperyFlags)
+RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bufferSize, size_t sizeOfDataType, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags)
 {
 	// Staging Buffer
-	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+	RvDynamicBuffer stagingBuffer = createDynamicBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 
 	// Copying data
 	void* stagingData;
 	vkMapMemory(handle, stagingBuffer.memory, 0, bufferSize, 0, &stagingData);
-	memcpy(stagingData, (void*)data, (size_t)bufferSize);
+	memcpy(stagingData, static_cast<void*>(data), static_cast<size_t>(bufferSize));
 	vkUnmapMemory(handle, stagingBuffer.memory);
 
 	// Persistent buffer
 	RvPersistentBuffer newBuffer(bufferSize, sizeOfDataType);
-	createBuffer(bufferSize, usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, memoryProperyFlags, newBuffer.handle, newBuffer.memory);
+	createBuffer(bufferSize, usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, memoryPropertyFlags, newBuffer.handle, newBuffer.memory);
 
 	// Copying data to persistent buffer
-	rvTools::copyBuffer(*this, stagingBuffer.buffer, newBuffer.handle, bufferSize);
+	rvTools::copyBuffer(*this, stagingBuffer.handle, newBuffer.handle, bufferSize);
 
 	//Clearing staging buffer
-	vkDestroyBuffer(handle, stagingBuffer.buffer, nullptr);
+	vkDestroyBuffer(handle, stagingBuffer.handle, nullptr);
 	vkFreeMemory(handle, stagingBuffer.memory, nullptr);
 
 	return newBuffer;
@@ -211,7 +212,7 @@ RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height, VkF
 	return rvTools::createTexture(this, pixels, width, height, format);
 }
 
-uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
 {
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
 		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -249,7 +250,8 @@ VkFormat RvDevice::findDepthFormat()
 
 VkSampleCountFlagBits RvDevice::getMaxUsableSampleCount()
 {
-	VkSampleCountFlags counts = eastl::min(deviceProperties.limits.framebufferColorSampleCounts, deviceProperties.limits.framebufferDepthSampleCounts);
+	VkSampleCountFlags counts = eastl::min(deviceProperties.limits.framebufferColorSampleCounts,
+	                                       deviceProperties.limits.framebufferDepthSampleCounts);
 	if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
 	if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
 	if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }

@@ -2,10 +2,10 @@
 #define RV_GUI_H
 
 //Vulkan Includes
-#include <vulkan/vulkan.h>
+#include "volk.h"
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 
 //ImGUI Includes
 #include "imgui.h"
@@ -18,9 +18,9 @@
 #include "RvWindow.h"
 #include "RvSwapChain.h"
 #include "RvTexture.h"
-#include "RvGUIPipeline.h"
+#include "RvGuiPipeline.h"
 
-struct RvGUI
+struct RvGui
 {
 	//External Parameters
 	ImGuiIO* io;
@@ -36,7 +36,7 @@ struct RvGUI
 	VkSampler textureSampler;
 
 	//Pipeline Attributes
-	RvGUIPipeline* guiPipeline;
+	RvGuiPipeline* guiPipeline;
 	VkDescriptorPool descriptorPool;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorSet descriptorSet;
@@ -49,8 +49,8 @@ struct RvGUI
 
 	//Buffer Attributes
 	VkPushConstantRange pushConstantRange;
-	vector<RvPersistentBuffer> vertexBuffer;
-	vector<RvPersistentBuffer> indexBuffer;
+	vector<RvDynamicBuffer> vertexBuffer;
+	vector<RvDynamicBuffer> indexBuffer;
 
 	//The GUI CommandBuffers for each frame
 	vector<VkCommandBuffer> cmdBuffers;
@@ -66,24 +66,24 @@ struct RvGUI
 	//std::vector<VkCommandBuffer> commandBuffers;
 	//void CreateFrameBuffers();
 
-	RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window);
-	~RvGUI();
+	RvGui(RvDevice& device, RvSwapChain& swapChain, RvWindow& window);
+	~RvGui();
 
-	void Init(VkSampleCountFlagBits samplesCount);
-	void AcquireFrame();
-	void SubmitFrame();
-	void UpdateBuffers(uint32_t frameIndex);
-	void RecordCmdBuffers(uint32_t frameIndex);
+	void init(VkSampleCountFlagBits samplesCount);
+	void acquireFrame();
+	void submitFrame();
+	void updateBuffers(uint32_t frameIndex);
+	void recordCmdBuffers(uint32_t frameIndex);
 
 private:
-	void CreateFrameBuffers();
-	void CreateCmdBuffers();
-	void CreateTextureSampler();
-	void CreateFontTexture();
-	void CreateDescriptorPool();
-	void CreateDescriptorSetLayout();
-	void CreateDescriptorSet();
-	void CreatePushConstants();
+	void createFrameBuffers();
+	void createCmdBuffers();
+	void createTextureSampler();
+	void createFontTexture();
+	void createDescriptorPool();
+	void createDescriptorSetLayout();
+	void createDescriptorSet();
+	void createPushConstants();
 
 };
 

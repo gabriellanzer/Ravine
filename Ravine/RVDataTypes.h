@@ -2,19 +2,16 @@
 #define RV_DATATYPES_H
 
 //GLM Includes
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
 //EASTL Includes
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
-#include <EASTL/map.h>
-#include <EASTL/string.h>
+#include <eastl/array.h>
+#include <eastl/vector.h>
+#include <eastl/map.h>
+#include <eastl/string.h>
 
 //Vulkan Includes
-#include <vulkan/vulkan.h>
+#include "volk.h"
 
 //Assimp Includes
 #include <assimp/scene.h>

@@ -8648,7 +8648,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
 #define WIN32_LEAN_AND_MEAN
 #endif
 #ifndef __MINGW32__
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <windows.h>
 #endif

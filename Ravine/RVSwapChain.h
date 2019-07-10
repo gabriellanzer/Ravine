@@ -2,24 +2,19 @@
 #define RV_SWAPCHAIN_H
 
 //EASTL Includes
-#include <EASTL/vector.h>
+#include <eastl/vector.h>
 using eastl::vector;
-#include "EASTL_new.h"
 
 //Vulkan Includes
-#include <vulkan/vulkan.h>
+#include "volk.h"
 
 //Ravine Includes
 #include "RvTools.h"
 #include "RvDevice.h"
 #include "RvFramebufferAttachment.h"
 
-//Structure for Swap Chain Support query of details
-struct SwapChainSupportDetails {
-	VkSurfaceCapabilitiesKHR capabilities;
-	vector<VkSurfaceFormatKHR> formats;
-	vector<VkPresentModeKHR> presentModes;
-};
+//Forward declaration of Swap Chain Support details struct
+struct RvSwapChainSupportDetails;
 
 struct RvSwapChain
 {
@@ -30,11 +25,11 @@ private:
 
 	size_t currentFrame = 0;
 
-	bool framebufferResized = false;
 public:
 	//Extent values
 	uint32_t WIDTH;
 	uint32_t HEIGHT;
+	bool framebufferResized = false;
 
 	//Number of maximum simultaneous frames
 	#define RV_MAX_FRAMES_IN_FLIGHT 3
@@ -58,38 +53,42 @@ public:
 	//Queue fences
 	vector<VkFence> inFlightFences;
 
-	//Queues semaphors
+	//Queues semaphores
 	vector<VkSemaphore> imageAvailableSemaphores;
 	vector<VkSemaphore> renderFinishedSemaphores;
 
 	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
 	~RvSwapChain();
 
-	void Clear();
+	void clear();
 
-	void CreateImageViews();
-	void CreateRenderPass();
-	void AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
-	void CreateFramebuffers();
+	void createImageViews();
+	void createRenderPass();
+	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	void createFramebuffers();
 
-	void CreateSyncObjects();
+	void createSyncObjects();
 
-	void DestroySyncObjects();
+	void destroySyncObjects();
 
-	bool AcquireNextFrame(uint32_t& frameIndex);
-	bool SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
+	bool acquireNextFrame(uint32_t& frameIndex);
+	bool submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
 
 
 	VkSurfaceFormatKHR chooseSurfaceFormat(const vector<VkSurfaceFormatKHR>& availableFormats);
 
-	VkPresentModeKHR choosePresentMode(const vector<VkPresentModeKHR> availablePresentModes);
+	VkPresentModeKHR choosePresentMode(const vector<VkPresentModeKHR>& availablePresentModes);
 
 	VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-	operator VkSwapchainKHR()
-	{
-		return handle;
-	}
+	explicit operator VkSwapchainKHR() const;
+};
+
+struct RvSwapChainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	vector<VkSurfaceFormatKHR> formats;
+	vector<VkPresentModeKHR> presentModes;
 };
 
 #endif

@@ -1,13 +1,13 @@
 #include "RvPolygonPipeline.h"
 
-//STD Includes
-#include <vector>
-
 //Data Types
-#include "RVDataTypes.h"
+#include "RvDataTypes.h"
 
 //Ravine Systems
 #include "RvTools.h"
+
+//STD Include
+#include <stdexcept>
 
 RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
@@ -133,7 +133,7 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Dynamic_state
 	VkDynamicState dynamicStates[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR
+		VK_DYNAMIC_STATE_SCISSOR,
 	};
 
 	VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -170,6 +170,7 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	pipelineInfo.pDepthStencilState = nullptr; // Optional
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // Optional
+	pipelineInfo.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
 
 	//The uniforms layout
 	pipelineInfo.layout = layout;

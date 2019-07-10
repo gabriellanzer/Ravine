@@ -1043,7 +1043,7 @@ static SpvReflectResult ParseMemberCounts(Parser* p_parser)
         continue;
       }
 
-      if (member_index == INVALID_VALUE) {
+      if (member_index == (uint32_t)INVALID_VALUE) {
         return SPV_REFLECT_RESULT_ERROR_RANGE_EXCEEDED;
       }
 
@@ -1332,7 +1332,7 @@ static SpvReflectResult ParseType(Parser* p_parser, Node* p_node, Decorations* p
   if (result == SPV_REFLECT_RESULT_SUCCESS) {
     // Since the parse descends on type information, these will get overwritten
     // if not guarded against assignment. Only assign if the id is invalid.
-    if (p_type->id == INVALID_VALUE) {
+    if (p_type->id == (uint32_t)INVALID_VALUE) {
       p_type->id = p_node->result_id;
       p_type->op = p_node->op;
       p_type->decoration_flags = 0;
@@ -1612,7 +1612,7 @@ static SpvReflectResult ParseDescriptorBindings(Parser* p_parser, SpvReflectShad
     {
       continue;
     }
-    if ((p_node->decorations.set.value == INVALID_VALUE) || (p_node->decorations.binding.value == INVALID_VALUE)) {
+    if ((p_node->decorations.set.value == (uint32_t)INVALID_VALUE) || (p_node->decorations.binding.value == (uint32_t)INVALID_VALUE)) {
       continue;
     }
 
@@ -1646,7 +1646,7 @@ static SpvReflectResult ParseDescriptorBindings(Parser* p_parser, SpvReflectShad
     {
       continue;
     }
-    if ((p_node->decorations.set.value == INVALID_VALUE) || (p_node->decorations.binding.value == INVALID_VALUE)) {
+    if ((p_node->decorations.set.value == (uint32_t)INVALID_VALUE) || (p_node->decorations.binding.value == (uint32_t)INVALID_VALUE)) {
       continue;
     }
 
@@ -3622,7 +3622,7 @@ const SpvReflectInterfaceVariable* spvReflectGetInputVariableByLocation(const Sp
                                                                         uint32_t                      location,
                                                                         SpvReflectResult*             p_result)
 {
-  if (location == INVALID_VALUE) {
+  if (location == (uint32_t)INVALID_VALUE) {
     if (IsNotNull(p_result)) {
       *p_result = SPV_REFLECT_RESULT_ERROR_ELEMENT_NOT_FOUND;
     }
@@ -3659,7 +3659,7 @@ const SpvReflectInterfaceVariable* spvReflectGetEntryPointInputVariableByLocatio
   SpvReflectResult*             p_result
 )
 {
-  if (location == INVALID_VALUE) {
+  if (location == (uint32_t)INVALID_VALUE) {
     if (IsNotNull(p_result)) {
       *p_result = SPV_REFLECT_RESULT_ERROR_ELEMENT_NOT_FOUND;
     }
@@ -3774,7 +3774,7 @@ const SpvReflectInterfaceVariable* spvReflectGetOutputVariableByLocation(const S
                                                                          uint32_t                       location,
                                                                          SpvReflectResult*              p_result)
 {
-  if (location == INVALID_VALUE) {
+  if (location == (uint32_t)INVALID_VALUE) {
     if (IsNotNull(p_result)) {
       *p_result = SPV_REFLECT_RESULT_ERROR_ELEMENT_NOT_FOUND;
     }
@@ -3811,7 +3811,7 @@ const SpvReflectInterfaceVariable* spvReflectGetEntryPointOutputVariableByLocati
   SpvReflectResult*             p_result
 )
 {
-  if (location == INVALID_VALUE) {
+  if (location == (uint32_t)INVALID_VALUE) {
     if (IsNotNull(p_result)) {
       *p_result = SPV_REFLECT_RESULT_ERROR_ELEMENT_NOT_FOUND;
     }
@@ -4005,13 +4005,13 @@ SpvReflectResult spvReflectChangeDescriptorBindingNumbers(SpvReflectShaderModule
       return SPV_REFLECT_RESULT_ERROR_RANGE_EXCEEDED;
     }
     // Binding number
-    if (new_binding_number != SPV_REFLECT_BINDING_NUMBER_DONT_CHANGE) {
+    if (new_binding_number != (uint32_t)SPV_REFLECT_BINDING_NUMBER_DONT_CHANGE) {
       uint32_t* p_code = p_module->_internal->spirv_code + p_target_descriptor->word_offset.binding;
       *p_code = new_binding_number;
       p_target_descriptor->binding = new_binding_number;
     }
     // Set number
-    if (new_set_binding != SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
+    if (new_set_binding != (uint32_t)SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
       uint32_t* p_code = p_module->_internal->spirv_code + p_target_descriptor->word_offset.set;
       *p_code = new_set_binding;
       p_target_descriptor->set = new_set_binding;
@@ -4019,7 +4019,7 @@ SpvReflectResult spvReflectChangeDescriptorBindingNumbers(SpvReflectShaderModule
   }
 
   SpvReflectResult result = SPV_REFLECT_RESULT_SUCCESS;
-  if (new_set_binding != SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
+  if (new_set_binding != (uint32_t)SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
     result = SynchronizeDescriptorSets(p_module);
   }
   return result;
@@ -4053,7 +4053,7 @@ SpvReflectResult spvReflectChangeDescriptorSetNumber(SpvReflectShaderModule*    
   }
 
   SpvReflectResult result = SPV_REFLECT_RESULT_SUCCESS;
-  if (IsNotNull(p_target_set) && new_set_number != SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
+  if (IsNotNull(p_target_set) && new_set_number != (uint32_t)SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
     for (uint32_t index = 0; index < p_target_set->binding_count; ++index) {
       SpvReflectDescriptorBinding* p_descriptor = p_target_set->bindings[index];
       if (p_descriptor->word_offset.set > (p_module->_internal->spirv_word_count - 1)) {

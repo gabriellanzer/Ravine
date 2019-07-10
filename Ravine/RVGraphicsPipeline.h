@@ -2,15 +2,15 @@
 #define RV_GRAPHICS_PIPELINE_H
 
 //Vulkan Includes
-#include <vulkan\vulkan.h>
+#include "volk.h"
 
 //Ravine Systems
 #include "RvDevice.h"
 
-struct RvPolygonPipeline
+struct RvGraphicsPipeline
 {
-	RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode);
-	~RvPolygonPipeline();
+	RvGraphicsPipeline(VkDescriptorSetLayout descriptorSetLayout, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode);
+	~RvGraphicsPipeline();
 
 	RvDevice* device;
 	VkPipeline handle;

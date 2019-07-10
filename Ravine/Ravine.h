@@ -1,43 +1,28 @@
 #ifndef RAVINE_H
 #define RAVINE_H
 
+//Vulkan Include
+#include "volk.h"
+
 //GLFW Includes
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <glfw/glfw3.h>
 
 //EASTL includes
-#include <EASTL/allocator.h>
-#include <EASTL/vector.h>
-#include <EASTL/array.h>
-#include <EASTL/unordered_set.h>
-#include <EASTL/map.h>
-#include <EASTL/string.h>
+#include <eastl/vector.h>
+#include <eastl/array.h>
+#include <eastl/string.h>
+#include <eastl/unordered_set.h>
 
 using eastl::string;
 using eastl::vector;
 using eastl::array;
 using eastl::unordered_set;
 
-//Vulkan Include
-#include <vulkan\vulkan.h>
-
-//FMT Includes
-#include <fmt/printf.h>
-
-//GLM includes
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
-
 //Types dependencies
 #include "RvDataTypes.h"
-#include "RvUniformTypes.h"
 
 //VK Wrappers
-#include "RvTools.h"
 #include "RvAnimationTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"
@@ -49,11 +34,11 @@ using eastl::unordered_set;
 #include "RvCamera.h"
 
 //GUI Includes
-#include "RvGUI.h"
+#include "RvGui.h"
 
 //Math defines
-#define f_max(a,b)            (((a) > (b)) ? (a) : (b))
-#define f_min(a,b)            (((a) < (b)) ? (a) : (b))
+#define F_MAX(a,b)            (((a) > (b)) ? (a) : (b))
+#define F_MIN(a,b)            (((a) < (b)) ? (a) : (b))
 
 //Assimp Includes
 #include <assimp/scene.h>           // Output data structure
@@ -63,12 +48,11 @@ using namespace rvTools::animation;
 
 class Ravine
 {
-
 public:
 	Ravine();
 	~Ravine();
 
-	void run();
+	void Run();
 
 private:
 
@@ -105,7 +89,17 @@ private:
 	RvCamera* camera;
 
 	//GUI
-	RvGUI* gui;
+	RvGui* gui;
+
+	//PROTOTYPE PRESENTATION STUFF
+	bool staticSolidPipelineEnabled = false;
+	bool staticWiredPipelineEnabled = false;
+	bool skinnedSolidPipelineEnabled = true;
+	bool skinnedWiredPipelineEnabled = false;
+	glm::vec3 uniformPosition = glm::vec3(0);
+	glm::vec3 uniformScale = glm::vec3(0.01f, 0.01f, 0.01f);
+	glm::vec3 uniformRotation = glm::vec3(0, 0, 0);
+	//PROTOTYPE PRESENTATION STUFF
 
 	const aiScene* scene;
 	//Todo: Move to MESH
@@ -136,7 +130,7 @@ private:
 	VkDescriptorSetLayout materialDescriptorSetLayout;
 	VkDescriptorSetLayout modelDescriptorSetLayout;
 	VkDescriptorPool descriptorPool;
-	vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
+	vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptor pool
 
 	//Commands Buffers and it's Pool
 	//TODO: Move to COMMAND BUFFER
@@ -204,8 +198,8 @@ private:
 	bool loadScene(const string& filePath);
 	void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
 	//TODO: Move to Blend-tree
-	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
-	void ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
+	void boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms);
+	void readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode, const aiMatrix4x4& parentTransform);
 
 	//Create vertex buffer
 	void createVertexBuffer();
@@ -237,14 +231,17 @@ private:
 	//Main application loop
 	void mainLoop();
 
+	//Gui Calls
+	void drawGuiElements();
+
 	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();
 
 	//First person camera setup
-	void setupFPSCam();
+	void setupFpsCam();
 
 	//Updates uniform buffer for given image
-	void updateUniformBuffer(uint32_t currentImage);
+	void updateUniformBuffer(uint32_t currentFrame);
 
 	//Partial Cleanup of Swap Chain data
 	void cleanupSwapChain();

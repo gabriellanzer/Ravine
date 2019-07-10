@@ -2,12 +2,11 @@
 
 
 RvPersistentBuffer::RvPersistentBuffer()
-{
-}
+= default;
 
 RvPersistentBuffer::RvPersistentBuffer(VkDeviceSize bufferSize, size_t sizeOfDataType) :
-	instancesCount(bufferSize / sizeOfDataType),
-	bufferSize(bufferSize), sizeOfDataType(sizeOfDataType)
+	bufferSize(bufferSize), sizeOfDataType(sizeOfDataType),
+	instancesCount(bufferSize / sizeOfDataType)
 {
 
 
@@ -15,5 +14,4 @@ RvPersistentBuffer::RvPersistentBuffer(VkDeviceSize bufferSize, size_t sizeOfDat
 
 
 RvPersistentBuffer::~RvPersistentBuffer()
-{
-}
+= default;

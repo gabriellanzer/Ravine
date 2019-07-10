@@ -32,7 +32,7 @@ using eastl::array;
 #include "RvCamera.h"
 
 //GUI Includes
-#include "RvGUI.h"
+#include "RvGui.h"
 
 //Math defines
 #define F_MAX(a,b)            (((a) > (b)) ? (a) : (b))

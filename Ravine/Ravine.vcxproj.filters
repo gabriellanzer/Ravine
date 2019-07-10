@@ -150,12 +150,6 @@
     <ClCompile Include="RvRenderPass.cpp">
       <Filter>Source Files\Ravine System\Core</Filter>
     </ClCompile>
-    <ClCompile Include="RvGUI.cpp">
-      <Filter>Source Files\Ravine System\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="RvGUIPipeline.cpp">
-      <Filter>Source Files\Ravine System\Pipelines</Filter>
-    </ClCompile>
     <ClCompile Include="RvDynamicBuffer.cpp">
       <Filter>Source Files\Ravine System\Data</Filter>
     </ClCompile>
@@ -167,6 +161,12 @@
     </ClCompile>
     <ClCompile Include="volk.c">
       <Filter>Source Files\External</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGui.cpp">
+      <Filter>Source Files\Ravine System\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="RvGuiPipeline.cpp">
+      <Filter>Source Files\Ravine System\Pipelines</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -257,12 +257,6 @@
     <ClInclude Include="RvUniformTypes.h">
       <Filter>Header Files\Ravine System\Data</Filter>
     </ClInclude>
-    <ClInclude Include="RvGUIPipeline.h">
-      <Filter>Header Files\Ravine System\Pipelines</Filter>
-    </ClInclude>
-    <ClInclude Include="RvGUI.h">
-      <Filter>Header Files\Ravine System\Core</Filter>
-    </ClInclude>
     <ClInclude Include="RvWireframePipeline.h">
       <Filter>Header Files\Ravine System\Pipelines</Filter>
     </ClInclude>
@@ -276,6 +270,12 @@
       <Filter>Header Files\External</Filter>
     </ClInclude>
     <ClInclude Include="RvGraphicsPipeline.h">
+      <Filter>Header Files\Ravine System\Pipelines</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGui.h">
+      <Filter>Header Files\Ravine System\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RvGuiPipeline.h">
       <Filter>Header Files\Ravine System\Pipelines</Filter>
     </ClInclude>
   </ItemGroup>

@@ -18,7 +18,7 @@
 #include "RvWindow.h"
 #include "RvSwapChain.h"
 #include "RvTexture.h"
-#include "RvGUIPipeline.h"
+#include "RvGuiPipeline.h"
 
 struct RvGui
 {

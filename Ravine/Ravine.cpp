@@ -1595,7 +1595,7 @@ void Ravine::cleanupSwapChain() {
 
 void Ravine::cleanup()
 {
-	//Cleanup RvGUI data
+	//Cleanup RvGui data
 	delete gui;
 
 	//Hold number of swapchain images

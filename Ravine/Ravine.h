@@ -92,10 +92,11 @@ private:
 	RvGui* gui;
 
 	//PROTOTYPE PRESENTATION STUFF
-	bool staticSolidPipelineEnabled = false;
+	bool staticSolidPipelineEnabled = true;
 	bool staticWiredPipelineEnabled = false;
-	bool skinnedSolidPipelineEnabled = true;
+	bool skinnedSolidPipelineEnabled = false;
 	bool skinnedWiredPipelineEnabled = false;
+	bool linesPipelineEnabled = true;
 	glm::vec3 uniformPosition = glm::vec3(0);
 	glm::vec3 uniformScale = glm::vec3(0.01f, 0.01f, 0.01f);
 	glm::vec3 uniformRotation = glm::vec3(0, 0, 0);

@@ -452,9 +452,9 @@ namespace rvTools {
 		device.endSingleTimeCommands(commandBuffer);
 	}
 
-	void copyBuffer(RvDevice& device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+	void copyBuffer(RvDevice& device, const VkBuffer srcBuffer, const VkBuffer dstBuffer, const VkDeviceSize size)
 	{
-		VkCommandBuffer commandBuffer = device.beginSingleTimeCommands();
+		const VkCommandBuffer commandBuffer = device.beginSingleTimeCommands();
 
 		VkBufferCopy copyRegion = {};
 		copyRegion.size = size;

@@ -196,6 +196,7 @@
     <ClCompile Include="RvTools.cpp" />
     <ClCompile Include="spirv_reflect.c" />
     <ClCompile Include="volk.c" />
+    <ClCompile Include="WaveletLifting.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EASTL_new.h" />
@@ -234,6 +235,7 @@
     <ClInclude Include="spirv_reflect.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="volk.h" />
+    <ClInclude Include="WaveletLifting.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag" />

@@ -42,6 +42,8 @@
 //Specific usages of Assimp library
 using Assimp::Importer;
 
+#include "WaveletLifting.h"
+
 Ravine::Ravine()
 {
 }
@@ -97,7 +99,7 @@ void Ravine::initVulkan() {
 	//Core setup
 	createInstance();
 	rvDebug::setupDebugCallback(instance);
-	window->CreateSurface(instance);
+	window->CreateSurface(instance); //Test
 	pickPhysicalDevice();
 
 	//Load Scene
@@ -597,7 +599,7 @@ void Ravine::createDescriptorSetLayout()
 bool Ravine::loadScene(const string& filePath)
 {
 	Importer importer;
-	importer.ReadFile(filePath.c_str(), 
+	importer.ReadFile(filePath.c_str(),
 		/*aiProcess_CalcTangentSpace |*/ \
 		/*aiProcess_GenNormals |*/ \
 		/*aiProcess_JoinIdenticalVertices |*/ \
@@ -928,177 +930,54 @@ void Ravine::createVertexBuffer()
 	}
 }
 
-struct EdgeContraction
-{
-	uint32_t even, odd;
-	double cost;
-
-	EdgeContraction() : even(UINT32_MAX), odd(UINT32_MAX), cost(FLT_MAX)
-	{
-
-	}
-
-	EdgeContraction(const uint32_t& even, const uint32_t& odd, const double& cost) : even(even), odd(odd), cost(cost)
-	{
-
-	}
-};
-
 void Ravine::createIndexBuffer()
 {
 	indexBuffers.reserve(meshesCount);
 	oddIndexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		size_t linesCount = meshes[i].index_count * static_cast<size_t>(2);
+		WaveletApp wApp(meshes[i]);
+		wApp.generateLinkVertices();
+		wApp.calculateEdgeContractions();
 
-		//Calculate vertex quadratic matrix based on each face
-		vector<glm::mat4> vertexQuadric(meshes[i].index_count);
-		for (size_t j = 0; j < meshes[i].index_count; j += 3) //For each face (3 ids)
+		//Apply three lifting steeps
+		for (size_t phaseIt = 0; phaseIt < 3; phaseIt++)
 		{
-			uint32_t& aId = meshes[i].indices[j + 0];
-			uint32_t& bId = meshes[i].indices[j + 1];
-			uint32_t& cId = meshes[i].indices[j + 2];
+			wApp.splitPhase();
 
-			//Calculate plane coefficients
-			glm::vec3& a = meshes[i].vertices[aId].pos;
-			glm::vec3& b = meshes[i].vertices[bId].pos;
-			glm::vec3& c = meshes[i].vertices[cId].pos;
-			glm::vec3 ba = b - a;
-			glm::vec3 ca = c - a;
-			glm::vec3 nor = glm::normalize(glm::cross(ba, ca));
-			glm::vec4 plane = glm::vec4(nor, glm::dot(nor, -a)); //ABCD planar coefficients
-			//Calculate error quadric influence of this face on each vertex
-			glm::mat4 errorQuadric;
-			errorQuadric[0][0] = plane[0] * plane[0]; //A²
-			errorQuadric[1][0] = errorQuadric[0][1] = plane[0] * plane[1]; //AB
-			errorQuadric[2][0] = errorQuadric[0][2] = plane[0] * plane[2]; //AC
-			errorQuadric[3][0] = errorQuadric[0][3] = plane[0] * plane[3]; //AD
-			errorQuadric[1][1] = plane[1] * plane[1]; //B²
-			errorQuadric[1][2] = errorQuadric[2][1] = plane[1] * plane[2]; //BC
-			errorQuadric[1][3] = errorQuadric[3][1] = plane[1] * plane[3]; //BD
-			errorQuadric[2][2] = plane[2] * plane[2]; //C²
-			errorQuadric[2][3] = errorQuadric[3][2] = plane[2] * plane[3]; //CD
-			errorQuadric[3][3] = plane[3] * plane[3]; //D²
-			//Accumulate the error quadric for each vertex
-			vertexQuadric[aId] += errorQuadric;
-			vertexQuadric[bId] += errorQuadric;
-			vertexQuadric[cId] += errorQuadric;
+			//Contraction remap
+			uint32_t* remap = new uint32_t[meshes[i].vertex_count];
+			for (uint32_t vertIt = 0, size = meshes[i].vertex_count; vertIt < size; vertIt++)
+			{
+				//Default value is no remap at all
+				remap[vertIt] = vertIt;
+			}
+			//Remap Mesh odd indices to their even contraction pairs
+			for (EdgeContraction* contract : wApp.contractionsToPerform)
+			{
+				for (uint32_t oddId : contract->odd->boundVertices)
+				{
+					remap[oddId] = contract->even->boundVertices[0];
+				}
+			}
+			//Apply remap to all indices
+			for (uint32_t indexIt = 0, size = meshes[i].index_count; indexIt < size; indexIt++)
+			{
+				//Default value is no remap at all
+				meshes[i].indices[indexIt] = remap[meshes[i].indices[indexIt]];
+			}
+			delete[] remap;
 		}
 
-		//Calculate contraction cost per edge
-		vector<EdgeContraction> contractions(meshes[i].index_count);
-		vector<vector<uint32_t>> vNeighbors(meshes[i].vertex_count);
-		for (size_t j = 0; j < meshes[i].index_count; j += 3) //For each face (3 ids)
+		vector<uint32_t> contractIds(wApp.contractionsToPerform.size() * 2);
+		for (uint32_t contIt = 0, contSize = wApp.contractionsToPerform.size(); contIt < contSize; contIt++)
 		{
-			//Calculate triangle equation
-			uint32_t aId = meshes[i].indices[j + 0];
-			uint32_t bId = meshes[i].indices[j + 1];
-			uint32_t cId = meshes[i].indices[j + 2];
-
-			//Hold Neighbors for later
-			vNeighbors[aId].push_back(bId);
-			vNeighbors[bId].push_back(aId);
-			vNeighbors[bId].push_back(cId);
-			vNeighbors[cId].push_back(bId);
-			vNeighbors[cId].push_back(aId);
-			vNeighbors[aId].push_back(cId);
-
-			//Edges are 'ab', 'bc' and 'ca'
-			glm::vec4 a = glm::vec4(meshes[i].vertices[aId].pos, 1);
-			glm::vec4 b = glm::vec4(meshes[i].vertices[bId].pos, 1);
-			glm::vec4 c = glm::vec4(meshes[i].vertices[cId].pos, 1);
-
-			//Cost for 'ab'
-			{
-				glm::mat4 combinedError = vertexQuadric[aId] + vertexQuadric[bId];
-				double costA = glm::dot(a, combinedError * a);
-				double costB = glm::dot(b, combinedError * b);
-				if (costA < costB) //'a' is even, 'b' is odd
-				{
-					contractions[j + 0] = { aId, bId, costA };
-				}
-				else //'b' is even, 'a' is odd
-				{
-					contractions[j + 0] = { bId, aId, costB };
-				}
-			}
-
-			//Cost for 'bc'
-			{
-				glm::mat4 combinedError = vertexQuadric[bId] + vertexQuadric[cId];
-				double costB = glm::dot(b, combinedError * b);
-				double costC = glm::dot(c, combinedError * c);
-				if (costB < costC) //'b' is even, 'c' is odd
-				{
-					contractions[j + 1] = { bId, cId, costB };
-				}
-				else //'c' is even, 'b' is odd
-				{
-					contractions[j + 1] = { cId, bId, costC };
-				}
-			}
-
-			//Cost for 'ca'
-			{
-				glm::mat4 combinedError = vertexQuadric[cId] + vertexQuadric[aId];
-				double costC = glm::dot(c, combinedError * c);
-				double costA = glm::dot(a, combinedError * a);
-				if (costC < costA) //'c' is even, 'a' is odd
-				{
-					contractions[j + 2] = { cId, aId, costC };
-				}
-				else //'a' is even, 'c' is odd
-				{
-					contractions[j + 2] = { aId, cId, costA };
-				}
-			}
-		}
-
-		//Order based on smallest costs first
-		eastl::sort(contractions.begin(), contractions.end(),
-			[](const EdgeContraction& a, const EdgeContraction& b) -> bool
-		{
-			return a.cost < b.cost;
-		});
-
-		unordered_set<uint32_t> oddsList;
-		vector<uint32_t> edgesToCollapse;
-		//Reserve estimation
-		edgesToCollapse.reserve(contractions.size() / 3);
-		for (EdgeContraction& contraction : contractions)
-		{
-			//Check if this is actually an odd and not an even vertex
-			bool isOdd = true;
-			vector<uint32_t>& neighbors = vNeighbors[contraction.odd];
-			if (oddsList.find(contraction.odd) != oddsList.end()) //Check already added
-			{
-				isOdd = false;
-				continue;
-			}
-
-			//Check if any neighbor is odd
-			for (unsigned int neighbor : neighbors)
-			{
-				if (oddsList.find(neighbor) != oddsList.end())
-				{
-					isOdd = false;
-					break;
-				}
-			}
-
-			//Found an odd!
-			if (isOdd)
-			{
-				//Add this contraction to the list
-				oddsList.insert(contraction.odd);
-				edgesToCollapse.push_back(contraction.odd);
-				edgesToCollapse.push_back(contraction.even);
-			}
+			contractIds[contIt * 2 + 0] = wApp.contractionsToPerform[contIt]->odd->boundVertices[0];
+			contractIds[contIt * 2 + 1] = wApp.contractionsToPerform[contIt]->even->boundVertices[0];
 		}
 
 		oddIndexBuffers.push_back(device->createPersistentBuffer(
-			edgesToCollapse.data(), sizeof(uint32_t) * edgesToCollapse.size(), sizeof(uint32_t),
+			contractIds.data(), sizeof(uint32_t) * contractIds.size(), sizeof(uint32_t),
 			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		));
@@ -1274,72 +1153,93 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	beginInfo.pInheritanceInfo = &inheritanceInfo;
 
 	//Begin recording Command Buffer
-	if (vkBeginCommandBuffer(secondaryCmdBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+	VkCommandBuffer& cmdBuffer = secondaryCmdBuffers[currentFrame];
+	if (vkBeginCommandBuffer(cmdBuffer, &beginInfo) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to begin recording command buffer!");
 	}
 
-	//Basic Drawing Commands
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
 	const size_t setsPerFrame = 1 + (meshesCount * 2);
 	const VkDeviceSize offsets[] = { 0 };
+
+	VkViewport viewport = { };
+	viewport.width = window->extent.width;
+	viewport.height = window->extent.height;
+	viewport.minDepth = 0;
+	viewport.maxDepth = 1;
+
+	VkRect2D scissor = { };
+	scissor.extent.width = window->extent.width;
+	scissor.extent.height = window->extent.height;
 
 	if (staticSolidPipelineEnabled)
 	{
 		//Bind Correct Graphics Pipeline
-		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
+
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 		//Global, Material and Model Descriptor Sets
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		//Call drawing
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
-			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
 	if (staticWiredPipelineEnabled)
 	{
 		//Bind Correct Graphics Pipeline
-		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
+
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 		//Global, Material and Model Descriptor Sets
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		//Call drawing
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
-			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
 	if (skinnedSolidPipelineEnabled)
 	{
 		//Bind Correct Graphics Pipeline
-		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 		//Global, Material and Model Descriptor Sets
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		//Call drawing
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
-			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
@@ -1347,60 +1247,75 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	if (skinnedSolidPipelineEnabled)
 	{
 		//Bind Correct Graphics Pipeline
-		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 		//Global, Material and Model Descriptor Sets
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		//Call drawing
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
-			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
 	if (skinnedWiredPipelineEnabled)
 	{
 		//Perform the same with wireframe rendering
-		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
+
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 		//Global, Material and Model Descriptor Sets
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
-			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
-	//Perform the same with lines rendering
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
-
-	//Global, Material and Model Descriptor Sets
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
-
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	if (linesPipelineEnabled)
 	{
-		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		//Perform the same with lines rendering
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
 
-		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], oddIndexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(oddIndexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, oddIndexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(oddIndexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
 	}
 
 	//Stop recording Command Buffer
-	if (vkEndCommandBuffer(secondaryCmdBuffers[currentFrame]) != VK_SUCCESS) {
+	if (vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to record command buffer!");
 	}
 #pragma endregion
@@ -1431,8 +1346,8 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	vkCmdBeginRenderPass(primaryCmdBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-	//Execute Skinned Mesh Pipeline - Secondary Command Buffer
-	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &secondaryCmdBuffers[currentFrame]);
+	//Execute Application Pipelines - Secondary Command Buffer
+	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &cmdBuffer);
 
 	//Execute GUI Pipeline - Secondary Command Buffer
 	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &gui->cmdBuffers[currentFrame]);
@@ -1507,6 +1422,7 @@ void Ravine::drawGuiElements()
 				ImGui::Checkbox("Skinned Wireframe Pipeline", &skinnedWiredPipelineEnabled);
 				ImGui::Checkbox("Static Opaque Pipeline", &staticSolidPipelineEnabled);
 				ImGui::Checkbox("Static Wireframe Pipeline", &staticWiredPipelineEnabled);
+				ImGui::Checkbox("Static Lines Pipeline", &linesPipelineEnabled);
 				ImGui::Separator();
 			}
 
@@ -1894,4 +1810,4 @@ void Ravine::cleanup()
 
 	//Finish GLFW
 	glfwTerminate();
-	}
+}

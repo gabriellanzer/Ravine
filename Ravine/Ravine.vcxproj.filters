@@ -70,13 +70,16 @@
     <Filter Include="Header Files\Ravine System\Pipelines">
       <UniqueIdentifier>{fc07786f-9b74-46ec-ae3f-fa5cd2d0069d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Applications">
+      <UniqueIdentifier>{20abae75-b7a2-4e81-8b9a-a517c7b09d00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Applications">
+      <UniqueIdentifier>{520d636c-69a0-4c30-9433-313a17e32d9a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Ravine.cpp">
-      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
     <ClCompile Include="RvGraphicsPipeline.cpp">
       <Filter>Source Files\Ravine System\Pipelines</Filter>
@@ -167,6 +170,12 @@
     </ClCompile>
     <ClCompile Include="RvGuiPipeline.cpp">
       <Filter>Source Files\Ravine System\Pipelines</Filter>
+    </ClCompile>
+    <ClCompile Include="WaveletLifting.cpp">
+      <Filter>Source Files\Applications</Filter>
+    </ClCompile>
+    <ClCompile Include="Ravine.cpp">
+      <Filter>Source Files\Ravine System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -277,6 +286,9 @@
     </ClInclude>
     <ClInclude Include="RvGuiPipeline.h">
       <Filter>Header Files\Ravine System\Pipelines</Filter>
+    </ClInclude>
+    <ClInclude Include="WaveletLifting.h">
+      <Filter>Header Files\Applications</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

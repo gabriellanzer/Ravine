@@ -26,13 +26,12 @@ using eastl::string;
 struct RvAnimation
 {
 	aiAnimation* aiAnim;
-	//Map<boneId, singleBoneAnimationFrames/*aiNodeAnim*/>
 };
 
 struct RvBoneInfo
 {
-	aiMatrix4x4 BoneOffset;
-	aiMatrix4x4 FinalTransformation;
+	aiMatrix4x4 boneOffset;
+	aiMatrix4x4 finalTransformation;
 };
 
 #pragma endregion

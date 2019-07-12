@@ -6,17 +6,27 @@ using glm::vec4;
 #include <eastl/sort.h>
 using eastl::sort;
 
+#include <eastl/unordered_set.h>
+using eastl::unordered_set;
+
 #include "crc32.hpp"
+
+HalfFace::HalfFace(uint32_t opIndex, uint32_t compId1, uint32_t compId2) :
+	oppositeIndex(opIndex), composingIndices{ compId1, compId2 }
+{
+
+}
 
 EdgeContraction::EdgeContraction() : even(nullptr), odd(nullptr), cost(FLT_MAX)
 {
+
 }
 
 EdgeContraction::EdgeContraction(LinkVertex* even, LinkVertex* odd, const double& cost) : even(even), odd(odd), cost(cost)
 {
 }
 
-WaveletApp::WaveletApp(const RvSkinnedMeshColored& mesh) : mesh(&mesh)
+WaveletApp::WaveletApp(RvSkinnedMeshColored& mesh) : mesh(&mesh)
 {
 	//Initialize linkVertexMap (one entry for each vertex)
 	linkVertexMap = new LinkVertex*[mesh.vertex_count];
@@ -39,7 +49,7 @@ WaveletApp::~WaveletApp()
 uint32_t hashVec3(vec3& vector)
 {
 	char* dataIni = reinterpret_cast<char*>(&vector.x);
-	return crc(dataIni, 3/*x,y,z*/*4/*float=4bytes=4char*/);
+	return crc(dataIni, 3/*x,y,z*/ * 4/*float=4bytes=4char*/);
 }
 
 void WaveletApp::generateLinkVertices()
@@ -79,9 +89,9 @@ void WaveletApp::generateLinkVertices()
 		uint32_t& cId = mesh->indices[indexIt + 2];
 
 		//Calculate plane coefficients
-		vec3& a = mesh->vertices[aId].pos;
-		vec3& b = mesh->vertices[bId].pos;
-		vec3& c = mesh->vertices[cId].pos;
+		vec3 a = mesh->vertices[aId].pos;
+		vec3 b = mesh->vertices[bId].pos;
+		vec3 c = mesh->vertices[cId].pos;
 		vec3 ba = b - a;
 		vec3 ca = c - a;
 		vec3 nor = normalize(cross(ba, ca));
@@ -108,7 +118,7 @@ void WaveletApp::generateLinkVertices()
 		bLink->quadric += errorQuadric;
 		cLink->quadric += errorQuadric;
 
-		//Hold Neighbors for later
+		//Hold Neighbors and generate HalfEdges
 		aLink->neighborVertices.insert(bLink);
 		bLink->neighborVertices.insert(aLink);
 		bLink->neighborVertices.insert(cLink);
@@ -134,22 +144,33 @@ void WaveletApp::calculateEdgeContractions()
 		LinkVertex* cLink = linkVertexMap[cId];
 
 		//Edges are 'ab', 'bc' and 'ca'
-		const vec4 a = vec4(mesh->vertices[aId].pos, 1);
-		const vec4 b = vec4(mesh->vertices[bId].pos, 1);
-		const vec4 c = vec4(mesh->vertices[cId].pos, 1);
+		const vec4 a = mesh->vertices[aId].pos;
+		const vec4 b = mesh->vertices[bId].pos;
+		const vec4 c = mesh->vertices[cId].pos;
 
 		//Cost for 'ab'
 		{
 			const mat4 combinedError = aLink->quadric + bLink->quadric;
 			const double costA = dot(a, combinedError * a);
 			const double costB = dot(b, combinedError * b);
+			EdgeContraction& ctr = contractions[indexIt + 0];
 			if (costA < costB) //'a' is even, 'b' is odd
 			{
-				contractions[indexIt + 0] = { aLink, bLink, costA };
+				ctr = { aLink, bLink, costA };
 			}
 			else //'b' is even, 'a' is odd
 			{
-				contractions[indexIt + 0] = { bLink, aLink, costB };
+				ctr = { bLink, aLink, costB };
+			}
+
+			//Setup contraction halfFaces
+			if (ctr.halfFaces[0].oppositeIndex == UINT32_MAX)
+			{
+				ctr.halfFaces[0] = HalfFace(cId, aId, bId);
+			}
+			else
+			{
+				ctr.halfFaces[1] = HalfFace(cId, aId, bId);
 			}
 		}
 
@@ -158,13 +179,24 @@ void WaveletApp::calculateEdgeContractions()
 			const mat4 combinedError = bLink->quadric + cLink->quadric;
 			const double costB = dot(b, combinedError * b);
 			const double costC = dot(c, combinedError * c);
+			EdgeContraction& ctr = contractions[indexIt + 1];
 			if (costB < costC) //'b' is even, 'c' is odd
 			{
-				contractions[indexIt + 1] = { bLink, cLink, costB };
+				ctr = { bLink, cLink, costB };
 			}
 			else //'c' is even, 'b' is odd
 			{
-				contractions[indexIt + 1] = { cLink, bLink, costC };
+				ctr = { cLink, bLink, costC };
+			}
+
+			//Setup contraction halfFaces
+			if (ctr.halfFaces[0].oppositeIndex == UINT32_MAX)
+			{
+				ctr.halfFaces[0] = HalfFace(aId, bId, cId);
+			}
+			else
+			{
+				ctr.halfFaces[1] = HalfFace(aId, bId, cId);
 			}
 		}
 
@@ -173,13 +205,24 @@ void WaveletApp::calculateEdgeContractions()
 			const mat4 combinedError = cLink->quadric + aLink->quadric;
 			const double costC = dot(c, combinedError * c);
 			const double costA = dot(a, combinedError * a);
+			EdgeContraction& ctr = contractions[indexIt + 2];
 			if (costC < costA) //'c' is even, 'a' is odd
 			{
-				contractions[indexIt + 2] = { cLink, aLink, costC };
+				ctr = { cLink, aLink, costC };
 			}
 			else //'a' is even, 'c' is odd
 			{
-				contractions[indexIt + 2] = { aLink, cLink, costA };
+				ctr = { aLink, cLink, costA };
+			}
+
+			//Setup contraction halfFaces
+			if (ctr.halfFaces[0].oppositeIndex == UINT32_MAX)
+			{
+				ctr.halfFaces[0] = HalfFace(bId, aId, cId);
+			}
+			else
+			{
+				ctr.halfFaces[1] = HalfFace(bId, aId, cId);
 			}
 		}
 	}
@@ -194,11 +237,11 @@ void WaveletApp::calculateEdgeContractions()
 
 void WaveletApp::splitPhase()
 {
-	unordered_set<LinkVertex*> oddsList;
-	//vector<LinkVertex*> edgesToCollapse;
+	//To perform split phase one must:
+	// - Calculate unique odds vertices for this lifting step
+
 	//Reserve estimation
-	//edgesToCollapse.reserve(contractions.size() / 3);
-	contractionsToPerform.reserve(contractions.size()/3);
+	contractionsToPerform.reserve(contractions.size() / 3);
 	for (EdgeContraction& contraction : contractions)
 	{
 		//Check if this is actually an odd and not an even vertex
@@ -224,17 +267,61 @@ void WaveletApp::splitPhase()
 		{
 			//Add this contraction to the list
 			oddsList.insert(contraction.odd);
-			//edgesToCollapse.push_back(contraction.odd);
-			//edgesToCollapse.push_back(contraction.even);
 			contractionsToPerform.push_back(&contraction);
-			contraction.cost = FLT_MAX;
 		}
 	}
-	//Order based on smallest costs first (will set contractions to perform to end)
-	sort(contractions.begin(), contractions.end(),
-		[](const EdgeContraction& a, const EdgeContraction& b) -> bool
+}
+
+void WaveletApp::updatePhase()
+{
+	//To perform update
+}
+
+void WaveletApp::performContractions()
+{
+	//To perform a contraction one must:
+	// - Drag all odd vertices to the correct even pair location
+	// - Delete indices the two faces that will be collapsed
+	uint32_t removedIds = 0;
+	for (EdgeContraction* contr : contractionsToPerform)
 	{
-		return a.cost < b.cost;
-	});
-	contractions.resize(contractions.size()-contractionsToPerform.size());
+		//Dragging step
+		const vec4& evenPos = mesh->vertices[contr->even->boundVertices[0]].pos;
+		for (uint32_t& oddId : contr->odd->boundVertices)
+		{
+			mesh->vertices[oddId].pos = evenPos;
+		}
+
+		//Should not collapse border edges
+		if (contr->halfFaces[1].oppositeIndex == UINT32_MAX)
+		{
+			continue;
+		}
+
+		//Mark indices to be removed (of both half-edges - two faces)
+		HalfFace& hEdge = contr->halfFaces[0];
+		mesh->indices[hEdge.oppositeIndex] = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[0]] = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[1]] = UINT32_MAX;
+		hEdge = contr->halfFaces[1];
+		mesh->indices[hEdge.oppositeIndex] = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[0]] = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[1]] = UINT32_MAX;
+		removedIds += 6; //Two faces = 6 Ids
+	}
+
+	//Sort all invalidated triangles to the end of the array
+	size_t remIt = 0;
+	const uint32_t size = mesh->index_count;
+	for (uint32_t i = 0; i < size; i += 3)
+	{
+		if (mesh->indices[i] == UINT32_MAX)
+		{
+			mesh->indices[i + 0] = mesh->indices[size - remIt - 3];
+			mesh->indices[i + 1] = mesh->indices[size - remIt - 2];
+			mesh->indices[i + 2] = mesh->indices[size - remIt - 1];
+		}
+		remIt += 3;
+	}
+	mesh->index_count = size - removedIds;
 }

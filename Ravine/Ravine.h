@@ -146,7 +146,11 @@ private:
 	vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
 	vector<RvPersistentBuffer> indexBuffers;
-	vector<RvPersistentBuffer> oddIndexBuffers;
+
+	//WAVELET LIFTING STUFF
+	vector<RvPersistentBuffer> contractionIndexBuffers;
+	int liftingLayer = 0;
+	//WAVELET LIFTING STUFF
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM

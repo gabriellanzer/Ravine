@@ -7,6 +7,8 @@ using eastl::unordered_map;
 using eastl::vector;
 #include <eastl/unordered_set.h>
 using eastl::unordered_set;
+#include <eastl/vector_multimap.h>
+using eastl::vector_multimap;
 
 #include <glm/vec3.hpp>
 using glm::vec3;
@@ -15,6 +17,23 @@ using glm::mat4;
 
 #include "RvDataTypes.h"
 
+struct HalfFace
+{
+	/**
+	 * \brief Index of the vertex opposing this half-edge.
+	 * This index is located on the tip of the face whose
+	 * side is this half-edge.
+	 */
+	uint32_t oppositeIndex;
+
+	/**
+	 * \brief Mesh indices that compose this half-edge.
+	 */
+	uint32_t composingIndices[2];
+
+	explicit HalfFace(uint32_t opIndex = UINT32_MAX, uint32_t compId1 = UINT32_MAX, uint32_t compId2 = UINT32_MAX);
+};
+
 struct LinkVertex
 {
 	/**
@@ -22,11 +41,6 @@ struct LinkVertex
 	 */
 	vector<uint32_t> boundVertices;
 
-	/**
-	 * \brief The two neighbors for each bound vertex.
-	 */
-	vector<uint32_t[2]> boundNeighbors;
-	
 	/**
 	 * \brief Vertices that are considered neighbors of all bound linkVertices;
 	 */
@@ -42,16 +56,18 @@ struct EdgeContraction
 {
 	LinkVertex* even, *odd;
 	double cost;
+	HalfFace halfFaces[2];
 
 	EdgeContraction();
 
 	EdgeContraction(LinkVertex* even, LinkVertex* odd, const double& cost);
+	~EdgeContraction() = default;
 };
 
 class WaveletApp
 {
 private:
-	const RvSkinnedMeshColored* mesh = nullptr;
+	RvSkinnedMeshColored* mesh = nullptr;
 
 	vector<LinkVertex*> linkVertices;
 	/**
@@ -62,17 +78,22 @@ private:
 	 * \brief Maps every vertex position to it's Link owner.
 	 */
 	map<uint128_t, LinkVertex*> linkPosMap;
-
 	vector<EdgeContraction> contractions;
-	WaveletApp() = default;
-public:
-	vector<EdgeContraction*> contractionsToPerform;
 
-	explicit WaveletApp(const RvSkinnedMeshColored& mesh);
+	WaveletApp() = default;
+
+public:
+	static const uint32_t LIFTING_STEPS = 3;
+	vector<EdgeContraction*> contractionsToPerform;
+	unordered_set<LinkVertex*> oddsList;
+
+	explicit WaveletApp(RvSkinnedMeshColored& mesh);
 	~WaveletApp();
 	void generateLinkVertices();
 	void calculateEdgeContractions();
 	void splitPhase();
+	void updatePhase();
+	void performContractions();
 };
 
 #endif

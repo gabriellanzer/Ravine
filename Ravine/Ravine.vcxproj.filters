@@ -290,6 +290,9 @@
     <ClInclude Include="WaveletLifting.h">
       <Filter>Header Files\Applications</Filter>
     </ClInclude>
+    <ClInclude Include="ProceduralMesh.hpp">
+      <Filter>Header Files\Applications</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag">

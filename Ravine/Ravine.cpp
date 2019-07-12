@@ -150,8 +150,27 @@ void Ravine::initVulkan() {
 	swapChain->createFramebuffers();
 	loadTextureImages();
 	createTextureSampler();
+
+	//Default meshes buffer creation
 	createIndexBuffer();
 	createVertexBuffer();
+
+	//For each Lifting Step
+	for (size_t phaseIt = 0; phaseIt < WaveletApp::LIFTING_STEPS; phaseIt++)
+	{
+		for (size_t meshIt = 0; meshIt < meshesCount; meshIt++)
+		{
+			WaveletApp wApp(meshes[meshIt]);
+			wApp.generateLinkVertices();
+			wApp.calculateEdgeContractions();
+			wApp.splitPhase();
+			wApp.performContractions();
+		}
+
+		createIndexBuffer();
+		createVertexBuffer();
+	}
+
 	createUniformBuffers();
 	createDescriptorPool();
 	createDescriptorSets();
@@ -659,7 +678,7 @@ bool Ravine::loadScene(const string& filePath)
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
 				//Vertices
-				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z, 1 };
 
 				//Texture coordinates
 				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
@@ -676,7 +695,7 @@ bool Ravine::loadScene(const string& filePath)
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
 				//Vertices
-				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z, 1 };
 
 				//Texture coordinates
 				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
@@ -693,7 +712,7 @@ bool Ravine::loadScene(const string& filePath)
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
 				//Vertices
-				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z, 1 };
 
 				//Texture coordinates
 				meshes[i].vertices[j].texCoord = { 0, 0 };
@@ -710,7 +729,7 @@ bool Ravine::loadScene(const string& filePath)
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
 				//Vertices
-				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z, 1 };
 
 				//Texture coordinates
 				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
@@ -727,7 +746,7 @@ bool Ravine::loadScene(const string& filePath)
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
 				//Vertices
-				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z, 1 };
 
 				//Texture coordinates
 				meshes[i].vertices[j].texCoord = { 0, 0 };
@@ -835,7 +854,7 @@ void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 		}
 
 		meshData.boneMapping[boneName] = boneIndex;
-		meshes[0].boneInfo[boneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
+		meshes[0].boneInfo[boneIndex].boneOffset = pMesh->mBones[i]->mOffsetMatrix;
 
 		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {
 			uint16_t vertexId = 0 + pMesh->mBones[i]->mWeights[j].mVertexId;
@@ -857,7 +876,7 @@ void Ravine::boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms
 	transforms.resize(meshes[0].numBones);
 
 	for (uint16_t i = 0; i < meshes[0].numBones; i++) {
-		transforms[i] = meshes[0].boneInfo[i].FinalTransformation;
+		transforms[i] = meshes[0].boneInfo[i].finalTransformation;
 	}
 }
 
@@ -897,8 +916,8 @@ void Ravine::readNodeHierarchy(double animationTime, double curDuration, double 
 	if (meshes[0].boneMapping.find(nodeName) != meshes[0].boneMapping.end())
 	{
 		uint32_t BoneIndex = meshes[0].boneMapping[nodeName];
-		meshes[0].boneInfo[BoneIndex].FinalTransformation = meshes[0].animGlobalInverseTransform *
-			globalTransformation * meshes[0].boneInfo[BoneIndex].BoneOffset;
+		meshes[0].boneInfo[BoneIndex].finalTransformation = meshes[0].animGlobalInverseTransform *
+			globalTransformation * meshes[0].boneInfo[BoneIndex].boneOffset;
 	}
 
 	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
@@ -916,7 +935,7 @@ void Ravine::createVertexBuffer()
 	which is a more optimal memory but it's not accessible by CPU.
 	That's why we use a staging buffer to transfer vertex data to the vertex buffer.
 	*/
-	vertexBuffers.reserve(meshesCount);
+	vertexBuffers.reserve(meshesCount*(WaveletApp::LIFTING_STEPS + 1));
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		vertexBuffers.push_back(device->createPersistentBuffer(
@@ -925,70 +944,43 @@ void Ravine::createVertexBuffer()
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		));
 
-		delete[] meshes[i].vertices;
-		meshes[i].index_count = 0;
+		//delete[] meshes[i].vertices;
+		//meshes[i].index_count = 0;
 	}
 }
 
 void Ravine::createIndexBuffer()
 {
-	indexBuffers.reserve(meshesCount);
-	oddIndexBuffers.reserve(meshesCount);
+	indexBuffers.reserve(meshesCount*(WaveletApp::LIFTING_STEPS + 1));
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		WaveletApp wApp(meshes[i]);
 		wApp.generateLinkVertices();
 		wApp.calculateEdgeContractions();
+		wApp.splitPhase();
 
-		//Apply three lifting steeps
-		for (size_t phaseIt = 0; phaseIt < 3; phaseIt++)
-		{
-			wApp.splitPhase();
+		//contractionIndexBuffers.reserve(meshesCount*(WaveletApp::LIFTING_STEPS+1));
+		//vector<uint32_t> contractIds(wApp.contractionsToPerform.size() * 2);
+		//for (uint32_t contIt = 0, contSize = wApp.contractionsToPerform.size(); contIt < contSize; contIt++)
+		//{
+		//	contractIds[contIt * 2 + 0] = wApp.contractionsToPerform[contIt]->odd->boundVertices[0];
+		//	contractIds[contIt * 2 + 1] = wApp.contractionsToPerform[contIt]->even->boundVertices[0];
+		//}
+		//contractionIndexBuffers.push_back(device->createPersistentBuffer(
+		//	contractIds.data(), sizeof(uint32_t) * contractIds.size(), sizeof(uint32_t),
+		//	static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+		//	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		//));
 
-			//Contraction remap
-			uint32_t* remap = new uint32_t[meshes[i].vertex_count];
-			for (uint32_t vertIt = 0, size = meshes[i].vertex_count; vertIt < size; vertIt++)
-			{
-				//Default value is no remap at all
-				remap[vertIt] = vertIt;
-			}
-			//Remap Mesh odd indices to their even contraction pairs
-			for (EdgeContraction* contract : wApp.contractionsToPerform)
-			{
-				for (uint32_t oddId : contract->odd->boundVertices)
-				{
-					remap[oddId] = contract->even->boundVertices[0];
-				}
-			}
-			//Apply remap to all indices
-			for (uint32_t indexIt = 0, size = meshes[i].index_count; indexIt < size; indexIt++)
-			{
-				//Default value is no remap at all
-				meshes[i].indices[indexIt] = remap[meshes[i].indices[indexIt]];
-			}
-			delete[] remap;
-		}
-
-		vector<uint32_t> contractIds(wApp.contractionsToPerform.size() * 2);
-		for (uint32_t contIt = 0, contSize = wApp.contractionsToPerform.size(); contIt < contSize; contIt++)
-		{
-			contractIds[contIt * 2 + 0] = wApp.contractionsToPerform[contIt]->odd->boundVertices[0];
-			contractIds[contIt * 2 + 1] = wApp.contractionsToPerform[contIt]->even->boundVertices[0];
-		}
-
-		oddIndexBuffers.push_back(device->createPersistentBuffer(
-			contractIds.data(), sizeof(uint32_t) * contractIds.size(), sizeof(uint32_t),
-			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-		));
-
+		//Create Index Buffer Before Lifting
 		indexBuffers.push_back(device->createPersistentBuffer(
 			meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
 			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		));
-		delete[] meshes[i].indices;
-		meshes[i].index_count = 0;
+
+		//delete[] meshes[i].indices;
+		//meshes[i].index_count = 0;
 	}
 }
 
@@ -1189,9 +1181,10 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			const int buffId = meshIndex + liftingLayer * meshesCount;
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[buffId].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[buffId].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[buffId].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
@@ -1213,9 +1206,10 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			const int buffId = meshIndex + liftingLayer * meshesCount;
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[buffId].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[buffId].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[buffId].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
@@ -1237,9 +1231,10 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			const int buffId = meshIndex + liftingLayer * meshesCount;
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[buffId].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[buffId].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[buffId].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
@@ -1262,9 +1257,10 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			const int buffId = meshIndex + liftingLayer * meshesCount;
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[buffId].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[buffId].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[buffId].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
@@ -1285,34 +1281,36 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skinnedWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+			const int buffId = meshIndex + liftingLayer * meshesCount;
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[buffId].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, indexBuffers[buffId].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(indexBuffers[buffId].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
-	if (linesPipelineEnabled)
-	{
-		//Perform the same with lines rendering
-		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
+	//if (linesPipelineEnabled)
+	//{
+	//	//Perform the same with lines rendering
+	//	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
 
-		//Update dynamic states
-		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+	//	//Update dynamic states
+	//	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+	//	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-		//Global, Material and Model Descriptor Sets
-		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+	//	//Global, Material and Model Descriptor Sets
+	//	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
-		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
-		{
-			const size_t meshSetOffset = meshIndex * 2;
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+	//	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	//	{
+	//		const size_t meshSetOffset = meshIndex * 2;
+	//		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, oddIndexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(oddIndexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
-		}
-	}
+	//		vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+	//		const int indexBuffId = meshIndex+liftingLayer*(WaveletApp::LIFTING_STEPS+1);
+	//		vkCmdBindIndexBuffer(cmdBuffer, contractionIndexBuffers[indexBuffId].handle, 0, VK_INDEX_TYPE_UINT32);
+	//		vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(contractionIndexBuffers[indexBuffId].instancesCount), 1, 0, 0, 0);
+	//	}
+	//}
 
 	//Stop recording Command Buffer
 	if (vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS) {
@@ -1424,6 +1422,11 @@ void Ravine::drawGuiElements()
 				ImGui::Checkbox("Static Wireframe Pipeline", &staticWiredPipelineEnabled);
 				ImGui::Checkbox("Static Lines Pipeline", &linesPipelineEnabled);
 				ImGui::Separator();
+			}
+
+			ImGui::TextUnformatted("Wavelet Lifting");
+			{
+				ImGui::DragInt("Lifting Layer", &liftingLayer, 0.1f, 0, WaveletApp::LIFTING_STEPS);
 			}
 
 			ImGui::TextUnformatted("Uniforms");
@@ -1594,14 +1597,20 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 	// SWAP ANIMATIONS
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && !keyUpPressed) {
 		keyUpPressed = true;
-		meshes[0].curAnimId = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
+		if (meshes[0].animations.size() != 0)
+		{
+			meshes[0].curAnimId = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
+		}
 	}
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE) {
 		keyUpPressed = false;
 	}
 	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && !keyDownPressed) {
 		keyDownPressed = true;
-		meshes[0].curAnimId = (meshes[0].curAnimId - 1) % meshes[0].animations.size();
+		if (meshes[0].animations.size() != 0)
+		{
+			meshes[0].curAnimId = (meshes[0].curAnimId - 1) % meshes[0].animations.size();
+		}
 	}
 	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_RELEASE) {
 		keyDownPressed = false;

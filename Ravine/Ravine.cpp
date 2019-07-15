@@ -48,7 +48,7 @@ Ravine::Ravine()
 Ravine::~Ravine()
 = default;
 
-void Ravine::Run()
+void Ravine::run()
 {
 	RvTime::initialize();
 	initWindow();
@@ -87,7 +87,7 @@ void Ravine::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, true, framebufferResizeCallback);
+	window = new RvWindow(WIDTH, HEIGHT, WINDOW_NAME, false, framebufferResizeCallback);
 
 	stbi_set_flip_vertically_on_load(true);
 }

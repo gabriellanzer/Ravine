@@ -50,7 +50,7 @@ public:
 	Ravine();
 	~Ravine();
 
-	void Run();
+	void run();
 
 private:
 

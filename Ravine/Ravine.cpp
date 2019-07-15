@@ -164,7 +164,9 @@ void Ravine::initVulkan() {
 			wApp.generateLinkVertices();
 			wApp.calculateEdgeContractions();
 			wApp.splitPhase();
+			wApp.updatePhase();
 			wApp.performContractions();
+			wApp.cleanUp();
 		}
 
 		createIndexBuffer();

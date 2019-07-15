@@ -35,15 +35,7 @@ WaveletApp::WaveletApp(RvSkinnedMeshColored& mesh) : mesh(&mesh)
 WaveletApp::~WaveletApp()
 {
 	mesh = nullptr;
-	for (LinkVertex* vert : linkVertices)
-	{
-		delete vert;
-	}
-	linkVertices.clear();
-	delete[] linkVertexMap;
-	linkPosMap.clear();
-	contractions.clear();
-	contractionsToPerform.clear();
+	cleanUp();
 }
 
 uint32_t hashVec3(vec3& vector)
@@ -68,6 +60,7 @@ void WaveletApp::generateLinkVertices()
 		{
 			link = new LinkVertex();
 			link->boundVertices.reserve(8);
+			link->boundPos = vert.pos;
 			linkVertices.push_back(link);
 			linkPosMap.emplace(vertKey, link);
 		}
@@ -274,7 +267,28 @@ void WaveletApp::splitPhase()
 
 void WaveletApp::updatePhase()
 {
-	//To perform update
+	//To perform update phase one must:
+	// - Get neighbors average delta vector constant for odd vertex
+	// - Update every even vertex by summing delta constant to it
+	for (LinkVertex* odd : oddsList)
+	{
+		vec4 oddPos = mesh->vertices[odd->boundVertices[0]].pos;
+		const float neighborsNum = odd->neighborVertices.size();
+		vec4 evenSum;
+		for (LinkVertex* neighbor : odd->neighborVertices)
+		{
+			evenSum += neighbor->boundPos;
+		}
+		odd->neighborsDelta = oddPos / (neighborsNum + 1) - evenSum / (neighborsNum*neighborsNum + neighborsNum);
+
+		for (LinkVertex* neighbor : odd->neighborVertices)
+		{
+			for (uint32_t& boundId : neighbor->boundVertices)
+			{
+				mesh->vertices[boundId].pos += odd->neighborsDelta;
+			}
+		}
+	}
 }
 
 void WaveletApp::performContractions()
@@ -324,4 +338,17 @@ void WaveletApp::performContractions()
 		remIt += 3;
 	}
 	mesh->index_count = size - removedIds;
+}
+
+void WaveletApp::cleanUp()
+{
+	for (LinkVertex* vert : linkVertices)
+	{
+		delete vert;
+	}
+	linkVertices.clear();
+	delete[] linkVertexMap;
+	linkPosMap.clear();
+	contractions.clear();
+	contractionsToPerform.clear();
 }

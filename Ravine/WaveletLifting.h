@@ -12,6 +12,8 @@ using eastl::vector_multimap;
 
 #include <glm/vec3.hpp>
 using glm::vec3;
+#include <glm/vec4.hpp>
+using glm::vec4;
 #include <glm/mat4x4.hpp>
 using glm::mat4;
 
@@ -47,6 +49,16 @@ struct LinkVertex
 	unordered_set<LinkVertex*> neighborVertices;
 
 	/**
+	 * \brief Position of bound vertices.
+	 */
+	vec4 boundPos;
+
+	/**
+	 * \brief Average neighbors delta vector.
+	 */
+	vec4 neighborsDelta;
+
+	/**
 	 * \brief Quadric error matrix, calculated from neighbor planes.
 	 */
 	mat4 quadric;
@@ -54,7 +66,7 @@ struct LinkVertex
 
 struct EdgeContraction
 {
-	LinkVertex* even, *odd;
+	LinkVertex *even, *odd;
 	double cost;
 	HalfFace halfFaces[2];
 
@@ -83,7 +95,7 @@ private:
 	WaveletApp() = default;
 
 public:
-	static const uint32_t LIFTING_STEPS = 3;
+	static const uint32_t LIFTING_STEPS = 10;
 	vector<EdgeContraction*> contractionsToPerform;
 	unordered_set<LinkVertex*> oddsList;
 
@@ -94,6 +106,7 @@ public:
 	void splitPhase();
 	void updatePhase();
 	void performContractions();
+	void cleanUp();
 };
 
 #endif

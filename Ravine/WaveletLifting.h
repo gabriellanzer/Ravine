@@ -2,6 +2,7 @@
 #define APP_WAVELET_LIFTING_H
 
 #include <eastl/unordered_map.h>
+struct RvPersistentBuffer;
 using eastl::unordered_map;
 #include <eastl/vector.h>
 using eastl::vector;
@@ -33,8 +34,11 @@ struct HalfFace
 	 */
 	uint32_t composingIndices[2];
 
-	explicit HalfFace(uint32_t opIndex = UINT32_MAX, uint32_t compId1 = UINT32_MAX, uint32_t compId2 = UINT32_MAX);
+	HalfFace();
+	explicit HalfFace(const uint32_t& opIndex, const uint32_t& compId1, const uint32_t& compId2);
 };
+
+struct EdgeContraction;
 
 struct LinkVertex
 {
@@ -62,6 +66,11 @@ struct LinkVertex
 	 * \brief Quadric error matrix, calculated from neighbor planes.
 	 */
 	mat4 quadric;
+
+	/**
+	 * \brief Associated EdgeContraction Index for each neighbor LinkVertex.
+	 */
+	map<LinkVertex*, uint32_t> contractions;
 };
 
 struct EdgeContraction
@@ -76,16 +85,20 @@ struct EdgeContraction
 	~EdgeContraction() = default;
 };
 
+
+typedef eastl::pair<const LinkVertex*, const LinkVertex*> EdgeKey;
+
 class WaveletApp
 {
 private:
 	RvSkinnedMeshColored* mesh = nullptr;
 
+	unordered_set<LinkVertex*> boundaryVertices;
 	vector<LinkVertex*> linkVertices;
 	/**
 	 * \brief Maps every vertex ID to it's Link owner.
 	 */
-	LinkVertex** linkVertexMap;
+	LinkVertex** linkVertexMap = nullptr;
 	/**
 	 * \brief Maps every vertex position to it's Link owner.
 	 */
@@ -107,6 +120,8 @@ public:
 	void updatePhase();
 	void performContractions();
 	void cleanUp();
+	void generateOddsFeedback(vector<uint32_t>& oddsIndexBuffer, vector<vec4>& oddsVertexBuffer);
+	void generateContractionsFeedback(vector<uint32_t>& oddsIndexBuffer, vector<vec4>& oddsVertexBuffer);
 };
 
 #endif

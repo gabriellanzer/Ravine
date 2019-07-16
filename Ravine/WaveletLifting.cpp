@@ -9,9 +9,11 @@ using eastl::sort;
 #include <eastl/unordered_set.h>
 using eastl::unordered_set;
 
-#include "crc32.hpp"
+HalfFace::HalfFace() : oppositeIndex(UINT32_MAX), composingIndices{ UINT32_MAX, UINT32_MAX }
+{
+}
 
-HalfFace::HalfFace(uint32_t opIndex, uint32_t compId1, uint32_t compId2) :
+HalfFace::HalfFace(const uint32_t& opIndex, const uint32_t& compId1, const uint32_t& compId2) :
 	oppositeIndex(opIndex), composingIndices{ compId1, compId2 }
 {
 
@@ -28,8 +30,7 @@ EdgeContraction::EdgeContraction(LinkVertex* even, LinkVertex* odd, const double
 
 WaveletApp::WaveletApp(RvSkinnedMeshColored& mesh) : mesh(&mesh)
 {
-	//Initialize linkVertexMap (one entry for each vertex)
-	linkVertexMap = new LinkVertex*[mesh.vertex_count];
+
 }
 
 WaveletApp::~WaveletApp()
@@ -38,14 +39,11 @@ WaveletApp::~WaveletApp()
 	cleanUp();
 }
 
-uint32_t hashVec3(vec3& vector)
-{
-	char* dataIni = reinterpret_cast<char*>(&vector.x);
-	return crc(dataIni, 3/*x,y,z*/ * 4/*float=4bytes=4char*/);
-}
-
 void WaveletApp::generateLinkVertices()
 {
+	//Initialize linkVertexMap (one entry for each vertex)
+	linkVertexMap = new LinkVertex*[mesh->vertex_count];
+
 	//Go through every vertex in the mesh and generates link linkVertices
 	for (uint32_t vertIt = 0; vertIt < mesh->vertex_count; vertIt++)
 	{
@@ -77,9 +75,9 @@ void WaveletApp::generateLinkVertices()
 	//Calculate vertex quadratic matrix and neighbors based on each face
 	for (uint32_t indexIt = 0; indexIt < mesh->index_count; indexIt += 3) //For each face (3 ids)
 	{
-		uint32_t& aId = mesh->indices[indexIt + 0];
-		uint32_t& bId = mesh->indices[indexIt + 1];
-		uint32_t& cId = mesh->indices[indexIt + 2];
+		const uint32_t aId = mesh->indices[indexIt + 0];
+		const uint32_t bId = mesh->indices[indexIt + 1];
+		const uint32_t cId = mesh->indices[indexIt + 2];
 
 		//Calculate plane coefficients
 		vec3 a = mesh->vertices[aId].pos;
@@ -124,7 +122,6 @@ void WaveletApp::generateLinkVertices()
 void WaveletApp::calculateEdgeContractions()
 {
 	//One contraction for each edge
-	contractions.resize(mesh->index_count);
 	for (uint32_t indexIt = 0; indexIt < mesh->index_count; indexIt += 3) //For each face (3 ids)
 	{
 		//Calculate triangle equation
@@ -143,81 +140,115 @@ void WaveletApp::calculateEdgeContractions()
 
 		//Cost for 'ab'
 		{
-			const mat4 combinedError = aLink->quadric + bLink->quadric;
-			const double costA = dot(a, combinedError * a);
-			const double costB = dot(b, combinedError * b);
-			EdgeContraction& ctr = contractions[indexIt + 0];
-			if (costA < costB) //'a' is even, 'b' is odd
+			uint32_t ctrId = UINT32_MAX;
+			auto it = aLink->contractions.find(bLink);
+			if (it == aLink->contractions.end())
 			{
-				ctr = { aLink, bLink, costA };
-			}
-			else //'b' is even, 'a' is odd
-			{
-				ctr = { bLink, aLink, costB };
-			}
+				ctrId = contractions.size();
+				const mat4 combinedError = aLink->quadric + bLink->quadric;
+				const double costA = dot(a, combinedError * a);
+				const double costB = dot(b, combinedError * b);
+				if (costA < costB) //'a' is even, 'b' is odd
+				{
+					contractions.push_back({ aLink, bLink, costA });
+				}
+				else //'b' is even, 'a' is odd
+				{
+					contractions.push_back({ bLink, aLink, costB });
+				}
 
-			//Setup contraction halfFaces
-			if (ctr.halfFaces[0].oppositeIndex == UINT32_MAX)
-			{
-				ctr.halfFaces[0] = HalfFace(cId, aId, bId);
+				//Setup chained link
+				aLink->contractions.emplace(bLink, ctrId);
+				bLink->contractions.emplace(aLink, ctrId);
+
+				//Setup contraction halfFaces
+				contractions[ctrId].halfFaces[0] = HalfFace(cId, aId, bId);
 			}
 			else
 			{
-				ctr.halfFaces[1] = HalfFace(cId, aId, bId);
+				ctrId = it->second;
+				contractions[ctrId].halfFaces[1] = HalfFace(cId, aId, bId);
 			}
 		}
 
 		//Cost for 'bc'
 		{
-			const mat4 combinedError = bLink->quadric + cLink->quadric;
-			const double costB = dot(b, combinedError * b);
-			const double costC = dot(c, combinedError * c);
-			EdgeContraction& ctr = contractions[indexIt + 1];
-			if (costB < costC) //'b' is even, 'c' is odd
+			uint32_t ctrId = UINT32_MAX;
+			auto it = bLink->contractions.find(cLink);
+			if (it == bLink->contractions.end())
 			{
-				ctr = { bLink, cLink, costB };
-			}
-			else //'c' is even, 'b' is odd
-			{
-				ctr = { cLink, bLink, costC };
-			}
+				ctrId = contractions.size();
+				const mat4 combinedError = bLink->quadric + cLink->quadric;
+				const double costB = dot(b, combinedError * b);
+				const double costC = dot(c, combinedError * c);
+				if (costB < costC) //'b' is even, 'c' is odd
+				{
+					contractions.push_back({ bLink, cLink, costB });
+				}
+				else //'c' is even, 'b' is odd
+				{
+					contractions.push_back({ cLink, bLink, costC });
+				}
 
-			//Setup contraction halfFaces
-			if (ctr.halfFaces[0].oppositeIndex == UINT32_MAX)
-			{
-				ctr.halfFaces[0] = HalfFace(aId, bId, cId);
+				//Setup chained link
+				bLink->contractions.emplace(cLink, ctrId);
+				cLink->contractions.emplace(bLink, ctrId);
+
+				//Setup contraction halfFaces
+				contractions[ctrId].halfFaces[0] = HalfFace(aId, bId, cId);
 			}
 			else
 			{
-				ctr.halfFaces[1] = HalfFace(aId, bId, cId);
+				ctrId = it->second;
+				contractions[ctrId].halfFaces[1] = HalfFace(aId, bId, cId);
 			}
 		}
 
 		//Cost for 'ca'
 		{
-			const mat4 combinedError = cLink->quadric + aLink->quadric;
-			const double costC = dot(c, combinedError * c);
-			const double costA = dot(a, combinedError * a);
-			EdgeContraction& ctr = contractions[indexIt + 2];
-			if (costC < costA) //'c' is even, 'a' is odd
+			uint32_t ctrId = UINT32_MAX;
+			auto it = cLink->contractions.find(aLink);
+			if (it == cLink->contractions.end())
 			{
-				ctr = { cLink, aLink, costC };
-			}
-			else //'a' is even, 'c' is odd
-			{
-				ctr = { aLink, cLink, costA };
-			}
+				ctrId = contractions.size();
+				const mat4 combinedError = cLink->quadric + aLink->quadric;
+				const double costC = dot(c, combinedError * c);
+				const double costA = dot(a, combinedError * a);
+				if (costC < costA) //'c' is even, 'a' is odd
+				{
+					contractions.push_back({ cLink, aLink, costC });
+				}
+				else //'a' is even, 'c' is odd
+				{
+					contractions.push_back({ aLink, cLink, costA });
+				}
 
-			//Setup contraction halfFaces
-			if (ctr.halfFaces[0].oppositeIndex == UINT32_MAX)
-			{
-				ctr.halfFaces[0] = HalfFace(bId, aId, cId);
+				//Setup chained link
+				cLink->contractions.emplace(aLink, ctrId);
+				aLink->contractions.emplace(cLink, ctrId);
+
+				//Setup contraction halfFaces
+				contractions[ctrId].halfFaces[0] = HalfFace(bId, aId, cId);
 			}
 			else
 			{
-				ctr.halfFaces[1] = HalfFace(bId, aId, cId);
+				ctrId = it->second;
+				contractions[ctrId].halfFaces[1] = HalfFace(bId, aId, cId);
 			}
 		}
+	}
+
+	//Set boundary conditions
+	for (EdgeContraction& edge : contractions)
+	{
+		if (edge.halfFaces[1].oppositeIndex != UINT32_MAX)
+		{
+			continue;
+		}
+
+		//This edge is a margin, mark it's vertices as excluded ones
+		boundaryVertices.insert(edge.odd);
+		boundaryVertices.insert(edge.even);
 	}
 
 	//Order based on smallest costs first
@@ -240,6 +271,12 @@ void WaveletApp::splitPhase()
 		//Check if this is actually an odd and not an even vertex
 		unordered_set<LinkVertex*>& neighbors = contraction.odd->neighborVertices;
 		if (oddsList.find(contraction.odd) != oddsList.end()) //Check already added
+		{
+			continue;
+		}
+
+		//Skip boundary vertices
+		if (boundaryVertices.find(contraction.odd) != boundaryVertices.end())
 		{
 			continue;
 		}
@@ -280,6 +317,7 @@ void WaveletApp::updatePhase()
 			evenSum += neighbor->boundPos;
 		}
 		odd->neighborsDelta = oddPos / (neighborsNum + 1) - evenSum / (neighborsNum*neighborsNum + neighborsNum);
+		odd->neighborsDelta.w = 0;
 
 		for (LinkVertex* neighbor : odd->neighborVertices)
 		{
@@ -297,47 +335,58 @@ void WaveletApp::performContractions()
 	// - Drag all odd vertices to the correct even pair location
 	// - Delete indices the two faces that will be collapsed
 	uint32_t removedIds = 0;
-	for (EdgeContraction* contr : contractionsToPerform)
+	for (EdgeContraction* ctr : contractionsToPerform)
 	{
-		//Dragging step
-		const vec4& evenPos = mesh->vertices[contr->even->boundVertices[0]].pos;
-		for (uint32_t& oddId : contr->odd->boundVertices)
-		{
-			mesh->vertices[oddId].pos = evenPos;
-		}
-
 		//Should not collapse border edges
-		if (contr->halfFaces[1].oppositeIndex == UINT32_MAX)
+		if (ctr->halfFaces[1].oppositeIndex == UINT32_MAX)
 		{
 			continue;
 		}
 
+		//Dragging step
+		const vec4& evenPos = mesh->vertices[ctr->even->boundVertices[0]].pos;
+		for (uint32_t& oddId : ctr->odd->boundVertices)
+		{
+			mesh->vertices[oddId].pos = evenPos;
+		}
+
 		//Mark indices to be removed (of both half-edges - two faces)
-		HalfFace& hEdge = contr->halfFaces[0];
-		mesh->indices[hEdge.oppositeIndex] = UINT32_MAX;
-		mesh->indices[hEdge.composingIndices[0]] = UINT32_MAX;
-		mesh->indices[hEdge.composingIndices[1]] = UINT32_MAX;
-		hEdge = contr->halfFaces[1];
-		mesh->indices[hEdge.oppositeIndex] = UINT32_MAX;
-		mesh->indices[hEdge.composingIndices[0]] = UINT32_MAX;
-		mesh->indices[hEdge.composingIndices[1]] = UINT32_MAX;
+		HalfFace& hEdge = ctr->halfFaces[0];
+		mesh->indices[hEdge.oppositeIndex]		 = 0;
+		mesh->indices[hEdge.composingIndices[0]] = 0;
+		mesh->indices[hEdge.composingIndices[1]] = 0;
+		hEdge = ctr->halfFaces[1];
+		mesh->indices[hEdge.oppositeIndex]		 = 0;
+		mesh->indices[hEdge.composingIndices[0]] = 0;
+		mesh->indices[hEdge.composingIndices[1]] = 0;
 		removedIds += 6; //Two faces = 6 Ids
 	}
 
-	//Sort all invalidated triangles to the end of the array
-	size_t remIt = 0;
-	const uint32_t size = mesh->index_count;
-	for (uint32_t i = 0; i < size; i += 3)
-	{
-		if (mesh->indices[i] == UINT32_MAX)
-		{
-			mesh->indices[i + 0] = mesh->indices[size - remIt - 3];
-			mesh->indices[i + 1] = mesh->indices[size - remIt - 2];
-			mesh->indices[i + 2] = mesh->indices[size - remIt - 1];
-		}
-		remIt += 3;
-	}
-	mesh->index_count = size - removedIds;
+	////Sort all invalidated triangles to the end of the array
+	//uint32_t size = mesh->index_count;
+	//for (uint32_t i = 0; i < mesh->index_count; i += 3)
+	//{
+	//	if (mesh->indices[i] == UINT32_MAX)
+	//	{
+	//		uint32_t swapIt = size - 3;
+	//		if (i >= swapIt)
+	//		{
+	//			size -= 3;
+	//			break;
+	//		}
+
+	//		//Find a face whose indices are valid
+	//		while (mesh->indices[swapIt] == UINT32_MAX)
+	//		{
+	//			swapIt -= 3;
+	//		}
+	//		mesh->indices[i + 0] = mesh->indices[swapIt + 0];
+	//		mesh->indices[i + 1] = mesh->indices[swapIt + 1];
+	//		mesh->indices[i + 2] = mesh->indices[swapIt + 2];
+	//		size -= 3;
+	//	}
+	//}
+	//mesh->index_count = size;
 }
 
 void WaveletApp::cleanUp()
@@ -346,9 +395,53 @@ void WaveletApp::cleanUp()
 	{
 		delete vert;
 	}
+	boundaryVertices.clear();
 	linkVertices.clear();
 	delete[] linkVertexMap;
+	linkVertexMap = nullptr;
 	linkPosMap.clear();
 	contractions.clear();
 	contractionsToPerform.clear();
+}
+
+void WaveletApp::generateOddsFeedback(vector<uint32_t>& oddsIndexBuffer, vector<vec4>& oddsVertexBuffer)
+{
+	oddsIndexBuffer.reserve(oddsList.size() * 8);
+	oddsVertexBuffer.reserve(oddsList.size() * 5);
+
+	uint32_t oddIt = 0;
+	for (LinkVertex* odd : oddsList)
+	{
+		//Get position where the odd vertex will be added to
+		oddIt = oddsVertexBuffer.size();
+
+		//One vertex for the Odd, many for the even neighbors
+		oddsVertexBuffer.push_back(odd->boundPos);
+		for (LinkVertex* even : odd->neighborVertices)
+		{
+			oddsVertexBuffer.push_back(even->boundPos);
+		}
+
+		//One line (2 indices) for each neighbor
+		for (uint32_t i = 0, size = odd->neighborVertices.size(); i < size; i++)
+		{
+			oddsIndexBuffer.push_back(oddIt); //Odd vertex
+			oddsIndexBuffer.push_back(oddIt + 1 + i); //Neighbor even vertex
+		}
+	}
+
+}
+
+void WaveletApp::generateContractionsFeedback(vector<uint32_t>& oddsIndexBuffer, vector<vec4>& oddsVertexBuffer)
+{
+	oddsIndexBuffer.reserve(contractionsToPerform.size() * 2);
+	oddsVertexBuffer.reserve(contractionsToPerform.size() * 2);
+	uint32_t it = 0;
+	for (EdgeContraction* ctr : contractionsToPerform)
+	{
+		oddsVertexBuffer.push_back(mesh->vertices[ctr->odd->boundVertices[0]].pos);
+		oddsVertexBuffer.push_back(mesh->vertices[ctr->even->boundVertices[0]].pos);
+		oddsIndexBuffer.push_back(it++);
+		oddsIndexBuffer.push_back(it++);
+	}
 }

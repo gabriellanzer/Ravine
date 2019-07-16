@@ -103,7 +103,7 @@ void Ravine::initVulkan() {
 	pickPhysicalDevice();
 
 	//Load Scene
-	string modelName = "cacimba.fbx";
+	string modelName = "wavelet_plane.fbx";
 	if (loadScene("../data/" + modelName))
 	{
 		fmt::print(stdout, "{0} loaded!\n", modelName.c_str());
@@ -164,9 +164,35 @@ void Ravine::initVulkan() {
 			wApp.generateLinkVertices();
 			wApp.calculateEdgeContractions();
 			wApp.splitPhase();
+
+			if(wApp.contractionsToPerform.size() == 0)
+				continue;
+
+			vector<uint32_t> oddIndices;
+			vector<vec4> oddVertices;
+			wApp.generateContractionsFeedback(oddIndices, oddVertices);
+			vector<RvSkinnedVertexColored> oddVertBuff;
+			oddVertBuff.reserve(oddVertices.size());
+			for(vec4& vert : oddVertices)
+			{
+				oddVertBuff.push_back({
+					vert,{1,0,0}, {0,0}, 
+					{0,0,0}, {0,0,0,0}, {0,0,0,0}
+				});
+			}
+			oddIndexBuffers.push_back(device->createPersistentBuffer(
+				oddIndices.data(), sizeof(uint32_t) * oddIndices.size(), sizeof(uint32_t),
+				static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+			));
+			oddVertexBuffers.push_back(device->createPersistentBuffer(
+				oddVertBuff.data(), sizeof(RvSkinnedVertexColored) * oddVertBuff.size(), sizeof(RvSkinnedVertexColored),
+				static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+			));
+
 			wApp.updatePhase();
 			wApp.performContractions();
-			wApp.cleanUp();
 		}
 
 		createIndexBuffer();
@@ -956,24 +982,6 @@ void Ravine::createIndexBuffer()
 	indexBuffers.reserve(meshesCount*(WaveletApp::LIFTING_STEPS + 1));
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		WaveletApp wApp(meshes[i]);
-		wApp.generateLinkVertices();
-		wApp.calculateEdgeContractions();
-		wApp.splitPhase();
-
-		//contractionIndexBuffers.reserve(meshesCount*(WaveletApp::LIFTING_STEPS+1));
-		//vector<uint32_t> contractIds(wApp.contractionsToPerform.size() * 2);
-		//for (uint32_t contIt = 0, contSize = wApp.contractionsToPerform.size(); contIt < contSize; contIt++)
-		//{
-		//	contractIds[contIt * 2 + 0] = wApp.contractionsToPerform[contIt]->odd->boundVertices[0];
-		//	contractIds[contIt * 2 + 1] = wApp.contractionsToPerform[contIt]->even->boundVertices[0];
-		//}
-		//contractionIndexBuffers.push_back(device->createPersistentBuffer(
-		//	contractIds.data(), sizeof(uint32_t) * contractIds.size(), sizeof(uint32_t),
-		//	static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-		//	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-		//));
-
 		//Create Index Buffer Before Lifting
 		indexBuffers.push_back(device->createPersistentBuffer(
 			meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
@@ -1290,29 +1298,29 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 		}
 	}
 
-	//if (linesPipelineEnabled)
-	//{
-	//	//Perform the same with lines rendering
-	//	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
+	if (linesPipelineEnabled && liftingLayer < WaveletApp::LIFTING_STEPS)
+	{
+		//Perform the same with lines rendering
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *staticLineGraphicsPipeline);
 
-	//	//Update dynamic states
-	//	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-	//	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+		//Update dynamic states
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-	//	//Global, Material and Model Descriptor Sets
-	//	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
-	//	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
-	//	{
-	//		const size_t meshSetOffset = meshIndex * 2;
-	//		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, staticLineGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-	//		vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-	//		const int indexBuffId = meshIndex+liftingLayer*(WaveletApp::LIFTING_STEPS+1);
-	//		vkCmdBindIndexBuffer(cmdBuffer, contractionIndexBuffers[indexBuffId].handle, 0, VK_INDEX_TYPE_UINT32);
-	//		vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(contractionIndexBuffers[indexBuffId].instancesCount), 1, 0, 0, 0);
-	//	}
-	//}
+			const int buffId = meshIndex + liftingLayer * meshesCount;
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &oddVertexBuffers[buffId].handle, offsets);
+			vkCmdBindIndexBuffer(cmdBuffer, oddIndexBuffers[buffId].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(oddVertexBuffers[buffId].instancesCount), 1, 0, 0, 0);
+		}
+	}
 
 	//Stop recording Command Buffer
 	if (vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS) {

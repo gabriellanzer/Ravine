@@ -98,7 +98,7 @@ private:
 	bool skinnedWiredPipelineEnabled = false;
 	bool linesPipelineEnabled = true;
 	glm::vec3 uniformPosition = glm::vec3(0);
-	glm::vec3 uniformScale = glm::vec3(0.01f, 0.01f, 0.01f);
+	glm::vec3 uniformScale = glm::vec3(1.00f, 1.00f, 1.00f);
 	glm::vec3 uniformRotation = glm::vec3(0, 0, 0);
 	//PROTOTYPE PRESENTATION STUFF
 
@@ -148,7 +148,8 @@ private:
 	vector<RvPersistentBuffer> indexBuffers;
 
 	//WAVELET LIFTING STUFF
-	vector<RvPersistentBuffer> contractionIndexBuffers;
+	vector<RvPersistentBuffer> oddIndexBuffers;
+	vector<RvPersistentBuffer> oddVertexBuffers;
 	int liftingLayer = 0;
 	//WAVELET LIFTING STUFF
 

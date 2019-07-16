@@ -81,7 +81,7 @@ RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCoun
 	rasterizer.depthClampEnable = VK_FALSE; //VK_FALSE discards fragments outside of near/far plane frustum
 	rasterizer.rasterizerDiscardEnable = VK_FALSE; //VK_TRUE discards any geometry rendered here
 	rasterizer.polygonMode = VK_POLYGON_MODE_LINE; //Could be FILL, LINE or POINT (requires GPU feature enabling)
-	rasterizer.lineWidth = 2.0f;
+	rasterizer.lineWidth = 4.0f;
 	rasterizer.cullMode = VK_CULL_MODE_NONE;
 	//We're flipping glm's Y axis in the descriptor set, so we need to flip the front face
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;

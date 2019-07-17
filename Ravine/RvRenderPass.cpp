@@ -2,12 +2,6 @@
 #include "RvTools.h"
 #include <stdexcept>
 
-RvRenderPass::RvRenderPass()
-= default;
-
-RvRenderPass::~RvRenderPass()
-= default;
-
 void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount, const VkExtent3D& sizeAndLayers, const VkImageView* swapchainImages)
 {
 	this->device = &device;
@@ -42,7 +36,7 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 		}
 
 		//Link proper swapchain image attachment
-		if(swapchainImages != VK_NULL_HANDLE)
+		if (swapchainImages != VK_NULL_HANDLE)
 		{
 			attachments.push_back(swapchainImages[frameIt]);
 		}
@@ -88,24 +82,44 @@ void RvRenderPass::clear()
 	vkDestroyRenderPass(device->handle, handle, nullptr);
 }
 
-void RvRenderPass::linkSubpass(const RvSubpass& subpass)
+void RvRenderPass::attachSubpass(const RvSubpass& subpass)
 {
 	subpasses.push_back(subpass);
 }
 
-void RvRenderPass::linkFramebufferAttachment(RvFramebufferAttachment attachment)
+void RvRenderPass::addFramebufferAttachment(const RvFramebufferAttachmentCreateInfo createInfo)
 {
-	framebufferAttachments.push_back(attachment);
+	sharedFramebufferAttachmentsCreateInfos.push_back(createInfo);
 }
 
-void RvRenderPass::linkSharedFramebufferAttachment(RvFramebufferAttachment createInfo)
+void RvRenderPass::addSharedFramebufferAttachment(const RvFramebufferAttachmentCreateInfo createInfo)
 {
-	sharedFramebufferAttachments.push_back(attachment);
+	sharedFramebufferAttachmentsCreateInfos.push_back(createInfo);
 }
 
-RvSubpass::RvSubpass() : description(), dependency()
+RvRenderPass RvRenderPass::defaultRenderPass(const RvDevice& device, const RvSwapChain& swapChain)
+{
+	RvRenderPass renderPass;
+	const uint32_t framesCount = swapChain.imageViews.size();
+	for (uint32_t i = 0; i < framesCount; ++i)
+	{
+		RvFramebufferAttachmentCreateInfo colorAttachment = rvDefaultColorAttachment;
+		colorAttachment.extent = { swapChain.extent, 1 };
+		sharedFramebufferAttachmentsCreateInfos.push_back(
+			
+		);
+	}
+}
+
+RvSubpass::RvSubpass(const VkSubpassDescription& description, const VkSubpassDependency& dependency) : description(description), dependency(dependency)
+{
+
+}
+
+RvSubpass RvSubpass::defaultSubpass()
 {
 	//Default constructor aligns with default renderpass construction
+	VkSubpassDescription description = {};
 	description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	description.colorAttachmentCount = 1;
 
@@ -128,6 +142,7 @@ RvSubpass::RvSubpass() : description(), dependency()
 	description.pResolveAttachments = &colorAttachmentResolveRef;
 
 	//Default subpass dependency (based on single subpass renderpass)
+	VkSubpassDependency dependency = {};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
 
@@ -139,7 +154,5 @@ RvSubpass::RvSubpass() : description(), dependency()
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+	return RvSubpass(description, dependency);
 }
-
-RvSubpass::~RvSubpass()
-= default;

@@ -12,6 +12,7 @@ using eastl::vector;
 //Ravine Includes
 #include "RvDevice.h"
 #include "RvFramebufferAttachment.h"
+#include "RvSwapChain.h"
 
 //Forward declaration for Subpass usage
 struct RvSubpass;
@@ -30,14 +31,16 @@ private:
 	vector<VkFramebuffer> framebuffers;
 	vector<RvFramebufferAttachment> framebufferAttachments;
 	vector<RvFramebufferAttachment> sharedFramebufferAttachments;
+	vector<RvFramebufferAttachmentCreateInfo> framebufferAttachmentsCreateInfos;
+	vector<RvFramebufferAttachmentCreateInfo> sharedFramebufferAttachmentsCreateInfos;
 
 	//RvDevice reference
 	const RvDevice* device = nullptr;
 
 public:
 
-	RvRenderPass();
-	~RvRenderPass();
+	RvRenderPass() = default;
+	~RvRenderPass() = default;
 
 	/**
 	 * \brief Actually RenderPass construction on given device for the number of desired frames.
@@ -58,34 +61,33 @@ public:
 	 * \brief Attaches a Subpass into this RenderPass.
 	 * \param subpass 
 	 */
-	void linkSubpass(const RvSubpass& subpass);
+	void attachSubpass(const RvSubpass& subpass);
 
 	/**
 	 * \brief Creates a framebuffer attachment that will be added into each framebuffer
 	 * once the RenderPass actually gets created
 	 * \param createInfo 
 	 */
-	void linkFramebufferAttachment(RvFramebufferAttachment createInfo);
+	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
 
 	/**
 	 * \brief 
 	 * \param createInfo 
 	 */
-	void linkSharedFramebufferAttachment(RvFramebufferAttachment createInfo);
+	void addSharedFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	static RvRenderPass defaultRenderPass(const RvDevice& device, const RvSwapChain& swapChain);
 };
 
 struct RvSubpass
 {
 private:
-
 	VkSubpassDescription description;
 	VkSubpassDependency dependency;
 
 public:
-
-	RvSubpass();
-	~RvSubpass();
-
+	RvSubpass(const VkSubpassDescription& description, const VkSubpassDependency& dependency);
+	~RvSubpass() = default;
+	static RvSubpass defaultSubpass();
 };
 
 #endif

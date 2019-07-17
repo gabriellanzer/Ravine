@@ -352,16 +352,18 @@ void Ravine::createDescriptorPool()
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
-	//TODO: Change descriptor count accodingly to materials count instead of meshes count
+	//TODO: Change descriptor count accordingly to materials count instead of meshes count
 	//Material Uniforms
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
+	//Image Uniforms
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 
 	//Model Uniforms
 	poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[3].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
+	//Animation Uniforms
 	poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[4].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 
@@ -455,7 +457,7 @@ void Ravine::createDescriptorSets()
 			imageInfo[meshId] = {};
 			imageInfo[meshId].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			RvSkinnedMeshColored& mesh = meshes[meshId];
-			size_t textureId = mesh.textures_count > 0 ? 1 + mesh.textureIds[0] : 0/*Missing Texture (Pink)*/;
+			uint32_t textureId = mesh.texturesCount > 0 ? 1 + mesh.textureIds[0] : 0/*Missing Texture (Pink)*/;
 			imageInfo[meshId].imageView = textures[textureId].view;
 			imageInfo[meshId].sampler = textureSampler;
 
@@ -634,9 +636,9 @@ bool Ravine::loadScene(const string& filePath)
 		meshes[i].animGlobalInverseTransform = animGlobalInverseTransform;
 
 		//Allocate data structures
-		meshes[i].vertex_count = mesh->mNumVertices;
+		meshes[i].vertexCount = mesh->mNumVertices;
 		meshes[i].vertices = new RvSkinnedVertexColored[mesh->mNumVertices];
-		meshes[i].index_count = mesh->mNumFaces * 3;
+		meshes[i].indexCount = mesh->mNumFaces * 3;
 		meshes[i].indices = new uint32_t[mesh->mNumFaces * 3];
 
 		//Setup vertices
@@ -753,7 +755,7 @@ bool Ravine::loadScene(const string& filePath)
 
 		//Get the number of textures
 		uint32_t textureCounts = mat->GetTextureCount(aiTextureType_DIFFUSE);
-		meshes[i].textures_count = textureCounts;
+		meshes[i].texturesCount = textureCounts;
 		meshes[i].textureIds = new uint32_t[textureCounts];
 
 		//List each texture on the texturesToLoad list and hold texture ids
@@ -914,11 +916,11 @@ void Ravine::createVertexBuffer()
 	vertexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertex_count, sizeof(RvSkinnedVertexColored),
+		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertexCount, sizeof(RvSkinnedVertexColored),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 		delete[] meshes[i].vertices;
-		meshes[i].vertex_count = 0;
+		meshes[i].vertexCount = 0;
 	}
 
 }
@@ -928,11 +930,11 @@ void Ravine::createIndexBuffer()
 	indexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
+		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].indexCount, sizeof(uint32_t),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 		delete[] meshes[i].indices;
-		meshes[i].index_count = 0;
+		meshes[i].indexCount = 0;
 	}
 }
 

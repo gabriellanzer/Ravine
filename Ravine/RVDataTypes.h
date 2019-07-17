@@ -3,6 +3,10 @@
 
 //GLM Includes
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
+using glm::vec3;
+#include <glm/gtc/quaternion.hpp>
+using glm::quat;
 
 //EASTL Includes
 #include <eastl/array.h>
@@ -33,6 +37,24 @@ struct RvBoneInfo
 {
 	aiMatrix4x4 BoneOffset;
 	aiMatrix4x4 FinalTransformation;
+};
+
+#pragma endregion
+
+#pragma region RvBaseMesh
+
+template<typename RvVertexType>
+struct RvBaseMesh
+{
+	RvVertexType* vertices;
+	uint32_t	vertexCount;
+
+	uint32_t*	indices;
+	uint32_t	indexCount;
+
+	//TODO: Move to RvMaterialState
+	uint32_t*	textureIds;
+	uint32_t	texturesCount;
 };
 
 #pragma endregion
@@ -78,16 +100,9 @@ struct RvVertex {
 	}
 };
 
-struct RvMesh
+struct RvMesh : RvBaseMesh<RvVertex>
 {
-	RvVertex*	vertices;
-	uint32_t	vertex_count;
 
-	uint32_t*	indices;
-	uint32_t	index_count;
-
-	uint32_t*	textureIds;
-	uint32_t	textures_count;
 };
 
 #pragma endregion
@@ -140,16 +155,9 @@ struct RvVertexColored {
 	}
 };
 
-struct RvMeshColored
+struct RvMeshColored : RvBaseMesh<RvVertexColored>
 {
-	RvVertexColored*	vertices;
-	uint32_t			vertex_count;
 
-	uint32_t*			indices;
-	uint32_t			index_count;
-
-	uint32_t*			textureIds;
-	uint32_t			textures_count;
 };
 
 #pragma endregion
@@ -221,16 +229,20 @@ struct RvSkinnedVertex {
 
 };
 
-struct RvSkinnedMesh
+struct RvSkinnedMesh : RvBaseMesh<RvSkinnedVertex>
 {
-	RvSkinnedVertex*	vertices;
-	uint32_t			vertex_count;
+	aiNode* rootNode;
+	uint16_t numBones = 0;
 
-	uint32_t*			indices;
-	uint32_t			index_count;
+	vector<RvAnimation*> animations;
+	aiMatrix4x4 animGlobalInverseTransform;
+	// TODO: REFACTOR MAPPING TO NOT USE STRINGS
+	map<string, uint16_t> boneMapping;
+	vector<RvBoneInfo> boneInfo;
 
-	uint32_t*			textureIds;
-	uint32_t			textures_count;
+	//TODO: Move to RvAnimationState
+	vector<aiMatrix4x4> boneTransforms;
+	uint16_t curAnimId = 0;
 };
 
 #pragma endregion
@@ -309,17 +321,8 @@ struct RvSkinnedVertexColored {
 
 };
 
-struct RvSkinnedMeshColored
+struct RvSkinnedMeshColored : RvBaseMesh<RvSkinnedVertexColored>
 {
-	RvSkinnedVertexColored*	vertices;
-	uint32_t				vertex_count = 0;
-
-	uint32_t*				indices;
-	uint32_t				index_count = 0;
-
-	uint32_t*				textureIds;
-	uint32_t				textures_count = 0;
-
 	aiNode* rootNode;
 	uint16_t numBones = 0;
 
@@ -332,7 +335,6 @@ struct RvSkinnedMeshColored
 	//TODO: Move to RvAnimationState
 	vector<aiMatrix4x4> boneTransforms;
 	uint16_t curAnimId = 0;
-
 };
 
 #pragma endregion

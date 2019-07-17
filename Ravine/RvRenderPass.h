@@ -30,8 +30,6 @@ private:
 	vector<VkFramebuffer> framebuffers;
 	vector<RvFramebufferAttachment> framebufferAttachments;
 	vector<RvFramebufferAttachment> sharedFramebufferAttachments;
-	vector<RvFramebufferAttachmentCreateInfo> framebufferAttachmentsCreateInfos;
-	vector<RvFramebufferAttachmentCreateInfo> sharedFramebufferAttachmentsCreateInfos;
 
 	//RvDevice reference
 	const RvDevice* device = nullptr;
@@ -60,20 +58,20 @@ public:
 	 * \brief Attaches a Subpass into this RenderPass.
 	 * \param subpass 
 	 */
-	void attachSubpass(const RvSubpass& subpass);
+	void linkSubpass(const RvSubpass& subpass);
 
 	/**
 	 * \brief Creates a framebuffer attachment that will be added into each framebuffer
 	 * once the RenderPass actually gets created
 	 * \param createInfo 
 	 */
-	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	void linkFramebufferAttachment(RvFramebufferAttachment createInfo);
 
 	/**
 	 * \brief 
 	 * \param createInfo 
 	 */
-	void addSharedFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+	void linkSharedFramebufferAttachment(RvFramebufferAttachment createInfo);
 };
 
 struct RvSubpass

@@ -88,19 +88,19 @@ void RvRenderPass::clear()
 	vkDestroyRenderPass(device->handle, handle, nullptr);
 }
 
-void RvRenderPass::attachSubpass(const RvSubpass& subpass)
+void RvRenderPass::linkSubpass(const RvSubpass& subpass)
 {
 	subpasses.push_back(subpass);
 }
 
-void RvRenderPass::addFramebufferAttachment(const RvFramebufferAttachmentCreateInfo createInfo)
+void RvRenderPass::linkFramebufferAttachment(RvFramebufferAttachment attachment)
 {
-	sharedFramebufferAttachmentsCreateInfos.push_back(createInfo);
+	framebufferAttachments.push_back(attachment);
 }
 
-void RvRenderPass::addSharedFramebufferAttachment(const RvFramebufferAttachmentCreateInfo createInfo)
+void RvRenderPass::linkSharedFramebufferAttachment(RvFramebufferAttachment createInfo)
 {
-	sharedFramebufferAttachmentsCreateInfos.push_back(createInfo);
+	sharedFramebufferAttachments.push_back(attachment);
 }
 
 RvSubpass::RvSubpass() : description(), dependency()

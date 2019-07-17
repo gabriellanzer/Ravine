@@ -88,6 +88,11 @@ struct EdgeContraction
 
 typedef eastl::pair<const LinkVertex*, const LinkVertex*> EdgeKey;
 
+struct Tri
+{
+	uint32_t v0, v1, v2;
+};
+
 class WaveletApp
 {
 private:

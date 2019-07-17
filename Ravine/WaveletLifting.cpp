@@ -352,41 +352,34 @@ void WaveletApp::performContractions()
 
 		//Mark indices to be removed (of both half-edges - two faces)
 		HalfFace& hEdge = ctr->halfFaces[0];
-		mesh->indices[hEdge.oppositeIndex]		 = 0;
-		mesh->indices[hEdge.composingIndices[0]] = 0;
-		mesh->indices[hEdge.composingIndices[1]] = 0;
+		mesh->indices[hEdge.oppositeIndex]		 = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[0]] = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[1]] = UINT32_MAX;
 		hEdge = ctr->halfFaces[1];
-		mesh->indices[hEdge.oppositeIndex]		 = 0;
-		mesh->indices[hEdge.composingIndices[0]] = 0;
-		mesh->indices[hEdge.composingIndices[1]] = 0;
+		mesh->indices[hEdge.oppositeIndex]		 = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[0]] = UINT32_MAX;
+		mesh->indices[hEdge.composingIndices[1]] = UINT32_MAX;
 		removedIds += 6; //Two faces = 6 Ids
 	}
 
-	////Sort all invalidated triangles to the end of the array
-	//uint32_t size = mesh->index_count;
-	//for (uint32_t i = 0; i < mesh->index_count; i += 3)
-	//{
-	//	if (mesh->indices[i] == UINT32_MAX)
-	//	{
-	//		uint32_t swapIt = size - 3;
-	//		if (i >= swapIt)
-	//		{
-	//			size -= 3;
-	//			break;
-	//		}
+	vector<Tri> triVec;
+	triVec.resize(mesh->index_count/3);
+	memcpy(triVec.data(), mesh->indices, 4*mesh->index_count);
 
-	//		//Find a face whose indices are valid
-	//		while (mesh->indices[swapIt] == UINT32_MAX)
-	//		{
-	//			swapIt -= 3;
-	//		}
-	//		mesh->indices[i + 0] = mesh->indices[swapIt + 0];
-	//		mesh->indices[i + 1] = mesh->indices[swapIt + 1];
-	//		mesh->indices[i + 2] = mesh->indices[swapIt + 2];
-	//		size -= 3;
-	//	}
-	//}
-	//mesh->index_count = size;
+	eastl::sort(triVec.begin(), triVec.end(), 
+		[](const Tri& a, const Tri& b) -> bool
+	{
+		if(a.v0 < b.v0)
+			return true;
+		if(a.v1 < b.v1)
+			return true;
+		if(a.v2 < b.v2)
+			return true;
+		return false;
+	});
+
+	memcpy(mesh->indices, triVec.data(), 4*mesh->index_count);
+	mesh->index_count -= removedIds;
 }
 
 void WaveletApp::cleanUp()

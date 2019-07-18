@@ -13,6 +13,7 @@ using eastl::vector;
 #include "RvDevice.h"
 #include "RvFramebufferAttachment.h"
 #include "RvSwapChain.h"
+#include "RvTypeDefs.h"
 
 //Forward declaration for Subpass usage
 struct RvSubpass;
@@ -29,6 +30,7 @@ private:
 
 	//Framebuffers and their attachments
 	vector<VkFramebuffer> framebuffers;
+	vector<RvAttachmentDescription> attachmentDescriptions;
 	vector<RvFramebufferAttachment> framebufferAttachments;
 	vector<RvFramebufferAttachment> sharedFramebufferAttachments;
 	vector<RvFramebufferAttachmentCreateInfo> framebufferAttachmentsCreateInfos;
@@ -36,6 +38,12 @@ private:
 
 	//RvDevice reference
 	const RvDevice* device = nullptr;
+
+	/**
+	 * \brief Friend class to enable access of private attributes.
+	 */
+	friend class Ravine;
+	friend class RvGui; //TODO: Change the way RvGui works to avoid this type of access
 
 public:
 
@@ -61,32 +69,39 @@ public:
 	 * \brief Attaches a Subpass into this RenderPass.
 	 * \param subpass 
 	 */
-	void attachSubpass(const RvSubpass& subpass);
+	void addSubpass(const RvSubpass subpass);
 
 	/**
-	 * \brief Creates a framebuffer attachment that will be added into each framebuffer
-	 * once the RenderPass actually gets created
-	 * \param createInfo 
+	 * \brief Add a framebuffer attachment create info that will be created for each of the frame buffers.
+	 * \param createInfo Information required to create the framebuffer attachment.
 	 */
 	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
+
+	/**
+	 * \brief Add a framebuffer descriptor that defines what
+	 * \param description The Description of a given attachment (order must match subpass usage description)
+	 */
+	void addAttachmentDescriptor(RvAttachmentDescription description);
 
 	/**
 	 * \brief 
 	 * \param createInfo 
 	 */
 	void addSharedFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
-	static RvRenderPass defaultRenderPass(const RvDevice& device, const RvSwapChain& swapChain);
+
+	static RvRenderPass* defaultRenderPass(RvDevice& device, const RvSwapChain& swapChain);
 };
 
 struct RvSubpass
 {
-private:
 	VkSubpassDescription description;
 	VkSubpassDependency dependency;
+	VkAttachmentReference* attachmentReferences = nullptr;
+	uint32_t* preserveAttachments = nullptr;
 
-public:
-	RvSubpass(const VkSubpassDescription& description, const VkSubpassDependency& dependency);
-	~RvSubpass() = default;
+	RvSubpass(const RvSubpass& subpass);
+	RvSubpass(VkSubpassDescription descriptr, VkSubpassDependency dependency);
+	~RvSubpass();
 	static RvSubpass defaultSubpass();
 };
 

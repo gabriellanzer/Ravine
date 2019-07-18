@@ -8,13 +8,13 @@ using eastl::array;
 //STD Includes
 #include <stdexcept>
 
-RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain) : renderPass()
+RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainKHR oldSwapChain)
 {
 	//TODO: Use new constructor thingy
 	this->device = &device;
 	this->surface = surface;
-	this->WIDTH = WIDTH;
-	this->HEIGHT = HEIGHT;
+	this->width = width;
+	this->height = height;
 
 	//Check swap chain support
 	RvSwapChainSupportDetails swapChainSupport = rvTools::querySupport(device.physicalDevice, surface);
@@ -124,7 +124,7 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 		return capabilities.currentExtent;
 	}
 	else {
-		VkExtent2D actualExtent = { WIDTH, HEIGHT };
+		VkExtent2D actualExtent = { width, height };
 
 		actualExtent.width = eastl::max(capabilities.minImageExtent.width, eastl::min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = eastl::max(capabilities.minImageExtent.height, eastl::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -140,23 +140,6 @@ RvSwapChain::operator VkSwapchainKHR() const
 
 void RvSwapChain::clear()
 {
-	//Destroy attachments
-	for (size_t i = 0; i < framebufferAttachments.size(); i++)
-	{
-		vkDestroyImageView(device->handle, framebufferAttachments[i].imageView, nullptr);
-		vkDestroyImage(device->handle, framebufferAttachments[i].image, nullptr);
-		vkFreeMemory(device->handle, framebufferAttachments[i].memory, nullptr);
-	}
-
-	//Destroy FrameBuffers
-	for (VkFramebuffer framebuffer : framebuffers) {
-		vkDestroyFramebuffer(device->handle, framebuffer, nullptr);
-	}
-
-	vkDestroyRenderPass(device->handle, renderPass, nullptr);
-	for (VkImageView imageView : imageViews) {
-		vkDestroyImageView(device->handle, imageView, nullptr);
-	}
 	vkDestroySwapchainKHR(device->handle, handle, nullptr);
 
 	destroySyncObjects();
@@ -172,6 +155,7 @@ void RvSwapChain::createImageViews()
 	}
 }
 
+/*
 void RvSwapChain::createRenderPass()
 {
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
@@ -305,8 +289,8 @@ void RvSwapChain::createFramebuffers()
 		{
 			attachments.push_back(framebufferAttachment.imageView);
 		}
-
 		attachments.push_back(imageViews[i]);
+
 
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -322,6 +306,7 @@ void RvSwapChain::createFramebuffers()
 		}
 	}
 }
+*/
 
 void RvSwapChain::createSyncObjects()
 {
@@ -396,8 +381,9 @@ bool RvSwapChain::submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	if (vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+	
+	VkResult result = vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
 
@@ -414,7 +400,7 @@ bool RvSwapChain::submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 
 	presentInfo.pResults = nullptr; // Optional
 
-	const VkResult result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
+	result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 		framebufferResized = false;
 		return false;

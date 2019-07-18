@@ -278,6 +278,9 @@
     <ClInclude Include="RvGuiPipeline.h">
       <Filter>Header Files\Ravine System\Pipelines</Filter>
     </ClInclude>
+    <ClInclude Include="RvTypeDefs.h">
+      <Filter>Header Files\Ravine System\Internal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag">

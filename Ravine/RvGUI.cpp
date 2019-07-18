@@ -11,7 +11,8 @@
 
 #include "imgui_impl_glfw.h"
 
-RvGui::RvGui(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window), swapChainImagesCount(swapChain.images.size())
+RvGui::RvGui(RvDevice* device, RvSwapChain* swapChain, RvWindow* window, RvRenderPass* renderPass) : 
+	device(device), swapChain(swapChain), window(window), renderPass(renderPass), swapChainImagesCount(swapChain->images.size())
 {
 	ImGui::CreateContext();
 	io = &ImGui::GetIO();
@@ -67,13 +68,13 @@ void RvGui::init(VkSampleCountFlagBits samplesCount)
 	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
 
 	//Dimensions
-	io->DisplaySize = ImVec2(swapChain->WIDTH, swapChain->HEIGHT);
+	io->DisplaySize = ImVec2(swapChain->width, swapChain->height);
 	io->DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
 	//Initialize Vulkan Resources
 	VkExtent2D extent;
-	extent.width = swapChain->WIDTH;
-	extent.height = swapChain->HEIGHT;
+	extent.width = swapChain->width;
+	extent.height = swapChain->height;
 
 	//Load Font Texture
 	createFontTexture();
@@ -96,7 +97,7 @@ void RvGui::init(VkSampleCountFlagBits samplesCount)
 	createCmdBuffers();
 
 	//Create GUI Graphics Pipeline
-	guiPipeline = new RvGuiPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
+	guiPipeline = new RvGuiPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, renderPass->handle);
 }
 
 void RvGui::acquireFrame()
@@ -394,10 +395,10 @@ void RvGui::recordCmdBuffers(uint32_t frameIndex)
 	//Setup inheritance information to provide access modifiers from RenderPass
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
 	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritanceInfo.renderPass = swapChain->renderPass;
+	inheritanceInfo.renderPass = renderPass->handle;
 	//inheritanceInfo.subpass = 0; TODO: USE SUBPASS FOR DEPENDENCIES (BLITTING)
 	inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-	inheritanceInfo.framebuffer = swapChain->framebuffers[frameIndex]; //TODO: USE INTERNAL FRAMEBUFFER
+	inheritanceInfo.framebuffer = renderPass->framebuffers[frameIndex]; //TODO: USE INTERNAL FRAMEBUFFER
 	inheritanceInfo.pipelineStatistics = 0;
 	beginInfo.pInheritanceInfo = &inheritanceInfo;
 

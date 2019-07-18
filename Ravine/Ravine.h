@@ -17,10 +17,9 @@ using eastl::string;
 using eastl::vector;
 using eastl::array;
 
-//Types dependencies
-#include "RvDataTypes.h"
 
-//VK Wrappers
+//Ravine Includes
+#include "RvDataTypes.h"
 #include "RvAnimationTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"
@@ -30,9 +29,8 @@ using eastl::array;
 #include "RvWindow.h"
 #include "RvTexture.h"
 #include "RvCamera.h"
-
-//GUI Includes
 #include "RvGui.h"
+#include "RvRenderPass.h"
 
 //Math defines
 #define F_MAX(a,b)            (((a) > (b)) ? (a) : (b))
@@ -64,6 +62,7 @@ private:
 	//Todo: Move to VULKAN APP
 	RvDevice* device;
 	RvSwapChain* swapChain;
+	RvRenderPass* renderPass;
 
 	//TODO: Fix Creation flow with shaders integration
 	vector<char> skinnedTexColCode;
@@ -208,12 +207,6 @@ private:
 
 	//Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();
-
-	//Create resources for depth testing
-	void createDepthResources();
-
-	//Create resources for sampling
-	void createMultiSamplingResources();
 
 	//Creates command buffers array
 	void allocateCommandBuffers();

@@ -11,7 +11,6 @@ using eastl::vector;
 //Ravine Includes
 #include "RvTools.h"
 #include "RvDevice.h"
-#include "RvFramebufferAttachment.h"
 
 //Forward declaration of Swap Chain Support details struct
 struct RvSwapChainSupportDetails;
@@ -27,8 +26,8 @@ private:
 
 public:
 	//Extent values
-	uint32_t WIDTH;
-	uint32_t HEIGHT;
+	uint32_t width;
+	uint32_t height;
 	bool framebufferResized = false;
 
 	//Number of maximum simultaneous frames
@@ -37,18 +36,11 @@ public:
 	//Vulkan Object Handle
 	VkSwapchainKHR handle = VK_NULL_HANDLE;
 
-	//Renderpass
-	VkRenderPass renderPass;
-
 	//Swap chain properties
 	vector<VkImage> images;
 	VkFormat imageFormat;
 	VkExtent2D extent;
 	vector<VkImageView> imageViews;
-
-	//Framebuffers
-	vector<VkFramebuffer> framebuffers;
-	vector<RvFramebufferAttachment> framebufferAttachments;
 
 	//Queue fences
 	vector<VkFence> inFlightFences;
@@ -57,28 +49,21 @@ public:
 	vector<VkSemaphore> imageAvailableSemaphores;
 	vector<VkSemaphore> renderFinishedSemaphores;
 
-	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain);
+	RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainKHR oldSwapChain);
 	~RvSwapChain();
 
 	void clear();
 
 	void createImageViews();
-	void createRenderPass();
-	void addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo);
-	void createFramebuffers();
 
 	void createSyncObjects();
-
 	void destroySyncObjects();
 
 	bool acquireNextFrame(uint32_t& frameIndex);
 	bool submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex);
 
-
 	VkSurfaceFormatKHR chooseSurfaceFormat(const vector<VkSurfaceFormatKHR>& availableFormats);
-
 	VkPresentModeKHR choosePresentMode(const vector<VkPresentModeKHR>& availablePresentModes);
-
 	VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	explicit operator VkSwapchainKHR() const;

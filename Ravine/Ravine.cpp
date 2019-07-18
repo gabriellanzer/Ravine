@@ -95,7 +95,9 @@ void Ravine::initWindow() {
 void Ravine::initVulkan() {
 	//Core setup
 	createInstance();
+#ifdef VALIDATION_LAYERS_ENABLED
 	rvDebug::setupDebugCallback(instance);
+#endif
 	window->CreateSurface(instance);
 	pickPhysicalDevice();
 
@@ -114,7 +116,8 @@ void Ravine::initVulkan() {
 	//Rendering pipeline
 	swapChain = new RvSwapChain(*device, window->surface, window->extent.width, window->extent.height, NULL);
 	swapChain->createImageViews();
-	swapChain->createRenderPass();
+	swapChain->createSyncObjects();
+	renderPass = RvRenderPass::defaultRenderPass(*device, *swapChain);
 	createDescriptorSetLayout();
 
 	//Shaders Loading
@@ -132,19 +135,18 @@ void Ravine::initVulkan() {
 		modelDescriptorSetLayout
 	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, renderPass->handle, skinnedTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, renderPass->handle, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, renderPass->handle, staticTexColCode, phongTexColCode);
 	staticWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, renderPass->handle, staticWireframeCode, solidColorCode);
 	staticLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, renderPass->handle, staticWireframeCode, solidColorCode);
+	gui = new RvGui(device, swapChain, window, renderPass);
+	gui->init(device->getMaxUsableSampleCount());
 
-	createMultiSamplingResources();
-	createDepthResources();
-	swapChain->createFramebuffers();
 	loadTextureImages();
 	createTextureSampler();
 	createVertexBuffer();
@@ -153,11 +155,6 @@ void Ravine::initVulkan() {
 	createDescriptorPool();
 	createDescriptorSets();
 	allocateCommandBuffers();
-	swapChain->createSyncObjects();
-
-	//GUI Management
-	gui = new RvGui(*device, *swapChain, *window);
-	gui->init(device->getMaxUsableSampleCount());
 }
 
 void Ravine::createInstance() {
@@ -323,24 +320,12 @@ void Ravine::recreateSwapChain() {
 	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
 	swapChain->createSyncObjects();
 	swapChain->createImageViews();
-	swapChain->createRenderPass();
 
-	VkDescriptorSetLayout* descriptorSetLayouts = new VkDescriptorSetLayout[3]
-	{
-		globalDescriptorSetLayout,
-		materialDescriptorSetLayout,
-		modelDescriptorSetLayout
-	};
-
-	createMultiSamplingResources();
-	createDepthResources();
-	swapChain->createFramebuffers();
+	//swapChain->createFramebuffers();
 	allocateCommandBuffers();
-	RvGui* oldGui = gui;
-	gui = new RvGui(*device, *swapChain, *window);
-	gui->init(device->getMaxUsableSampleCount());
-	delete oldGui;
+
 	//Deleting old swapchain
+	//oldSwapchain->renderPass = VK_NULL_HANDLE;
 	oldSwapchain->clear();
 	delete oldSwapchain;
 }
@@ -1033,31 +1018,11 @@ void Ravine::createTextureSampler()
 	}
 }
 
-void Ravine::createDepthResources()
-{
-	RvFramebufferAttachmentCreateInfo createInfo = rvDefaultDepthAttachment;
-	createInfo.format = device->findDepthFormat();
-	createInfo.extent.width = swapChain->extent.width;
-	createInfo.extent.height = swapChain->extent.height;
-
-	swapChain->addFramebufferAttachment(createInfo);
-}
-
-void Ravine::createMultiSamplingResources()
-{
-	RvFramebufferAttachmentCreateInfo createInfo = rvDefaultResolveAttachment;
-	createInfo.format = swapChain->imageFormat;
-	createInfo.extent.width = swapChain->extent.width;
-	createInfo.extent.height = swapChain->extent.height;
-
-	swapChain->addFramebufferAttachment(createInfo);
-}
-
 void Ravine::allocateCommandBuffers() {
 
 	//Allocate command buffers
-	primaryCmdBuffers.resize(swapChain->framebuffers.size());
-	secondaryCmdBuffers.resize(swapChain->framebuffers.size());
+	primaryCmdBuffers.resize(renderPass->framebuffers.size());
+	secondaryCmdBuffers.resize(renderPass->framebuffers.size());
 
 	//Primary Command Buffers
 	VkCommandBufferAllocateInfo allocInfo = {};
@@ -1076,7 +1041,7 @@ void Ravine::allocateCommandBuffers() {
 	}
 }
 
-void Ravine::recordCommandBuffers(uint32_t currentFrame)
+void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 {
 	//Begining Command Buffer Recording
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
@@ -1090,10 +1055,10 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	//Setup inheritance information to provide access modifiers from RenderPass
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
 	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritanceInfo.renderPass = swapChain->renderPass;
+	inheritanceInfo.renderPass = renderPass->handle;
 	//inheritanceInfo.subpass = 0;
 	inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-	inheritanceInfo.framebuffer = swapChain->framebuffers[currentFrame];
+	inheritanceInfo.framebuffer = renderPass->framebuffers[currentFrame];
 	inheritanceInfo.pipelineStatistics = 0;
 	beginInfo.pInheritanceInfo = &inheritanceInfo;
 
@@ -1225,8 +1190,8 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = swapChain->renderPass;
-	renderPassInfo.framebuffer = swapChain->framebuffers[currentFrame];
+	renderPassInfo.renderPass = renderPass->handle;
+	renderPassInfo.framebuffer = renderPass->framebuffers[currentFrame];
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = swapChain->extent;
 
@@ -1601,7 +1566,10 @@ void Ravine::cleanup()
 	delete gui;
 
 	//Hold number of swapchain images
-	uint32_t swapImagesCount = swapChain->images.size();
+	const uint32_t swapImagesCount = swapChain->images.size();
+
+	//Cleanup render-pass
+	renderPass->clear();
 
 	//Cleanup swap-chain related data
 	cleanupSwapChain();

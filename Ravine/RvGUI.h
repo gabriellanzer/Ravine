@@ -18,6 +18,7 @@
 #include "RvWindow.h"
 #include "RvSwapChain.h"
 #include "RvTexture.h"
+#include "RvRenderPass.h"
 #include "RvGuiPipeline.h"
 
 struct RvGui
@@ -26,6 +27,7 @@ struct RvGui
 	ImGuiIO* io;
 	RvDevice* device;
 	RvSwapChain* swapChain;
+	RvRenderPass* renderPass;
 	RvWindow* window;
 
 	//External parameters state
@@ -61,12 +63,7 @@ struct RvGui
 
 	uint32_t lastVtxCrc[RV_MAX_FRAMES_IN_FLIGHT] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 
-	//TODO: Create command buffers here and do a blitting operation later
-	//Today we are using the same CMD buffers to draw models and do UI stuff
-	//std::vector<VkCommandBuffer> commandBuffers;
-	//void CreateFrameBuffers();
-
-	RvGui(RvDevice& device, RvSwapChain& swapChain, RvWindow& window);
+	RvGui(RvDevice* device, RvSwapChain* swapChain, RvWindow* window, RvRenderPass* renderPass);
 	~RvGui();
 
 	void init(VkSampleCountFlagBits samplesCount);

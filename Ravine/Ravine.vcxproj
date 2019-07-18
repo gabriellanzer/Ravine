@@ -220,6 +220,7 @@
     <ClInclude Include="RvGuiPipeline.h" />
     <ClInclude Include="RvLinePipeline.h" />
     <ClInclude Include="RvRenderPass.h" />
+    <ClInclude Include="RvTypeDefs.h" />
     <ClInclude Include="RvWireframePipeline.h" />
     <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />

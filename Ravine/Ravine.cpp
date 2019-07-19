@@ -1050,7 +1050,7 @@ void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 #pragma region Secondary Command Buffers
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 	//Setup inheritance information to provide access modifiers from RenderPass
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};

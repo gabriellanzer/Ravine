@@ -10,13 +10,8 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 	//Create RenderPass
 	VkRenderPassCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	VkAttachmentDescription* attachment = new VkAttachmentDescription[attachmentDescriptions.size()];
-	for (uint32_t i = 0; i < attachmentDescriptions.size(); ++i)
-	{
-		attachment[i] = attachmentDescriptions[i];
-	}
 	createInfo.attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size());
-	createInfo.pAttachments = attachment;
+	createInfo.pAttachments = attachmentDescriptions.data();
 	const uint32_t subpassSize = static_cast<uint32_t>(subpasses.size());
 	VkSubpassDescription* subpassDescriptions = new VkSubpassDescription[subpassSize];
 	VkSubpassDependency* subpassDependencies = new VkSubpassDependency[subpassSize];
@@ -54,12 +49,6 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 			);
 		VkImageView* attachments = new VkImageView[attachmentCount];
 		uint32_t it = 0;
-		//Link proper swapchain image attachment
-		if (swapchainImages != VK_NULL_HANDLE)
-		{
-			attachments[it] = swapchainImages[frameIt];
-			it++;
-		}
 
 		//Link all shared attachments
 		for (uint32_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
@@ -74,6 +63,13 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 			RvFramebufferAttachment attachment = rvTools::createFramebufferAttachment(device, framebufferAttachmentsCreateInfos[i]);
 			framebufferAttachments.push_back(attachment);
 			attachments[it+i] = attachment.imageView;
+		}
+
+		//Link proper swapchain image attachment
+		if (swapchainImages != VK_NULL_HANDLE)
+		{
+			attachments[it] = swapchainImages[frameIt];
+			it++;
 		}
 
 		VkFramebufferCreateInfo framebufferCreateInfo = {};

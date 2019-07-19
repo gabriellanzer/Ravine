@@ -3,7 +3,8 @@
 #include <stdexcept>
 #include <eastl/array.h>
 
-void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount, const VkExtent3D& sizeAndLayers, const VkImageView* swapchainImages)
+void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount, const VkExtent3D& sizeAndLayers,
+    const VkImageView* swapchainImages)
 {
 	this->device = &device;
 
@@ -42,18 +43,18 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 	//For each frame, create a framebuffer with it's attachments
 	for (uint32_t frameIt = 0; frameIt < framesCount; frameIt++)
 	{
-		const uint32_t attachmentCount = (
-			(swapchainImages != VK_NULL_HANDLE ? 1 : 0) + 
-			sharedFramebufferAttachments.size() + 
-			framebufferAttachmentsCreateInfos.size()
-			);
+		const uint32_t attachmentCount = 
+			sharedFramebufferAttachments.size() +
+			framebufferAttachmentsCreateInfos.size() +
+			(swapchainImages != VK_NULL_HANDLE ? 1 : 0);
+
 		VkImageView* attachments = new VkImageView[attachmentCount];
 		uint32_t it = 0;
 
 		//Link all shared attachments
 		for (uint32_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
 		{
-			attachments[it+i] = sharedFramebufferAttachments[i].imageView;
+			attachments[it + i] = sharedFramebufferAttachments[i].imageView;
 		}
 		it += sharedFramebufferAttachments.size();
 
@@ -62,7 +63,7 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 		{
 			RvFramebufferAttachment attachment = rvTools::createFramebufferAttachment(device, framebufferAttachmentsCreateInfos[i]);
 			framebufferAttachments.push_back(attachment);
-			attachments[it+i] = attachment.imageView;
+			attachments[it + i] = attachment.imageView;
 		}
 
 		//Link proper swapchain image attachment
@@ -82,8 +83,108 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 		framebufferCreateInfo.layers = sizeAndLayers.depth;
 		framebufferCreateInfo.pNext = nullptr;
 
-		framebuffers[frameIt] = {};
 		const VkResult result = vkCreateFramebuffer(device.handle, &framebufferCreateInfo, nullptr, &framebuffers[frameIt]);
+		if (result != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create framebuffer!");
+		}
+	}
+}
+
+void RvRenderPass::resizeAttachments(const uint32_t framesCount, const VkExtent3D& sizeAndLayers,
+	const VkImageView* swapchainImages)
+{
+	if (device == nullptr)
+	{
+		throw std::exception("Trying to resizeAttachments a not yet constructed RenderPass!");
+	}
+
+	//TODO: Study a way to resize attachments without using single-time commands (such as vkFlushMappedMemoryRanges)
+
+	//Clear FrameBuffers
+	for (VkFramebuffer framebuffer : framebuffers)
+	{
+		vkDestroyFramebuffer(device->handle, framebuffer, nullptr);
+	}
+
+	//Clear old attachments
+	for (auto& sharedFramebufferAttachment : sharedFramebufferAttachments)
+	{
+		vkDestroyImageView(device->handle, sharedFramebufferAttachment.imageView, nullptr);
+		vkDestroyImage(device->handle, sharedFramebufferAttachment.image, nullptr);
+		vkFreeMemory(device->handle, sharedFramebufferAttachment.memory, nullptr);
+	}
+	sharedFramebufferAttachments.clear();
+	for (auto& framebufferAttachment : framebufferAttachments)
+	{
+		vkDestroyImageView(device->handle, framebufferAttachment.imageView, nullptr);
+		vkDestroyImage(device->handle, framebufferAttachment.image, nullptr);
+		vkFreeMemory(device->handle, framebufferAttachment.memory, nullptr);
+	}
+	framebufferAttachments.clear();
+
+	//Resize create info pieces
+	for (RvFramebufferAttachmentCreateInfo& attachmentCreateInfo : sharedFramebufferAttachmentsCreateInfos)
+	{
+		attachmentCreateInfo.extent = sizeAndLayers;
+	}
+	for (RvFramebufferAttachmentCreateInfo& attachmentCreateInfo : framebufferAttachmentsCreateInfos)
+	{
+		attachmentCreateInfo.extent = sizeAndLayers;
+	}
+
+	//Resize array to allocate required VkFramebuffer objects
+	framebuffers.resize(framesCount);
+
+	//Create all shared framebuffer attachments
+	sharedFramebufferAttachments.reserve(sharedFramebufferAttachmentsCreateInfos.size());
+	for (RvFramebufferAttachmentCreateInfo& attachmentCreateInfo : sharedFramebufferAttachmentsCreateInfos)
+	{
+		sharedFramebufferAttachments.push_back(rvTools::createFramebufferAttachment(*device, attachmentCreateInfo));
+	}
+
+	//For each frame, create a framebuffer with it's attachments
+	for (uint32_t frameIt = 0; frameIt < framesCount; frameIt++)
+	{
+		const uint32_t attachmentCount = 
+			sharedFramebufferAttachments.size() +
+			framebufferAttachmentsCreateInfos.size() +
+			(swapchainImages != VK_NULL_HANDLE ? 1 : 0);
+		VkImageView* attachments = new VkImageView[attachmentCount];
+		uint32_t it = 0;
+
+		//Link all shared attachments
+		for (uint32_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
+		{
+			attachments[it + i] = sharedFramebufferAttachments[i].imageView;
+		}
+		it += sharedFramebufferAttachments.size();
+
+		//Create and link individual attachments
+		for (uint32_t i = 0; i < framebufferAttachmentsCreateInfos.size(); ++i)
+		{
+			RvFramebufferAttachment attachment = rvTools::createFramebufferAttachment(*device, framebufferAttachmentsCreateInfos[i]);
+			framebufferAttachments.push_back(attachment);
+			attachments[it + i] = attachment.imageView;
+		}
+
+		//Link proper swapchain image attachment
+		if (swapchainImages != VK_NULL_HANDLE)
+		{
+			attachments[it] = swapchainImages[frameIt];
+			it++;
+		}
+
+		VkFramebufferCreateInfo framebufferCreateInfo = {};
+		framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferCreateInfo.renderPass = handle;
+		framebufferCreateInfo.attachmentCount = attachmentCount;
+		framebufferCreateInfo.pAttachments = attachments;
+		framebufferCreateInfo.width = sizeAndLayers.width;
+		framebufferCreateInfo.height = sizeAndLayers.height;
+		framebufferCreateInfo.layers = sizeAndLayers.depth;
+		framebufferCreateInfo.pNext = nullptr;
+
+		const VkResult result = vkCreateFramebuffer(device->handle, &framebufferCreateInfo, nullptr, &framebuffers[frameIt]);
 		if (result != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create framebuffer!");
 		}
@@ -208,7 +309,7 @@ RvRenderPass* RvRenderPass::defaultRenderPass(RvDevice& device, const RvSwapChai
 	renderPass->addSubpass(RvSubpass::defaultSubpass());
 
 	//Proper Creation
-	renderPass->construct(device, swapChain.images.size(), size, swapChain.imageViews.data());
+	renderPass->construct(device, swapChain.imageViews.size(), size, swapChain.imageViews.data());
 
 	return renderPass;
 }
@@ -228,7 +329,7 @@ RvSubpass::RvSubpass(VkSubpassDescription descriptr, VkSubpassDependency depende
 	VkAttachmentReference* refPtr = attachmentReferences;
 
 	//Input attachments
-	if(description.inputAttachmentCount > 0)
+	if (description.inputAttachmentCount > 0)
 	{
 		memcpy(refPtr, description.pInputAttachments, description.inputAttachmentCount * sizeof(VkAttachmentReference));
 		description.pInputAttachments = refPtr;
@@ -250,7 +351,7 @@ RvSubpass::RvSubpass(VkSubpassDescription descriptr, VkSubpassDependency depende
 	description.pResolveAttachments = refPtr;
 
 	//Preserve attachments
-	if(description.preserveAttachmentCount > 0)
+	if (description.preserveAttachmentCount > 0)
 	{
 		preserveAttachments = new uint32_t[description.preserveAttachmentCount];
 		memcpy(preserveAttachments, description.pPreserveAttachments, description.preserveAttachmentCount * 4);

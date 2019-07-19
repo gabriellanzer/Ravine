@@ -6,8 +6,8 @@
 
 struct RvTexture
 {
-	RvTexture();
-	~RvTexture();
+	RvTexture() = default;
+	~RvTexture() = default;
 
 	//The texture size extent
 	VkExtent2D extent;
@@ -30,9 +30,9 @@ struct RvTexture
 	//The memory handle on a GPU device
 	VkDeviceMemory memory;
 
-	void Free();
+	void free();
 
-	operator VkImage()
+	operator VkImage() const
 	{
 		return handle;
 	}

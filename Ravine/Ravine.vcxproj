@@ -185,6 +185,7 @@
     <ClCompile Include="RvGui.cpp" />
     <ClCompile Include="RvGuiPipeline.cpp" />
     <ClCompile Include="RvLinePipeline.cpp" />
+    <ClCompile Include="RvPhysics.cpp" />
     <ClCompile Include="RvRenderPass.cpp" />
     <ClCompile Include="RvWireframePipeline.cpp" />
     <ClCompile Include="RvTexture.cpp" />
@@ -219,6 +220,7 @@
     <ClInclude Include="RvGui.h" />
     <ClInclude Include="RvGuiPipeline.h" />
     <ClInclude Include="RvLinePipeline.h" />
+    <ClInclude Include="RvPhysics.h" />
     <ClInclude Include="RvRenderPass.h" />
     <ClInclude Include="RvTypeDefs.h" />
     <ClInclude Include="RvWireframePipeline.h" />

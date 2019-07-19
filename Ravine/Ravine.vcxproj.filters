@@ -70,6 +70,12 @@
     <Filter Include="Header Files\Ravine System\Pipelines">
       <UniqueIdentifier>{fc07786f-9b74-46ec-ae3f-fa5cd2d0069d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Ravine System\Functionalities">
+      <UniqueIdentifier>{56ac1a76-967b-4fe0-9933-0cd103b867fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ravine System\Functionalities">
+      <UniqueIdentifier>{5a83609b-8dfd-453f-bfde-dc474bb47604}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -167,6 +173,9 @@
     </ClCompile>
     <ClCompile Include="RvGuiPipeline.cpp">
       <Filter>Source Files\Ravine System\Pipelines</Filter>
+    </ClCompile>
+    <ClCompile Include="RvPhysics.cpp">
+      <Filter>Source Files\Ravine System\Functionalities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -280,6 +289,9 @@
     </ClInclude>
     <ClInclude Include="RvTypeDefs.h">
       <Filter>Header Files\Ravine System\Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="RvPhysics.h">
+      <Filter>Header Files\Ravine System\Functionalities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -91,7 +91,7 @@ namespace rvTools {
 		vkFreeMemory(device->handle, stagingBuffer.memory, nullptr);
 
 		//Transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
-		generateMipmaps(device, texture.handle, format, width, height, mipLevels);
+		generateMipmap(device, texture.handle, format, width, height, mipLevels);
 
 		//Create ImageView for this texture
 		texture.view = createImageView(device->handle, texture.handle, format, VK_IMAGE_ASPECT_COLOR_BIT, texture.mipLevels);
@@ -100,7 +100,7 @@ namespace rvTools {
 
 	}
 
-	void generateMipmaps(RvDevice* device, VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)
+	void generateMipmap(RvDevice* device, VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)
 	{
 		//Checking device support for linear blitting
 		VkFormatProperties formatProperties = device->getFormatProperties(imageFormat);

@@ -320,6 +320,8 @@ void Ravine::recreateSwapChain() {
 	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
 	swapChain->createSyncObjects();
 	swapChain->createImageViews();
+	const VkExtent3D extent = { swapChain->extent.width, swapChain->extent.height, 1 };
+	renderPass->resizeAttachments(swapChain->imageViews.size(), extent, swapChain->imageViews.data());
 
 	//swapChain->createFramebuffers();
 	allocateCommandBuffers();
@@ -1578,7 +1580,7 @@ void Ravine::cleanup()
 	vkDestroySampler(device->handle, textureSampler, nullptr);
 	for (uint32_t i = 0; i < texturesSize; i++)
 	{
-		textures[i].Free();
+		textures[i].free();
 	}
 	delete[] textures;
 	texturesSize = 0;
@@ -1627,10 +1629,12 @@ void Ravine::cleanup()
 		vkFreeMemory(device->handle, indexBuffers[meshIndex].memory, nullptr);
 	}
 
-	//Destroy graphics pipeline
+	//Destroy pipelines
 	delete skinnedGraphicsPipeline;
 	delete skinnedWireframeGraphicsPipeline;
 	delete staticGraphicsPipeline;
+	delete staticWireframeGraphicsPipeline;
+	delete staticLineGraphicsPipeline;
 
 	//Destroy vulkan logical device and validation layer
 	device->clear();

@@ -60,6 +60,8 @@ public:
 	 */
 	void construct(const RvDevice& device, const uint32_t framesCount, const VkExtent3D& sizeAndLayers, const VkImageView* swapchainImages = VK_NULL_HANDLE);
 
+	void resizeAttachments(const uint32_t framesCount, const VkExtent3D& sizeAndLayers, const VkImageView* swapchainImages = VK_NULL_HANDLE);
+
 	/**
 	 * \brief 
 	 */

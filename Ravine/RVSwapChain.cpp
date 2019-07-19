@@ -10,7 +10,6 @@ using eastl::array;
 
 RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainKHR oldSwapChain)
 {
-	//TODO: Use new constructor thingy
 	this->device = &device;
 	this->surface = surface;
 	this->width = width;

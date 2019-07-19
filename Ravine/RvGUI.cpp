@@ -25,7 +25,7 @@ RvGui::~RvGui()
 
 	//Freeup Texture Samplers
 	vkDestroySampler(device->handle, textureSampler, nullptr);
-	fontTexture.Free();
+	fontTexture.free();
 
 	//Destroy Descriptor pool with descriptor sets allocation
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);

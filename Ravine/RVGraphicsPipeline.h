@@ -6,25 +6,34 @@
 
 //Ravine Systems
 #include "RvDevice.h"
+#include "RvRenderPass.h"
 
 struct RvGraphicsPipeline
 {
-	RvGraphicsPipeline(VkDescriptorSetLayout descriptorSetLayout, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode);
+	RvGraphicsPipeline();
 	~RvGraphicsPipeline();
 
-	RvDevice* device;
+	void create();
+	void recreate();
+	void attachShader(const VkShaderStageFlagBits stageFlagBits, const VkShaderModule* shaderModule, const char* entryPointName = "main");
+	void forceAttachShader(const VkShaderStageFlagBits stageFlagBits, const VkShaderModule* shaderModule, const char* entryPointName = "main");
+	void deattachShader(const VkShaderModule* shaderModule);
+
+	//Internal State
 	VkPipeline handle;
-
-	VkShaderModule vertModule;
-	VkShaderModule fragModule;
-
 	VkPipelineLayout layout;
 	VkPipelineCache pipelineCache;
-	VkRenderPass renderPass;
+	VkShaderStageFlagBits allAttachedShaderStageBits;
+	vector<VkShaderStageFlagBits> attachedShaderStageBits;
+	vector<const VkShaderModule*> attachedShaderModules;
+	vector<const char*> shaderEntryPoints;
+	VkDescriptorSetLayout descriptorSetLayout;
 
-	operator VkPipeline() {
-		return handle;
-	}
+	//External References
+	RvDevice* device;
+	RvRenderPass* renderPass;
+
+	operator VkPipeline() const;
 };
 
 #endif

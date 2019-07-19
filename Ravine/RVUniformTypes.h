@@ -4,7 +4,7 @@
 //GLM Includes
 #include <glm/mat4x4.hpp>
 
-struct RvUniformBufferObject {
+struct RvGlobalBufferObject {
 	glm::mat4 view;
 	glm::mat4 proj;
 	glm::vec4 lightColor;

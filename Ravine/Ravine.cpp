@@ -397,7 +397,7 @@ void Ravine::createDescriptorSets()
 	for (size_t i = 0; i < framesCount; i++)
 	{
 		VkDescriptorBufferInfo globalUniformsInfo = {};
-		globalUniformsInfo.buffer = uniformBuffers[i].handle;
+		globalUniformsInfo.buffer = globalBuffers[i].handle;
 		globalUniformsInfo.offset = 0;
 		globalUniformsInfo.range = sizeof(RvUniformBufferObject);
 
@@ -929,13 +929,13 @@ void Ravine::createUniformBuffers()
 {
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	size_t framesCount = swapChain->images.size();
-	uniformBuffers.resize(framesCount);
+	globalBuffers.resize(framesCount);
 	materialsBuffers.resize(framesCount * meshesCount);
 	modelsBuffers.resize(framesCount * meshesCount);
 	animationsBuffers.resize(framesCount * meshesCount);
 
 	for (size_t i = 0; i < framesCount; i++) {
-		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		globalBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 		for (size_t j = 0; j < meshesCount; j++)
 		{
 			size_t frameOffset = i * meshesCount;
@@ -1045,8 +1045,6 @@ void Ravine::allocateCommandBuffers() {
 
 void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 {
-	//Begining Command Buffer Recording
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1356,9 +1354,6 @@ void Ravine::setupFpsCam()
 	//Enable caching of buttons pressed
 	glfwSetInputMode(*window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 
-	//Hide mouse cursor
-	//glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
 	//Update lastMousePos to avoid initial offset not null
 	glfwGetCursorPos(*window, &lastMouseX, &lastMouseY);
 
@@ -1487,9 +1482,9 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 	//Transfering uniform data to uniform buffer
 	void* data;
-	vkMapMemory(device->handle, uniformBuffers[currentFrame].memory, 0, sizeof(ubo), 0, &data);
+	vkMapMemory(device->handle, globalBuffers[currentFrame].memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(device->handle, uniformBuffers[currentFrame].memory);
+	vkUnmapMemory(device->handle, globalBuffers[currentFrame].memory);
 #pragma endregion
 
 	//TODO: Change this to a per-material basis instead of per-mesh
@@ -1540,28 +1535,6 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 }
 
-void Ravine::cleanupSwapChain() {
-
-	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(primaryCmdBuffers.size()), primaryCmdBuffers.data());
-	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(secondaryCmdBuffers.size()), secondaryCmdBuffers.data());
-
-	//Destroy Graphics Pipeline and all it's components
-	vkDestroyPipeline(device->handle, *skinnedGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, skinnedGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *skinnedWireframeGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, skinnedWireframeGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *staticGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, staticGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *staticWireframeGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, staticWireframeGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *staticLineGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, staticLineGraphicsPipeline->layout, nullptr);
-
-	//Destroy swap chain and all it's images
-	swapChain->clear();
-	delete swapChain;
-}
-
 void Ravine::cleanup()
 {
 	//Cleanup RvGui data
@@ -1572,9 +1545,11 @@ void Ravine::cleanup()
 
 	//Cleanup render-pass
 	renderPass->clear();
+	delete renderPass;
 
 	//Cleanup swap-chain related data
-	cleanupSwapChain();
+	swapChain->clear();
+	delete swapChain;
 
 	//Cleaning up texture related objects
 	vkDestroySampler(device->handle, textureSampler, nullptr);
@@ -1588,26 +1563,21 @@ void Ravine::cleanup()
 	//Destroy descriptor pool
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
 
-	//Destroying uniforms buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, uniformBuffers[i].handle, nullptr);
-		vkFreeMemory(device->handle, uniformBuffers[i].memory, nullptr);
-	}
+	for (uint32_t i = 0; i < swapImagesCount; i++)
+	{
+		//Destroying global buffers
+		vkDestroyBuffer(device->handle, globalBuffers[i].handle, nullptr);
+		vkFreeMemory(device->handle, globalBuffers[i].memory, nullptr);
 
-	//Destroying materials buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
+		//Destroying materials buffers
 		vkDestroyBuffer(device->handle, materialsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, materialsBuffers[i].memory, nullptr);
-	}
 
-	//Destroying models buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
+		//Destroying models buffers
 		vkDestroyBuffer(device->handle, modelsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, modelsBuffers[i].memory, nullptr);
-	}
 
-	//Destroying animations buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
+		//Destroying animations buffers
 		vkDestroyBuffer(device->handle, animationsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, animationsBuffers[i].memory, nullptr);
 	}
@@ -1618,7 +1588,7 @@ void Ravine::cleanup()
 	vkDestroyDescriptorSetLayout(device->handle, modelDescriptorSetLayout, nullptr);
 
 	//TODO: FIX HERE!
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	for (uint32_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		//Destroy Vertex and Index Buffer Objects
 		vkDestroyBuffer(device->handle, vertexBuffers[meshIndex].handle, nullptr);

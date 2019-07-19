@@ -208,4 +208,6 @@ RvPolygonPipeline::~RvPolygonPipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);
+	vkDestroyPipelineLayout(device->handle, layout, nullptr);
+	vkDestroyPipeline(device->handle, handle, nullptr);
 }

@@ -141,7 +141,7 @@ private:
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM
-	vector<RvDynamicBuffer> uniformBuffers;
+	vector<RvDynamicBuffer> globalBuffers;
 	vector<RvDynamicBuffer> materialsBuffers;
 	vector<RvDynamicBuffer> modelsBuffers;
 	vector<RvDynamicBuffer> animationsBuffers;
@@ -228,9 +228,6 @@ private:
 
 	//Updates uniform buffer for given image
 	void updateUniformBuffer(uint32_t currentFrame);
-
-	//Partial Cleanup of Swap Chain data
-	void cleanupSwapChain();
 
 	//Finalize
 	void cleanup();

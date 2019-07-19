@@ -17,7 +17,7 @@ namespace rvDebug
 	}
 
 	//Creating debug callback
-	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
+	VkResult createDebugReportCallbackExt(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
 		auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 		if (func != nullptr) {
 			return func(instance, pCreateInfo, pAllocator, pCallback);
@@ -35,7 +35,7 @@ namespace rvDebug
 		createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 		createInfo.pfnCallback = debugCallback;
 
-		if (CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
+		if (createDebugReportCallbackExt(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to set up debug callback!");
 		}
 	}
@@ -50,5 +50,9 @@ namespace rvDebug
 		}
 	}
 
+	void destroyDebugCallback(VkInstance instance)
+	{
+		destroyDebugReportCallbackExt(instance, callback, nullptr);
+	}
 
 };

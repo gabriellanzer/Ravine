@@ -122,33 +122,6 @@ void RvGui::submitFrame()
 	ImGui::Render();
 }
 
-void RvGui::createFrameBuffers()
-{
-	//Resize FrameBuffer data arrays
-	framebuffers.resize(swapChainImagesCount);
-	framebufferAttachments.resize(swapChainImagesCount);
-
-	const VkExtent3D frameExtent {
-		swapChain->extent.width,
-		swapChain->extent.height,
-		1
-	};
-
-	//Create Framebuffer Images, Views and Memory regions
-	for (uint32_t i = 0; i < swapChainImagesCount; i++)
-	{
-		device->createImage(frameExtent, 0, VK_SAMPLE_COUNT_1_BIT,
-							swapChain->imageFormat, VK_IMAGE_TILING_OPTIMAL,
-							VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-							framebufferAttachments[i].image, framebufferAttachments[i].memory);
-
-		framebufferAttachments[i].imageView = rvTools::createImageView(
-			device->handle,framebufferAttachments[i].image, swapChain->imageFormat, VK_IMAGE_ASPECT_COLOR_BIT
-		);
-	}
-}
-
 void RvGui::createCmdBuffers()
 {
 	//Resize according to swapChain size

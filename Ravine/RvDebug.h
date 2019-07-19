@@ -6,7 +6,6 @@
 
 namespace rvDebug
 {
-
 	//Debug callback handler
 	static VkDebugReportCallbackEXT callback;
 
@@ -14,14 +13,20 @@ namespace rvDebug
 		VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj,
 		size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 
-	VkResult CreateDebugReportCallbackEXT(
+	VkResult createDebugReportCallbackExt(
 		VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+
+	void destroyDebugReportCallbackExt(
+		VkInstance instance, VkDebugReportCallbackEXT callback,
+		const VkAllocationCallbacks* pAllocator);
 
 	//Create DebugReport callback handler and check validation layer support
 	void setupDebugCallback(VkInstance instance);
 
-	void destroyDebugReportCallbackExt(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+	//Destroy DebugReport callback handler (if any)
+	void destroyDebugCallback(VkInstance instance);
+
 };
 
 #endif

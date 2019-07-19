@@ -57,10 +57,6 @@ struct RvGui
 	//The GUI CommandBuffers for each frame
 	vector<VkCommandBuffer> cmdBuffers;
 
-	//The GUI FrameBuffers for each frame
-	vector<VkFramebuffer> framebuffers;
-	vector<RvFramebufferAttachment> framebufferAttachments;
-
 	uint32_t lastVtxCrc[RV_MAX_FRAMES_IN_FLIGHT] = { ~uint32_t{ 0 } &uint32_t{ 0xFFFFFFFFuL } };
 
 	RvGui(RvDevice* device, RvSwapChain* swapChain, RvWindow* window, RvRenderPass* renderPass);
@@ -73,7 +69,6 @@ struct RvGui
 	void recordCmdBuffers(uint32_t frameIndex);
 
 private:
-	void createFrameBuffers();
 	void createCmdBuffers();
 	void createTextureSampler();
 	void createFontTexture();

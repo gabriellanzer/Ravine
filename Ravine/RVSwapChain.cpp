@@ -141,6 +141,12 @@ void RvSwapChain::clear()
 {
 	vkDestroySwapchainKHR(device->handle, handle, nullptr);
 
+	//Destroy ImageViews
+	for (VkImageView imageView : imageViews)
+	{
+		vkDestroyImageView(device->handle, imageView, nullptr);
+	}
+
 	destroySyncObjects();
 }
 
@@ -153,159 +159,6 @@ void RvSwapChain::createImageViews()
 		imageViews[i] = rvTools::createImageView(device->handle, images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 }
-
-/*
-void RvSwapChain::createRenderPass()
-{
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
-
-	//Color Attachment description
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Attachment_description
-	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format = imageFormat;	//Formats should match
-	colorAttachment.samples = device->sampleCount;
-
-	//What should Vulkan do after loading or storing data to framebuffers
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-	//No stencil test
-	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-	//VKImage layout defines what is the image usage after the pass
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;		//We don't care about it's value before the pass
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;	//Multisampled images need to be resolved
-
-	//Subpasses and attachment references
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Subpasses_and_attachment_references
-	VkAttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = 0;
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	//Depth attachment description
-	//Reference: https://vulkan-tutorial.com/Depth_buffering#page_Render_pass
-	VkAttachmentDescription depthAttachment = {};
-	depthAttachment.format = device->findDepthFormat();
-	depthAttachment.samples = device->sampleCount;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	//Subpasses and attachment references
-	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 1;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	//Multisampled image resolving 
-	VkAttachmentDescription colorAttachmentResolve = {};
-	colorAttachmentResolve.format = imageFormat;
-	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentReference colorAttachmentResolveRef = {};
-	colorAttachmentResolveRef.attachment = 2;
-	colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	//Vulkan supports compute subpasses, this is a graphics pipeline
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-	subpass.pResolveAttachments = &colorAttachmentResolveRef;
-
-	//Subpass Dependencies
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Subpass_dependencies
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-
-	//What we will wait for
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-
-	//What we will do with
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	//Attachments
-	array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
-
-	//Render Pass
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Render_pass
-	VkRenderPassCreateInfo renderPassInfo = {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-
-	if (vkCreateRenderPass(device->handle, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create render pass!");
-	}
-}
-
-void RvSwapChain::addFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo)
-{
-	RvFramebufferAttachment newAttachment = {};
-	device->createImage(
-		createInfo.extent, createInfo.mipLevels, device->sampleCount, createInfo.format,
-		createInfo.tilling,
-		createInfo.usage,
-		createInfo.memoryProperties,
-		createInfo.createFlag,
-		newAttachment.image, newAttachment.memory);
-	newAttachment.imageView = rvTools::createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
-
-	rvTools::transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
-
-	framebufferAttachments.push_back(newAttachment);
-}
-
-void RvSwapChain::createFramebuffers()
-{
-	//Create a framebuffer for each image view in the swapchain
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Framebuffers
-	framebuffers.resize(imageViews.size());
-
-	for (size_t i = 0; i < imageViews.size(); i++) {
-		//Copy framebuffer attachments 
-		//TODO: Maybe this can be optimized butting the vector outside and adding/removing imageViews for each iteration
-		vector<VkImageView> attachments;
-
-		for (RvFramebufferAttachment& framebufferAttachment : framebufferAttachments)
-		{
-			attachments.push_back(framebufferAttachment.imageView);
-		}
-		attachments.push_back(imageViews[i]);
-
-
-		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = extent.width;
-		framebufferInfo.height = extent.height;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(device->handle, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create framebuffer!");
-		}
-	}
-}
-*/
 
 void RvSwapChain::createSyncObjects()
 {

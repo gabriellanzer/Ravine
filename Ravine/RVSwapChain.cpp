@@ -2,8 +2,6 @@
 
 //EASTL Includes
 #include <eastl/algorithm.h>
-#include <eastl/array.h>
-using eastl::array;
 
 //STD Includes
 #include <stdexcept>

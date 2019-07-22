@@ -102,9 +102,18 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
-	//Depth and stencil testing (configuration of these auxiliar buffers)
+	//Depth and stencil testing (configuration of these auxiliary buffers)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Depth_and_stencil_testing
-	//NOT UTILIZED IN THIS TUTORIAL
+	VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = VK_TRUE;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;	//Depth compare function
+
+	//Creates bounds for depth
+	depthStencil.depthBoundsTestEnable = VK_FALSE;
+	depthStencil.minDepthBounds = 0.0f; // Optional
+	depthStencil.maxDepthBounds = 1.0f; // Optional
 
 	//Color Blending (combines the fragment's output with the color that is already in the framebuffer)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Color_blending
@@ -167,7 +176,7 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	pipelineInfo.pViewportState = &viewportState;
 	pipelineInfo.pRasterizationState = &rasterizer;
 	pipelineInfo.pMultisampleState = &multisampling;
-	pipelineInfo.pDepthStencilState = nullptr; // Optional
+	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // Optional
 	pipelineInfo.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
@@ -178,24 +187,9 @@ RvPolygonPipeline::RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSamp
 	//Reference render pass and define current subpass index
 	pipelineInfo.renderPass = renderPass;
 
-	//Pipeline inheritence
+	//Pipeline inheritance
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 	pipelineInfo.basePipelineIndex = -1; // Optional
-
-	//Depth/Stencil state
-	VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;	//Depth compare function
-
-	//Creates bounds for depth
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f; // Optional
-	depthStencil.maxDepthBounds = 1.0f; // Optional
-
-	//Settin depth/stencil state to pipeline
-	pipelineInfo.pDepthStencilState = &depthStencil;
 
 	//TODO: Use Pipeline Cache
 	if (vkCreateGraphicsPipelines(device.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &handle) != VK_SUCCESS) {

@@ -20,7 +20,6 @@ struct RvSubpass;
 
 struct RvRenderPass
 {
-private:
 
 	//Renderpass
 	VkRenderPass handle = VK_NULL_HANDLE;
@@ -38,14 +37,6 @@ private:
 
 	//RvDevice reference
 	const RvDevice* device = nullptr;
-
-	/**
-	 * \brief Friend class to enable access of private attributes.
-	 */
-	friend class Ravine;
-	friend class RvGui; //TODO: Change the way RvGui works to avoid this type of access
-
-public:
 
 	RvRenderPass() = default;
 	~RvRenderPass() = default;

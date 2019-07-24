@@ -3,7 +3,9 @@
 
 //EASTL Includes
 #include <eastl/vector.h>
+#include <eastl/string.h>
 using eastl::vector;
+using eastl::string;
 
 //Vulkan Includes
 #include "volk.h"
@@ -24,6 +26,9 @@ public:
 	RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface);
 	~RvDevice();
 
+	//Device Name
+	string name;
+
 	//Devices
 	VkDevice handle;
 	VkPhysicalDevice physicalDevice;
@@ -31,7 +36,7 @@ public:
 	//Queues
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
-	// Default command pool for the graphics queue
+	//Default command pool for the graphics queue
 	VkCommandPool commandPool = VK_NULL_HANDLE;
 
 	//Physical Properties

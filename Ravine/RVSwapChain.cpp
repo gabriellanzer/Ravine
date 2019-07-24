@@ -1,24 +1,20 @@
-#include "RVSwapChain.h"
+#include "RvSwapChain.h"
 
 //EASTL Includes
-#include <EASTL/algorithm.h>
-#include <EASTL/array.h>
-using eastl::array;
+#include <eastl/algorithm.h>
 
 //STD Includes
 #include <stdexcept>
 
-
-RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH, uint32_t HEIGHT, VkSwapchainKHR oldSwapChain) : renderPass()
+RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainKHR oldSwapChain)
 {
-	//TODO: Use new constructor thingy
 	this->device = &device;
 	this->surface = surface;
-	this->WIDTH = WIDTH;
-	this->HEIGHT = HEIGHT;
+	this->width = width;
+	this->height = height;
 
 	//Check swap chain support
-	SwapChainSupportDetails swapChainSupport = rvTools::querySupport(device.physicalDevice, surface);
+	RvSwapChainSupportDetails swapChainSupport = rvTools::querySupport(device.physicalDevice, surface);
 
 	//Define swap chain setup data
 	VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
@@ -46,7 +42,10 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 
 	//Define queue sharing modes based on ids comparison
 	rvTools::QueueFamilyIndices indices = rvTools::findQueueFamilies(device.physicalDevice, surface);
-	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
+	uint32_t queueFamilyIndices[] = {
+		static_cast<uint32_t>(indices.graphicsFamily),
+		static_cast<uint32_t>(indices.presentFamily)
+	};
 
 	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -67,7 +66,7 @@ RvSwapChain::RvSwapChain(RvDevice& device, VkSurfaceKHR surface, uint32_t WIDTH,
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 
-	//TODO: Change that to create another swap chain when resize screen
+	//Pointer to old swapchain to enable speed-up things
 	createInfo.oldSwapchain = oldSwapChain;
 
 	//Create swap chain with given information
@@ -98,7 +97,7 @@ VkSurfaceFormatKHR RvSwapChain::chooseSurfaceFormat(const vector<VkSurfaceFormat
 	return availableFormats[0];
 }
 
-VkPresentModeKHR RvSwapChain::choosePresentMode(const vector<VkPresentModeKHR> availablePresentModes) {
+VkPresentModeKHR RvSwapChain::choosePresentMode(const vector<VkPresentModeKHR>& availablePresentModes) {
 
 	//FIFO v-sync might not be available on some drivers
 	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -122,7 +121,7 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 		return capabilities.currentExtent;
 	}
 	else {
-		VkExtent2D actualExtent = { WIDTH, HEIGHT };
+		VkExtent2D actualExtent = { width, height };
 
 		actualExtent.width = eastl::max(capabilities.minImageExtent.width, eastl::min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = eastl::max(capabilities.minImageExtent.height, eastl::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -131,31 +130,25 @@ VkExtent2D RvSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 	}
 }
 
-void RvSwapChain::Clear()
+RvSwapChain::operator VkSwapchainKHR() const
 {
-	//Destroy attachments
-	for (size_t i = 0; i < framebufferAttachments.size(); i++)
-	{
-		vkDestroyImageView(device->handle, framebufferAttachments[i].imageView, nullptr);
-		vkDestroyImage(device->handle, framebufferAttachments[i].image, nullptr);
-		vkFreeMemory(device->handle, framebufferAttachments[i].memory, nullptr);
-	}
-
-	//Destroy FrameBuffers
-	for (VkFramebuffer framebuffer : framebuffers) {
-		vkDestroyFramebuffer(device->handle, framebuffer, nullptr);
-	}
-
-	vkDestroyRenderPass(device->handle, renderPass, nullptr);
-	for (VkImageView imageView : imageViews) {
-		vkDestroyImageView(device->handle, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(device->handle, handle, nullptr);
-
-	DestroySyncObjects();
+	return handle;
 }
 
-void RvSwapChain::CreateImageViews()
+void RvSwapChain::clear()
+{
+	vkDestroySwapchainKHR(device->handle, handle, nullptr);
+
+	//Destroy ImageViews
+	for (VkImageView imageView : imageViews)
+	{
+		vkDestroyImageView(device->handle, imageView, nullptr);
+	}
+
+	destroySyncObjects();
+}
+
+void RvSwapChain::createImageViews()
 {
 	//Match the size
 	imageViews.resize(images.size());
@@ -165,158 +158,7 @@ void RvSwapChain::CreateImageViews()
 	}
 }
 
-void RvSwapChain::CreateRenderPass()
-{
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
-
-	//Color Attachment description
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Attachment_description
-	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format = imageFormat;	//Formats should match
-	colorAttachment.samples = device->sampleCount;
-
-	//What should Vulkan do after loading or storing data to framebuffers
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-	//No stencil test
-	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-	//VKImage layout defines what is the image usage after the pass
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;		//We don't care about it's value before the pass
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;	//Multisampled images need to be resolved
-
-	//Subpasses and attachment references
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Subpasses_and_attachment_references
-	VkAttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = 0;
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	//Depth attachment description
-	//Reference: https://vulkan-tutorial.com/Depth_buffering#page_Render_pass
-	VkAttachmentDescription depthAttachment = {};
-	depthAttachment.format = device->findDepthFormat();
-	depthAttachment.samples = device->sampleCount;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	//Subpasses and attachment references
-	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 1;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	//Multisampled image resolving 
-	VkAttachmentDescription colorAttachmentResolve = {};
-	colorAttachmentResolve.format = imageFormat;
-	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentReference colorAttachmentResolveRef = {};
-	colorAttachmentResolveRef.attachment = 2;
-	colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	//Vulkan supports compute subpasses, this is a graphics pipeline
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-	subpass.pResolveAttachments = &colorAttachmentResolveRef;
-
-	//Subpass Dependencies
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Subpass_dependencies
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-
-	//What we will wait for
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-
-	//What we will do with
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	//Attachments
-	array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
-
-	//Render Pass
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes#page_Render_pass
-	VkRenderPassCreateInfo renderPassInfo = {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-
-	if (vkCreateRenderPass(device->handle, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create render pass!");
-	}
-}
-
-void RvSwapChain::AddFramebufferAttachment(RvFramebufferAttachmentCreateInfo createInfo)
-{
-	RvFramebufferAttachment newAttachment = {};
-	device->createImage(
-		extent.width, extent.height, createInfo.mipLevels, device->sampleCount, createInfo.format,
-		createInfo.tilling,
-		createInfo.usage,
-		createInfo.memoryProperties,
-		createInfo.createFlag,
-		newAttachment.image, newAttachment.memory);
-	newAttachment.imageView = rvTools::createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
-
-	rvTools::transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
-
-	framebufferAttachments.push_back(newAttachment);
-}
-
-void RvSwapChain::CreateFramebuffers()
-{
-	//Create a framebuffer for each image view in the swapchain
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Framebuffers
-	framebuffers.resize(imageViews.size());
-
-	for (size_t i = 0; i < imageViews.size(); i++) {
-		//Copy framebuffer attachments 
-		//TODO: Maybe this can be optimized butting the vector outside and adding/removing imageViews for each iteration
-		vector<VkImageView> attachments;
-
-		for (size_t j = 0; j < framebufferAttachments.size(); j++)
-		{
-			attachments.push_back(framebufferAttachments[j].imageView);
-		}
-
-		attachments.push_back(imageViews[i]);
-
-		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = extent.width;
-		framebufferInfo.height = extent.height;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(device->handle, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create framebuffer!");
-		}
-	}
-}
-
-void RvSwapChain::CreateSyncObjects()
+void RvSwapChain::createSyncObjects()
 {
 	imageAvailableSemaphores.resize(RV_MAX_FRAMES_IN_FLIGHT);
 	renderFinishedSemaphores.resize(RV_MAX_FRAMES_IN_FLIGHT);
@@ -340,7 +182,7 @@ void RvSwapChain::CreateSyncObjects()
 	}
 }
 
-void RvSwapChain::DestroySyncObjects()
+void RvSwapChain::destroySyncObjects()
 {
 	for (size_t i = 0; i < RV_MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(device->handle, renderFinishedSemaphores[i], nullptr);
@@ -349,26 +191,27 @@ void RvSwapChain::DestroySyncObjects()
 	}
 }
 
-bool RvSwapChain::AcquireNextFrame(uint32_t& frameIndex)
+bool RvSwapChain::acquireNextFrame(uint32_t& frameIndex)
 {
 	//Wait for in-flight fences
-	vkWaitForFences(device->handle, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkWaitForFences(device->handle, 1, &inFlightFences[currentFrame], VK_TRUE, eastl::numeric_limits<uint64_t>::max());
 	vkResetFences(device->handle, 1, &inFlightFences[currentFrame]);
 
 	//Acquiring an image from the swap chain
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Acquiring_an_image_from_the_swap_chain
-	VkResult result = vkAcquireNextImageKHR(device->handle, handle, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &frameIndex);
+	const VkResult result = vkAcquireNextImageKHR(device->handle, handle, eastl::numeric_limits<uint64_t>::max(),
+	                                        imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &frameIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		return false;
 	}
-	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+	if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
 	return true;
 }
 
-bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex)
+bool RvSwapChain::submitNextFrame(VkCommandBuffer* commandBuffers, uint32_t frameIndex)
 {
 	//Submitting the command queue
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation#page_Submitting_the_command_buffer
@@ -388,8 +231,9 @@ bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	if (vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+	
+	VkResult result = vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
 
@@ -406,12 +250,12 @@ bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 
 	presentInfo.pResults = nullptr; // Optional
 
-	VkResult result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
+	result = vkQueuePresentKHR(device->presentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 		framebufferResized = false;
 		return false;
 	}
-	else if (result != VK_SUCCESS) {
+	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to present swap chain image!");
 	}
 
@@ -420,5 +264,4 @@ bool RvSwapChain::SubmitNextFrame(VkCommandBuffer* commandBuffers, uint32_t fram
 }
 
 RvSwapChain::~RvSwapChain()
-{
-}
+= default;

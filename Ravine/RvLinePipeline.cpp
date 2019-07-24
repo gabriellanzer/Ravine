@@ -1,14 +1,13 @@
 #include "RvLinePipeline.h"
 
-//STD Includes
-#include <vector>
-
 //Data Types
-#include "RVDataTypes.h"
+#include "RvDataTypes.h"
 
 //Ravine Systems
 #include "RvTools.h"
 
+//STD Include
+#include <stdexcept>
 
 RvLinePipeline::RvLinePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
@@ -205,4 +204,6 @@ RvLinePipeline::~RvLinePipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);
+	vkDestroyPipelineLayout(device->handle, layout, nullptr);
+	vkDestroyPipeline(device->handle, handle, nullptr);
 }

@@ -6,10 +6,10 @@
 #include <glfw/glfw3.h>
 
 //Vulkan Include
-#include <vulkan/vulkan.h>
+#include "volk.h"
 
 //EASTL Includes
-#include <EASTL/string.h>
+#include <eastl/string.h>
 using eastl::string;
 
 //STD Includes

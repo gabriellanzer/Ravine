@@ -1,6 +1,6 @@
-#include <EASTL/algorithm.h>
-#include <EASTL/array.h>
-#include <EASTL/numeric.h>
+#include <eastl/algorithm.h>
+#include <eastl/array.h>
+#include <eastl/numeric.h>
 
 using eastl::array;
 

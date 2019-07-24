@@ -2,29 +2,60 @@
 #define RV_GRAPHICS_PIPELINE_H
 
 //Vulkan Includes
-#include <vulkan\vulkan.h>
+#include "volk.h"
 
 //Ravine Systems
 #include "RvDevice.h"
+#include "RvRenderPass.h"
 
-struct RvPolygonPipeline
+struct RvGraphicsPipeline
 {
-	RvPolygonPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, const std::vector<char>& vertShaderCode, const std::vector<char>& fragShaderCode);
-	~RvPolygonPipeline();
+	//External References
+	const RvDevice*								device							= nullptr;
+	RvRenderPass								renderPass						= {};
+    uint32_t                                    subpass							= 0;
+    VkPipeline                                  basePipeline					= VK_NULL_HANDLE;
+	vector<VkDescriptorSetLayout>				descriptorSetLayouts			= {};
+	vector<VkPushConstantRange>					pushConstantRanges				= {};
 
-	RvDevice* device;
-	VkPipeline handle;
+	//Internal States
+	VkPipeline									handle							= VK_NULL_HANDLE;
+	VkPipelineCache								pipelineCache					= VK_NULL_HANDLE;
+	VkPipelineLayout                            layout							= VK_NULL_HANDLE;
+	VkShaderStageFlagBits						allAttachedShaderStageBits		= static_cast<VkShaderStageFlagBits>(0);
+	vector<VkShaderStageFlagBits>				attachedShaderStageBits			= {};
+	vector<const VkShaderModule*>				attachedShaderModules			= {};
+	vector<const char*>							shaderEntryPoints				= {};
+    VkPipelineCreateFlags                       createFlags						= static_cast<VkPipelineCreateFlags>(0);
+    vector<VkVertexInputBindingDescription>		vertexBindingDescriptions		= {};
+    vector<VkVertexInputAttributeDescription>	vertexAttributeDescriptions		= {};
+    VkPipelineVertexInputStateCreateInfo		vertexInputState				= {};
+    VkPipelineInputAssemblyStateCreateInfo		inputAssemblyState				= {};
+    VkPipelineTessellationStateCreateInfo		tessellationState				= {};
+    vector<VkViewport>							viewports						= {};
+	vector<VkRect2D>							scissors						= {};
+    VkPipelineViewportStateCreateInfo			viewportState					= {};
+    VkPipelineRasterizationStateCreateInfo		rasterizationState				= {};
+    VkSampleMask								sampleMask						= static_cast<VkSampleMask>(0);
+    VkPipelineMultisampleStateCreateInfo		multisampleState				= {};
+    VkPipelineDepthStencilStateCreateInfo		depthStencilState				= {};
+    vector<VkPipelineColorBlendAttachmentState>	colorBlendAttachments			= {};
+	VkPipelineColorBlendStateCreateInfo			colorBlendState					= {};
+	vector<VkDynamicState>						dynamicStates					= {};
+    VkPipelineDynamicStateCreateInfo			dynamicState					= {};
 
-	VkShaderModule vertModule;
-	VkShaderModule fragModule;
+	explicit RvGraphicsPipeline(const RvDevice* device, VkPipeline basePipeline = VK_NULL_HANDLE);
+	~RvGraphicsPipeline();
 
-	VkPipelineLayout layout;
-	VkPipelineCache pipelineCache;
-	VkRenderPass renderPass;
+	void create();
+	void recreate();
+	void attachShader(const VkShaderStageFlagBits stageFlagBits, const VkShaderModule* shaderModule, const char* entryPointName = "main");
+	void forceAttachShader(const VkShaderStageFlagBits stageFlagBits, const VkShaderModule* shaderModule, const char* entryPointName = "main");
+	void detachShader(const VkShaderModule* shaderModule);
+	static RvGraphicsPipeline* defaultGraphicsPipeline(RvDevice& device, const RvRenderPass& renderPass);
+	static VkPipelineCache defaultPipelineCache(RvDevice& device);
 
-	operator VkPipeline() {
-		return handle;
-	}
+	operator VkPipeline() const;
 };
 
 #endif

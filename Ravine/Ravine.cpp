@@ -4,31 +4,41 @@
 #include <stdexcept>
 
 //EASTL Includes
-#include <EASTL/functional.h>
-#include <EASTL/set.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/string.h>
+#include <eastl/set.h>
+#include <eastl/string.h>
 
 //GLM Includes
-#include <glm\gtc\matrix_transform.hpp>
+#include "glm/gtc/matrix_transform.hpp"
 
 //STB Includes
 #define STB_IMAGE_IMPLEMENTATION
-#include "SingleFileLibraries\stb_image.h"
+#include "stb_image.h"
 
 //Ravine Systems Includes
 #include "RvTime.h"
 #include "RvConfig.h"
 #include "RvDebug.h"
 
+//Types dependencies
+#include "RvUniformTypes.h"
+
 //ShaderC Includes
 #include "shaderc/shaderc.h"
+
+//GLM includes
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+//FMT Includes
+#include <fmt/printf.h>
 
 //Assimp Includes
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/postprocess.h>     // Post processing flags
 
-//Specific usages of ASSIMP library
+//Specific usages of Assimp library
 using Assimp::Importer;
 
 Ravine::Ravine()
@@ -36,8 +46,7 @@ Ravine::Ravine()
 }
 
 Ravine::~Ravine()
-{
-}
+= default;
 
 void Ravine::run()
 {
@@ -55,14 +64,13 @@ void Ravine::framebufferResizeCallback(GLFWwindow* window, int width, int height
 {
 	auto rvWindowTemp = reinterpret_cast<RvWindow*>(glfwGetWindowUserPointer(window));
 	rvWindowTemp->framebufferResized = true;
-	rvWindowTemp->extent = { (uint32_t)width, (uint32_t)height };
+	rvWindowTemp->extent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
 
 vector<const char*> Ravine::getRequiredInstanceExtensions()
 {
 	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 	vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
@@ -87,7 +95,9 @@ void Ravine::initWindow() {
 void Ravine::initVulkan() {
 	//Core setup
 	createInstance();
+#ifdef VALIDATION_LAYERS_ENABLED
 	rvDebug::setupDebugCallback(instance);
+#endif
 	window->CreateSurface(instance);
 	pickPhysicalDevice();
 
@@ -105,8 +115,9 @@ void Ravine::initVulkan() {
 
 	//Rendering pipeline
 	swapChain = new RvSwapChain(*device, window->surface, window->extent.width, window->extent.height, NULL);
-	swapChain->CreateImageViews();
-	swapChain->CreateRenderPass();
+	swapChain->createImageViews();
+	swapChain->createSyncObjects();
+	renderPass = RvRenderPass::defaultRenderPass(*device, *swapChain);
 	createDescriptorSetLayout();
 
 	//Shaders Loading
@@ -124,19 +135,18 @@ void Ravine::initVulkan() {
 		modelDescriptorSetLayout
 	};
 	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, renderPass->handle, skinnedTexColCode, phongTexColCode);
 	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, renderPass->handle, skinnedWireframeCode, solidColorCode);
 	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
+		descriptorSetLayouts, 3, renderPass->handle, staticTexColCode, phongTexColCode);
 	staticWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, renderPass->handle, staticWireframeCode, solidColorCode);
 	staticLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
+		descriptorSetLayouts, 3, renderPass->handle, staticWireframeCode, solidColorCode);
+	gui = new RvGui(device, swapChain, window, renderPass);
+	gui->init(device->getMaxUsableSampleCount());
 
-	createMultiSamplingResources();
-	createDepthResources();
-	swapChain->CreateFramebuffers();
 	loadTextureImages();
 	createTextureSampler();
 	createVertexBuffer();
@@ -145,18 +155,19 @@ void Ravine::initVulkan() {
 	createDescriptorPool();
 	createDescriptorSets();
 	allocateCommandBuffers();
-	swapChain->CreateSyncObjects();
-
-	//GUI Management
-	gui = new RvGUI(*device, *swapChain, *window);
-	gui->Init(device->getMaxUsableSampleCount());
 }
 
 void Ravine::createInstance() {
 
+	//Initialize Volk
+	if (volkInitialize() != VK_SUCCESS) {
+		throw std::runtime_error("Failed to initialize Volk!\
+			Ensure your driver is up to date and supports Vulkan!");
+	}
+
 	//Check validation layer support
 #ifdef VALIDATION_LAYERS_ENABLED
-	if (!rvCfg::CheckValidationLayerSupport()) {
+	if (!rvCfg::checkValidationLayerSupport()) {
 		throw std::runtime_error("Validation layers requested, but not available!");
 	}
 #endif
@@ -188,23 +199,25 @@ void Ravine::createInstance() {
 	//GLFW Window Management extensions
 	vector<const char*> requiredExtensions = getRequiredInstanceExtensions();
 	fmt::print(stdout, "Application required extensions:\n");
-	for (uint32_t i = 0; i < requiredExtensions.size(); i++) {
+	for (const char*& requiredExtension : requiredExtensions)
+	{
 		bool found = false;
-		for (uint32_t j = 0; j < extensions.size(); j++) {
-			if (strcmp(requiredExtensions[i], (const char*)extensions.at(j).extensionName) == 0) {
+		for (VkExtensionProperties& extension : extensions)
+		{
+			if (strcmp(requiredExtension, static_cast<const char*>(extension.extensionName)) == 0) {
 				found = true;
 				break;
 			}
 		}
-		fmt::print(stdout, "\t{0} {1}\n", requiredExtensions[i], (found ? "found!" : "NOT found!"));
+		fmt::print(stdout, "\t{0} {1}\n", requiredExtension, (found ? "found!" : "NOT found!"));
 	}
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
 	//Add validation layer info
 #ifdef VALIDATION_LAYERS_ENABLED
-	createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::ValidationLayers.size());
-	createInfo.ppEnabledLayerNames = rvCfg::ValidationLayers.data();
+	createInfo.enabledLayerCount = static_cast<uint32_t>(rvCfg::VALIDATION_LAYERS.size());
+	createInfo.ppEnabledLayerNames = rvCfg::VALIDATION_LAYERS.data();
 	fmt::print(stdout, "!Enabling validation layers!\n");
 #else
 	createInfo.enabledLayerCount = 0;
@@ -214,6 +227,9 @@ void Ravine::createInstance() {
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create instance!");
 	}
+
+	//Initialize Entry-points on Volk
+	volkLoadInstance(instance);
 }
 
 void Ravine::pickPhysicalDevice()
@@ -240,7 +256,7 @@ void Ravine::pickPhysicalDevice()
 	}
 }
 
-bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
+bool Ravine::isDeviceSuitable(const VkPhysicalDevice device) {
 
 	//Debug Physical Device Properties
 	VkPhysicalDeviceProperties deviceProperties;
@@ -253,7 +269,7 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = rvTools::querySupport(device, window->surface);
+		RvSwapChainSupportDetails swapChainSupport = rvTools::querySupport(device, window->surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
@@ -270,16 +286,16 @@ bool Ravine::isDeviceSuitable(VkPhysicalDevice device) {
 	return isSuitable;
 }
 
-bool Ravine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool Ravine::checkDeviceExtensionSupport(const VkPhysicalDevice device) {
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
 	vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-	eastl::set<eastl::string> requiredExtensions(rvCfg::DeviceExtensions.begin(), rvCfg::DeviceExtensions.end());
+	eastl::set<eastl::string> requiredExtensions(rvCfg::DEVICE_EXTENSIONS.begin(), rvCfg::DEVICE_EXTENSIONS.end());
 
-	for (const auto& extension : availableExtensions) {
+	for (const VkExtensionProperties& extension : availableExtensions) {
 		requiredExtensions.erase(extension.extensionName);
 	}
 
@@ -302,37 +318,17 @@ void Ravine::recreateSwapChain() {
 	//Storing handle
 	RvSwapChain* oldSwapchain = swapChain;
 	swapChain = new RvSwapChain(*device, window->surface, WIDTH, HEIGHT, oldSwapchain->handle);
-	swapChain->CreateSyncObjects();
-	swapChain->CreateImageViews();
-	swapChain->CreateRenderPass();
+	swapChain->createSyncObjects();
+	swapChain->createImageViews();
+	const VkExtent3D extent = { swapChain->extent.width, swapChain->extent.height, 1 };
+	renderPass->resizeAttachments(swapChain->imageViews.size(), extent, swapChain->imageViews.data());
 
-	VkDescriptorSetLayout* descriptorSetLayouts = new VkDescriptorSetLayout[3]
-	{
-		globalDescriptorSetLayout,
-		materialDescriptorSetLayout,
-		modelDescriptorSetLayout
-	};
-	skinnedGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedTexColCode, phongTexColCode);
-	skinnedWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, skinnedWireframeCode, solidColorCode);
-	staticGraphicsPipeline = new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticTexColCode, phongTexColCode);
-	staticWireframeGraphicsPipeline = new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
-	staticLineGraphicsPipeline = new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-		descriptorSetLayouts, 3, swapChain->renderPass, staticWireframeCode, solidColorCode);
-
-	createMultiSamplingResources();
-	createDepthResources();
-	swapChain->CreateFramebuffers();
+	//swapChain->createFramebuffers();
 	allocateCommandBuffers();
-	RvGUI* oldGui = gui;
-	gui = new RvGUI(*device, *swapChain, *window);
-	gui->Init(device->getMaxUsableSampleCount());
-	delete oldGui;
+
 	//Deleting old swapchain
-	oldSwapchain->Clear();
+	//oldSwapchain->renderPass = VK_NULL_HANDLE;
+	oldSwapchain->clear();
 	delete oldSwapchain;
 }
 
@@ -343,16 +339,18 @@ void Ravine::createDescriptorPool()
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
-	//TODO: Change descriptor count accodingly to materials count instead of meshes count
+	//TODO: Change descriptor count accordingly to materials count instead of meshes count
 	//Material Uniforms
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
+	//Image Uniforms
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 
 	//Model Uniforms
 	poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[3].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
+	//Animation Uniforms
 	poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[4].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 
@@ -360,7 +358,7 @@ void Ravine::createDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = swapChain->images.size() * (1 + 2 * meshesCount);/*Global, Material (per mesh), Model (per mesh)*/
+	poolInfo.maxSets = swapChain->images.size() * (1 + meshesCount * 2);/*Global, Material (per mesh), Model (per mesh)*/
 
 	if (vkCreateDescriptorPool(device->handle, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
@@ -370,11 +368,11 @@ void Ravine::createDescriptorPool()
 void Ravine::createDescriptorSets()
 {
 	//Descriptor Sets Count
-	size_t setsPerFrame = (1 + 2 * meshesCount)/*Global, Material (per mesh), Model (per mesh)*/;
-	int framesCount = swapChain->images.size();
+	size_t setsPerFrame = (1 + meshesCount * 2)/*Global, Material (per mesh), Model (per mesh)*/;
+	size_t framesCount = swapChain->images.size();
 	size_t descriptorSetsCount = framesCount * setsPerFrame;
 	vector<VkDescriptorSetLayout> layouts(descriptorSetsCount);
-	for (int i = 0; i < framesCount; i++)
+	for (size_t i = 0; i < framesCount; i++)
 	{
 		layouts[i * setsPerFrame + 0] = globalDescriptorSetLayout;
 		for (size_t meshId = 0; meshId < meshesCount; meshId++)
@@ -399,13 +397,13 @@ void Ravine::createDescriptorSets()
 	for (size_t i = 0; i < framesCount; i++)
 	{
 		VkDescriptorBufferInfo globalUniformsInfo = {};
-		globalUniformsInfo.buffer = uniformBuffers[i].buffer;
+		globalUniformsInfo.buffer = globalBuffers[i].handle;
 		globalUniformsInfo.offset = 0;
-		globalUniformsInfo.range = sizeof(RvUniformBufferObject);
+		globalUniformsInfo.range = sizeof(RvGlobalBufferObject);
 
 		//Offset per frame iteration
 		size_t frameSetOffset = (i * setsPerFrame);
-		size_t writesPerFrame = (1 + 4 * meshesCount);
+		size_t writesPerFrame = (1 + meshesCount * 4);
 		vector<VkWriteDescriptorSet> descriptorWrites(writesPerFrame);
 
 		//Global Uniform Buffer Info
@@ -430,70 +428,70 @@ void Ravine::createDescriptorSets()
 
 			//Materials Uniform Buffer Info
 			materialsInfo[meshId] = {};
-			materialsInfo[meshId].buffer = materialsBuffers[i].buffer;
+			materialsInfo[meshId].buffer = materialsBuffers[i].handle;
 			materialsInfo[meshId].offset = 0;
 			materialsInfo[meshId].range = sizeof(RvMaterialBufferObject);
 
-			descriptorWrites[meshWritesOffset+1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+1].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
-			descriptorWrites[meshWritesOffset+1].dstBinding = 0;
-			descriptorWrites[meshWritesOffset+1].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[meshWritesOffset+1].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+1].pBufferInfo = &materialsInfo[meshId];
+			descriptorWrites[meshWritesOffset + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 1].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset + 1].dstBinding = 0;
+			descriptorWrites[meshWritesOffset + 1].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset + 1].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 1].pBufferInfo = &materialsInfo[meshId];
 
 			//Image Info
 			imageInfo[meshId] = {};
 			imageInfo[meshId].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			RvSkinnedMeshColored& mesh = meshes[meshId];
-			size_t textureId = mesh.textures_count > 0 ? 1 + mesh.textureIds[0] : 0/*Missing Texture (Pink)*/;
+			uint32_t textureId = mesh.texturesCount > 0 ? 1 + mesh.textureIds[0] : 0/*Missing Texture (Pink)*/;
 			imageInfo[meshId].imageView = textures[textureId].view;
 			imageInfo[meshId].sampler = textureSampler;
 
-			descriptorWrites[meshWritesOffset+2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+2].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
-			descriptorWrites[meshWritesOffset+2].dstBinding = 1;
-			descriptorWrites[meshWritesOffset+2].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[meshWritesOffset+2].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+2].pImageInfo = &imageInfo[meshId];
+			descriptorWrites[meshWritesOffset + 2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 2].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset + 2].dstBinding = 1;
+			descriptorWrites[meshWritesOffset + 2].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[meshWritesOffset + 2].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 2].pImageInfo = &imageInfo[meshId];
 
 			//Models Uniform Buffer Info
 			modelsInfo[meshId] = {};
-			modelsInfo[meshId].buffer = modelsBuffers[i*meshesCount + meshId].buffer;
+			modelsInfo[meshId].buffer = modelsBuffers[i * meshesCount + meshId].handle;
 			modelsInfo[meshId].offset = 0;
 			modelsInfo[meshId].range = sizeof(RvModelBufferObject);
 
-			descriptorWrites[meshWritesOffset+3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+3].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
-			descriptorWrites[meshWritesOffset+3].dstBinding = 0;
-			descriptorWrites[meshWritesOffset+3].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[meshWritesOffset+3].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+3].pBufferInfo = &modelsInfo[meshId];
+			descriptorWrites[meshWritesOffset + 3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 3].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset + 3].dstBinding = 0;
+			descriptorWrites[meshWritesOffset + 3].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset + 3].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 3].pBufferInfo = &modelsInfo[meshId];
 
 			//Animations Uniform Buffer Info
 			animationsInfo[meshId] = {};
-			animationsInfo[meshId].buffer = animationsBuffers[i*meshesCount + meshId].buffer;
+			animationsInfo[meshId].buffer = animationsBuffers[i * meshesCount + meshId].handle;
 			animationsInfo[meshId].offset = 0;
 			animationsInfo[meshId].range = sizeof(RvBoneBufferObject);
 
-			descriptorWrites[meshWritesOffset+4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset+4].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
-			descriptorWrites[meshWritesOffset+4].dstBinding = 1;
-			descriptorWrites[meshWritesOffset+4].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset+4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[meshWritesOffset+4].descriptorCount = 1;
-			descriptorWrites[meshWritesOffset+4].pBufferInfo = &animationsInfo[meshId];
+			descriptorWrites[meshWritesOffset + 4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[meshWritesOffset + 4].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset + 4].dstBinding = 1;
+			descriptorWrites[meshWritesOffset + 4].dstArrayElement = 0;
+			descriptorWrites[meshWritesOffset + 4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[meshWritesOffset + 4].descriptorCount = 1;
+			descriptorWrites[meshWritesOffset + 4].pBufferInfo = &animationsInfo[meshId];
 		}
 
 		//Update the sets for this frame
 		vkUpdateDescriptorSets(device->handle, writesPerFrame, descriptorWrites.data(), 0, nullptr);
 
-		delete materialsInfo;
-		delete imageInfo;
-		delete modelsInfo;
-		delete animationsInfo;
+		delete[] materialsInfo;
+		delete[] imageInfo;
+		delete[] modelsInfo;
+		delete[] animationsInfo;
 	}
 
 }
@@ -588,7 +586,7 @@ bool Ravine::loadScene(const string& filePath)
 {
 	Importer importer;
 	importer.ReadFile(filePath.c_str(), aiProcess_CalcTangentSpace | \
-		aiProcess_GenSmoothNormals | \
+		aiProcess_GenNormals | \
 		aiProcess_JoinIdenticalVertices | \
 		aiProcess_ImproveCacheLocality | \
 		aiProcess_LimitBoneWeights | \
@@ -625,9 +623,9 @@ bool Ravine::loadScene(const string& filePath)
 		meshes[i].animGlobalInverseTransform = animGlobalInverseTransform;
 
 		//Allocate data structures
-		meshes[i].vertex_count = mesh->mNumVertices;
+		meshes[i].vertexCount = mesh->mNumVertices;
 		meshes[i].vertices = new RvSkinnedVertexColored[mesh->mNumVertices];
-		meshes[i].index_count = mesh->mNumFaces * 3;
+		meshes[i].indexCount = mesh->mNumFaces * 3;
 		meshes[i].indices = new uint32_t[mesh->mNumFaces * 3];
 
 		//Setup vertices
@@ -636,11 +634,11 @@ bool Ravine::loadScene(const string& filePath)
 		const aiVector3D* uvs = mesh->mTextureCoords[0];
 		bool hasColors = mesh->HasVertexColors(0);
 		const aiColor4D* cols = mesh->mColors[0];
-
+		bool hasNormals = mesh->HasNormals();
 		const aiVector3D* norms = &mesh->mNormals[0];
 
 		//Treat each case for optimal performance
-		if (hasCoords && hasColors)
+		if (hasCoords && hasColors && hasNormals)
 		{
 			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
 			{
@@ -652,6 +650,40 @@ bool Ravine::loadScene(const string& filePath)
 
 				//Vertex colors
 				meshes[i].vertices[j].color = { cols[j].r, cols[j].g, cols[j].b };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+			}
+		}
+		else if (hasCoords && hasNormals)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { uvs[j].x, uvs[j].y };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
+
+				//Normals
+				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+			}
+		}
+		else if (hasNormals)
+		{
+			for (uint32_t j = 0; j < mesh->mNumVertices; j++)
+			{
+				//Vertices
+				meshes[i].vertices[j].pos = { verts[j].x, verts[j].y, verts[j].z };
+
+				//Texture coordinates
+				meshes[i].vertices[j].texCoord = { 0, 0 };
+
+				//Vertex colors
+				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
 				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
@@ -671,7 +703,7 @@ bool Ravine::loadScene(const string& filePath)
 				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
-				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+				meshes[i].vertices[j].normal = { 0, 0, 0 };
 			}
 		}
 		else
@@ -688,7 +720,7 @@ bool Ravine::loadScene(const string& filePath)
 				meshes[i].vertices[j].color = { 1, 1, 1 };
 
 				//Normals
-				meshes[i].vertices[j].normal = { norms[j].x , norms[j].y, norms[j].z };
+				meshes[i].vertices[j].normal = { 0, 0, 0 };
 			}
 		}
 
@@ -710,7 +742,7 @@ bool Ravine::loadScene(const string& filePath)
 
 		//Get the number of textures
 		uint32_t textureCounts = mat->GetTextureCount(aiTextureType_DIFFUSE);
-		meshes[i].textures_count = textureCounts;
+		meshes[i].texturesCount = textureCounts;
 		meshes[i].textureIds = new uint32_t[textureCounts];
 
 		//List each texture on the texturesToLoad list and hold texture ids
@@ -773,89 +805,89 @@ bool Ravine::loadScene(const string& filePath)
 void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
 {
 	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
-		uint16_t BoneIndex = 0;
-		string BoneName(pMesh->mBones[i]->mName.data);
+		uint16_t boneIndex = 0;
+		string boneName(pMesh->mBones[i]->mName.data);
 
-		if (meshData.boneMapping.find(BoneName) == meshData.boneMapping.end()) {
-			BoneIndex = meshes[0].numBones;
+		if (meshData.boneMapping.find(boneName) == meshData.boneMapping.end()) {
+			boneIndex = meshes[0].numBones;
 			meshes[0].numBones++;
 			RvBoneInfo bi;
 			meshes[0].boneInfo.push_back(bi);
 		}
 		else {
-			BoneIndex = meshData.boneMapping[BoneName];
+			boneIndex = meshData.boneMapping[boneName];
 		}
 
-		meshData.boneMapping[BoneName] = BoneIndex;
-		meshes[0].boneInfo[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
+		meshData.boneMapping[boneName] = boneIndex;
+		meshes[0].boneInfo[boneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
 
 		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {
-			uint16_t VertexID = 0 + pMesh->mBones[i]->mWeights[j].mVertexId;
-			float Weight = pMesh->mBones[i]->mWeights[j].mWeight;
-			meshData.vertices[VertexID].AddBoneData(BoneIndex, Weight);
+			uint16_t vertexId = 0 + pMesh->mBones[i]->mWeights[j].mVertexId;
+			float weight = pMesh->mBones[i]->mWeights[j].mWeight;
+			meshData.vertices[vertexId].AddBoneData(boneIndex, weight);
 		}
 	}
 }
 
-void Ravine::BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms)
+void Ravine::boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms)
 {
 	const aiMatrix4x4 identity;
 	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
 	double animDuration = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mDuration;
 	double otherDuration = meshes[0].animations[otherindex]->aiAnim->mDuration;
-	runTime += RvTime::deltaTime() * (animDuration / otherDuration * animInterpolation + 1.0f * (1.0f - animInterpolation));
-	ReadNodeHeirarchy(runTime, animDuration, otherDuration, meshes[0].rootNode, identity);
+	runTime += RvTime::deltaTime() * (animDuration / otherDuration * animInterpolation + 1.0 * (1.0 - animInterpolation));
+	readNodeHierarchy(runTime, animDuration, otherDuration, meshes[0].rootNode, identity);
 
-	Transforms.resize(meshes[0].numBones);
+	transforms.resize(meshes[0].numBones);
 
 	for (uint16_t i = 0; i < meshes[0].numBones; i++) {
-		Transforms[i] = meshes[0].boneInfo[i].FinalTransformation;
+		transforms[i] = meshes[0].boneInfo[i].FinalTransformation;
 	}
 }
 
-void Ravine::ReadNodeHeirarchy(double AnimationTime, double curDuration, double otherDuration, const aiNode* pNode,
-	const aiMatrix4x4& ParentTransform)
+void Ravine::readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode,
+	const aiMatrix4x4& parentTransform)
 {
-	string NodeName(pNode->mName.data);
+	string nodeName(pNode->mName.data);
 
-	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
+	aiMatrix4x4 nodeTransformation(pNode->mTransformation);
 
-	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
-	const aiNodeAnim* pNodeAnim = findNodeAnim(meshes[0].animations[meshes[0].curAnimId]->aiAnim, NodeName);
-	const aiNodeAnim* otherNodeAnim = findNodeAnim(meshes[0].animations[otherindex]->aiAnim, NodeName);
+	uint16_t otherIndex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
+	const aiNodeAnim* pNodeAnim = findNodeAnim(meshes[0].animations[meshes[0].curAnimId]->aiAnim, nodeName);
+	const aiNodeAnim* otherNodeAnim = findNodeAnim(meshes[0].animations[otherIndex]->aiAnim, nodeName);
 
-	float otherAnimTime = AnimationTime * curDuration / otherDuration;
+	double otherAnimTime = animationTime * curDuration / otherDuration;
 
 	double ticksPerSecond = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mTicksPerSecond;
-	float TimeInTicks = AnimationTime * ticksPerSecond;
-	float animationTime = std::fmod(TimeInTicks, curDuration);
+	double TimeInTicks = animationTime * ticksPerSecond;
+	double animationTickTime = std::fmod(TimeInTicks, curDuration);
 
-	ticksPerSecond = meshes[0].animations[otherindex]->aiAnim->mTicksPerSecond;
-	float otherTimeInTicks = otherAnimTime * ticksPerSecond;
-	float otherAnimationTime = std::fmod(otherTimeInTicks, otherDuration);
+	ticksPerSecond = meshes[0].animations[otherIndex]->aiAnim->mTicksPerSecond;
+	double otherTimeInTicks = otherAnimTime * ticksPerSecond;
+	double otherAnimationTime = std::fmod(otherTimeInTicks, otherDuration);
 
 	if (pNodeAnim)
 	{
 		// Get interpolated matrices between current and next frame
-		aiMatrix4x4 matScale = interpolateScale(animInterpolation, animationTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
-		aiMatrix4x4 matRotation = interpolateRotation(animInterpolation, animationTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
-		aiMatrix4x4 matTranslation = interpolateTranslation(animInterpolation, animationTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+		aiMatrix4x4 matScale = interpolateScale(animInterpolation, animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+		aiMatrix4x4 matRotation = interpolateRotation(animInterpolation, animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+		aiMatrix4x4 matTranslation = interpolateTranslation(animInterpolation, animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
 
-		NodeTransformation = matTranslation * matRotation * matScale;
+		nodeTransformation = matTranslation * matRotation * matScale;
 	}
 
-	aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
+	aiMatrix4x4 globalTransformation = parentTransform * nodeTransformation;
 
-	if (meshes[0].boneMapping.find(NodeName) != meshes[0].boneMapping.end())
+	if (meshes[0].boneMapping.find(nodeName) != meshes[0].boneMapping.end())
 	{
-		uint32_t BoneIndex = meshes[0].boneMapping[NodeName];
+		uint32_t BoneIndex = meshes[0].boneMapping[nodeName];
 		meshes[0].boneInfo[BoneIndex].FinalTransformation = meshes[0].animGlobalInverseTransform *
-			GlobalTransformation * meshes[0].boneInfo[BoneIndex].BoneOffset;
+			globalTransformation * meshes[0].boneInfo[BoneIndex].BoneOffset;
 	}
 
 	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
 	{
-		ReadNodeHeirarchy(AnimationTime, curDuration, otherDuration, pNode->mChildren[i], GlobalTransformation);
+		readNodeHierarchy(animationTime, curDuration, otherDuration, pNode->mChildren[i], globalTransformation);
 	}
 }
 
@@ -871,11 +903,11 @@ void Ravine::createVertexBuffer()
 	vertexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertex_count, sizeof(RvSkinnedVertexColored),
+		vertexBuffers.push_back(device->createPersistentBuffer(meshes[i].vertices, sizeof(RvSkinnedVertexColored) * meshes[i].vertexCount, sizeof(RvSkinnedVertexColored),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 		delete[] meshes[i].vertices;
-		meshes[i].vertex_count = 0;
+		meshes[i].vertexCount = 0;
 	}
 
 }
@@ -885,11 +917,11 @@ void Ravine::createIndexBuffer()
 	indexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
-		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].index_count, sizeof(uint32_t),
+		indexBuffers.push_back(device->createPersistentBuffer(meshes[i].indices, sizeof(uint32_t) * meshes[i].indexCount, sizeof(uint32_t),
 			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		);
 		delete[] meshes[i].indices;
-		meshes[i].index_count = 0;
+		meshes[i].indexCount = 0;
 	}
 }
 
@@ -897,13 +929,13 @@ void Ravine::createUniformBuffers()
 {
 	//Setting size of uniform buffers vector to count of SwapChain's images.
 	size_t framesCount = swapChain->images.size();
-	uniformBuffers.resize(framesCount);
-	materialsBuffers.resize(framesCount*meshesCount);
-	modelsBuffers.resize(framesCount*meshesCount);
-	animationsBuffers.resize(framesCount*meshesCount);
+	globalBuffers.resize(framesCount);
+	materialsBuffers.resize(framesCount * meshesCount);
+	modelsBuffers.resize(framesCount * meshesCount);
+	animationsBuffers.resize(framesCount * meshesCount);
 
 	for (size_t i = 0; i < framesCount; i++) {
-		uniformBuffers[i] = device->createDynamicBuffer(sizeof(RvUniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		globalBuffers[i] = device->createDynamicBuffer(sizeof(RvGlobalBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 		for (size_t j = 0; j < meshesCount; j++)
 		{
 			size_t frameOffset = i * meshesCount;
@@ -988,47 +1020,11 @@ void Ravine::createTextureSampler()
 	}
 }
 
-void Ravine::createDepthResources()
-{
-	VkFormat depthFormat = device->findDepthFormat();
-
-	RvFramebufferAttachmentCreateInfo createInfo = {};
-	createInfo.layerCount = 1;
-	createInfo.mipLevels = 1;
-	createInfo.format = depthFormat;
-	createInfo.tilling = VK_IMAGE_TILING_OPTIMAL;
-	createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	createInfo.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	createInfo.aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
-	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	createInfo.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	swapChain->AddFramebufferAttachment(createInfo);
-}
-
-void Ravine::createMultiSamplingResources()
-{
-	VkFormat colorFormat = swapChain->imageFormat;
-
-	RvFramebufferAttachmentCreateInfo createInfo = {};
-	createInfo.layerCount = 1;
-	createInfo.mipLevels = 1;
-	createInfo.format = colorFormat;
-	createInfo.tilling = VK_IMAGE_TILING_OPTIMAL;
-	createInfo.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	createInfo.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	createInfo.aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
-	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	createInfo.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	swapChain->AddFramebufferAttachment(createInfo);
-}
-
 void Ravine::allocateCommandBuffers() {
 
 	//Allocate command buffers
-	primaryCmdBuffers.resize(swapChain->framebuffers.size());
-	secondaryCmdBuffers.resize(swapChain->framebuffers.size());
+	primaryCmdBuffers.resize(renderPass->framebuffers.size());
+	secondaryCmdBuffers.resize(renderPass->framebuffers.size());
 
 	//Primary Command Buffers
 	VkCommandBufferAllocateInfo allocInfo = {};
@@ -1047,24 +1043,22 @@ void Ravine::allocateCommandBuffers() {
 	}
 }
 
-void Ravine::recordCommandBuffers(uint32_t currentFrame)
+void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 {
-	//Begining Command Buffer Recording
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_command_buffer_recording
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 #pragma region Secondary Command Buffers
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 	//Setup inheritance information to provide access modifiers from RenderPass
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
 	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritanceInfo.renderPass = swapChain->renderPass;
+	inheritanceInfo.renderPass = renderPass->handle;
 	//inheritanceInfo.subpass = 0;
 	inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-	inheritanceInfo.framebuffer = swapChain->framebuffers[currentFrame];
+	inheritanceInfo.framebuffer = renderPass->framebuffers[currentFrame];
 	inheritanceInfo.pipelineStatistics = 0;
 	beginInfo.pInheritanceInfo = &inheritanceInfo;
 
@@ -1075,40 +1069,115 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 	//Basic Drawing Commands
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
+	const size_t setsPerFrame = 1 + (meshesCount * 2);
+	const VkDeviceSize offsets[] = { 0 };
 
-	//Global, Material and Model Descriptor Sets
-	size_t setsPerFrame = 1 + (meshesCount * 2);
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
-
-	//Set Vertex Buffer for drawing
-	VkDeviceSize offsets[] = { 0 };
-
-	//Call drawing
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	if (staticSolidPipelineEnabled)
 	{
-		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
 
-		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+				staticGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
 	}
 
-	//Perform the same with wireframe rendering
-	vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
-
-	//Global, Material and Model Descriptor Sets
-	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
-
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	if (staticWiredPipelineEnabled)
 	{
-		size_t meshSetOffset = meshIndex * 2;
-		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticWireframeGraphicsPipeline);
 
-		vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
-		vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, staticWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+				staticWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
+	}
+
+	if (skinnedSolidPipelineEnabled)
+	{
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+			skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+				skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
+	}
+
+
+	if (skinnedSolidPipelineEnabled)
+	{
+		//Bind Correct Graphics Pipeline
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+			skinnedGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		//Call drawing
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+				skinnedGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
+	}
+
+	if (skinnedWiredPipelineEnabled)
+	{
+		//Perform the same with wireframe rendering
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedWireframeGraphicsPipeline);
+
+		//Global, Material and Model Descriptor Sets
+		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+			skinnedWireframeGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+
+		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+		{
+			const size_t meshSetOffset = meshIndex * 2;
+			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+				skinnedWireframeGraphicsPipeline->layout, 1, 2, &descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
+
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame], static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		}
 	}
 
 	//Stop recording Command Buffer
@@ -1129,8 +1198,8 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = swapChain->renderPass;
-	renderPassInfo.framebuffer = swapChain->framebuffers[currentFrame];
+	renderPassInfo.renderPass = renderPass->handle;
+	renderPassInfo.framebuffer = renderPass->framebuffers[currentFrame];
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = swapChain->extent;
 
@@ -1150,7 +1219,6 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &gui->cmdBuffers[currentFrame]);
 
 	//Finishing Render Pass
-	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Finishing_up
 	vkCmdEndRenderPass(primaryCmdBuffers[currentFrame]);
 
 	//Stop recording Command Buffer
@@ -1163,16 +1231,15 @@ void Ravine::recordCommandBuffers(uint32_t currentFrame)
 
 void Ravine::mainLoop() {
 
-	string fpsTitle = "";
+	string fpsTitle;
 
 	//Application
-	setupFPSCam();
+	setupFpsCam();
 
 	while (!glfwWindowShouldClose(*window)) {
 		RvTime::update();
 
-		fpsTitle = "Ravine - Milisseconds " + eastl::to_string(RvTime::deltaTime() * 1000.0);
-		glfwSetWindowTitle(*window, fpsTitle.c_str());
+		glfwSetWindowTitle(*window, "Ravine 1.0a");
 
 		glfwPollEvents();
 
@@ -1180,6 +1247,60 @@ void Ravine::mainLoop() {
 	}
 
 	vkDeviceWaitIdle(device->handle);
+}
+
+void Ravine::drawGuiElements()
+{
+	static bool showPipelinesMenu = false;
+	ImGui::BeginMainMenuBar();
+	ImGui::TextUnformatted("Ravine Vulkan Prototype - Version 0.1a");
+	ImGui::Separator();
+
+	if (ImGui::MenuItem("Configurations Menu", 0, false, !showPipelinesMenu))
+	{
+		showPipelinesMenu = !showPipelinesMenu;
+	}
+	ImGui::Separator();
+
+	static double lastUpdateTime = 0;
+	lastUpdateTime += RvTime::deltaTime();
+	static string lastFps = "0";
+	if (lastUpdateTime > 0.1)
+	{
+		lastUpdateTime = 0;
+		lastFps = "FPS - " + eastl::to_string(RvTime::framesPerSecond());
+	}
+	ImGui::TextUnformatted(lastFps.c_str());
+	if (ImGui::MenuItem("Exit Ravine", 0, false))
+	{
+		glfwSetWindowShouldClose(*window, true);
+	}
+	ImGui::EndMainMenuBar();
+
+	if (showPipelinesMenu)
+	{
+		if (ImGui::Begin("Configurations Menu", &showPipelinesMenu, { 400, 300 }, -1, ImGuiWindowFlags_NoCollapse))
+		{
+			ImGui::TextUnformatted("Graphics Pipelines");
+			{
+				ImGui::Checkbox("Skinned Opaque Pipeline", &skinnedSolidPipelineEnabled);
+				ImGui::Checkbox("Skinned Wireframe Pipeline", &skinnedWiredPipelineEnabled);
+				ImGui::Checkbox("Static Opaque Pipeline", &staticSolidPipelineEnabled);
+				ImGui::Checkbox("Static Wireframe Pipeline", &staticWiredPipelineEnabled);
+				ImGui::Separator();
+			}
+
+			ImGui::TextUnformatted("Uniforms");
+			{
+				ImGui::DragFloat3("Position", value_ptr(uniformPosition), 0.01f);
+				ImGui::DragFloat3("Scale", value_ptr(uniformScale), 0.001f, 0.00001f, 1000.0f);
+				ImGui::DragFloat3("Rotation", value_ptr(uniformRotation), 1.f, -180.f, 180.f);
+				ImGui::Separator();
+			}
+
+			ImGui::End();
+		}
+	}
 }
 
 void Ravine::drawFrame()
@@ -1194,49 +1315,51 @@ void Ravine::drawFrame()
 	//semaphores are used to syncronize operations within or across command queues - thus our best fit.
 
 	//Handle resize and such
+	if (window->framebufferResized)
+	{
+		swapChain->framebufferResized = true;
+		window->framebufferResized = false;
+	}
 	uint32_t frameIndex;
-	if (!swapChain->AcquireNextFrame(frameIndex)) {
+	if (!swapChain->acquireNextFrame(frameIndex)) {
 		recreateSwapChain();
 	}
 
 	//Update bone transforms
-	if (meshes[0].animations.size() > 0) {
-		BoneTransform(RvTime::elapsedTime(), meshes[0].boneTransforms);
+	if (!meshes[0].animations.empty()) {
+		boneTransform(RvTime::elapsedTime(), meshes[0].boneTransforms);
 	}
+
+	//Start GUI recording
+	gui->acquireFrame();
+	//DRAW THE GUI HERE
+
+	drawGuiElements();
+
+	//BUT NOT AFTER HERE
+	gui->submitFrame();
+
+	//Update GUI Buffers
+	gui->updateBuffers(frameIndex);
+
+	//Record GUI Draw Commands into CMD Buffers
+	gui->recordCmdBuffers(frameIndex);
 
 	//Update the uniforms for the given frame
 	updateUniformBuffer(frameIndex);
 
-	//Start GUI recording
-	gui->AcquireFrame();
-	//DRAW THE GUI HERE
-
-	ImGui::ShowDemoWindow();
-
-	//BUT NOT AFTER HERE
-	gui->SubmitFrame();
-
-	//Update GUI Buffers
-	gui->UpdateBuffers(frameIndex);
-
-	//Record GUI Draw Commands into CMD Buffers
-	gui->RecordCmdBuffers(frameIndex);
-
 	//Make sure to record all new Commands
 	recordCommandBuffers(frameIndex);
 
-	if (!swapChain->SubmitNextFrame(primaryCmdBuffers.data(), frameIndex)) {
+	if (!swapChain->submitNextFrame(primaryCmdBuffers.data(), frameIndex)) {
 		recreateSwapChain();
 	}
 }
 
-void Ravine::setupFPSCam()
+void Ravine::setupFpsCam()
 {
 	//Enable caching of buttons pressed
 	glfwSetInputMode(*window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
-
-	//Hide mouse cursor
-	//glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	//Update lastMousePos to avoid initial offset not null
 	glfwGetCursorPos(*window, &lastMouseX, &lastMouseY);
@@ -1258,53 +1381,61 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 	glfwGetCursorPos(*window, &mouseX, &mouseY);
 	glm::quat lookRot = glm::vec3(0, 0, 0);
+	glm::vec4 translation = glm::vec4(0);
 
-	if (glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_1))
+	bool imGuiHasKeyCtx = ImGui::GetIO().WantCaptureKeyboard;
+	static bool shiftDown = false;
+	if ((glfwGetKey(*window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) && !imGuiHasKeyCtx)
 	{
+		if (!shiftDown)
+		{
+			shiftDown = true;
+			glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+
 		//Delta Mouse Positions
 		double deltaX = mouseX - lastMouseX;
 		double deltaY = mouseY - lastMouseY;
 
 		//Calculate look rotation update
-		camera->horRot -= deltaX * 30.0 * RvTime::deltaTime();
-		camera->verRot -= deltaY * 30.0 * RvTime::deltaTime();
+		camera->horRot -= deltaX * 16.0 * RvTime::deltaTime();
+		camera->verRot -= deltaY * 16.0 * RvTime::deltaTime();
 
 		//Limit vertical angle
-		camera->verRot = f_max(f_min(89.9, camera->verRot), -89.9);
+		camera->verRot = F_MAX(F_MIN(89.9, camera->verRot), -89.9);
 
 		//Define rotation quaternion starting form look rotation
 		lookRot = glm::rotate(lookRot, glm::radians(camera->horRot), glm::vec3(0, 1, 0));
 		lookRot = glm::rotate(lookRot, glm::radians(camera->verRot), glm::vec3(1, 0, 0));
+
+		//Calculate translation
+		if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
+			translation.z -= 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
+			translation.x -= 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
+			translation.z += 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
+			translation.x += 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+			translation.y -= 2.0 * RvTime::deltaTime();
+
+		if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
+			translation.y += 2.0 * RvTime::deltaTime();
+	}
+	else if (shiftDown)
+	{
+		shiftDown = false;
+		glfwSetInputMode(*window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
 	//Update Last Mouse coordinates
 	lastMouseX = mouseX;
 	lastMouseY = mouseY;
-
-	//Calculate translation
-	glm::vec4 translation = glm::vec4(0);
-	if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
-		translation.z -= 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
-		translation.x -= 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
-		translation.z += 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
-		translation.x += 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		translation.y -= 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		translation.y += 2.0 * RvTime::deltaTime();
-
-	if (glfwGetKey(*window, GLFW_KEY_R) == GLFW_PRESS) {
-		camera->horRot = 90.0f;
-		camera->verRot = 0.0f;
-	}
 
 	// ANIM INTERPOL
 	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS) {
@@ -1322,14 +1453,14 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		fmt::print(stdout, "{0}\n", animInterpolation);
 	}
 	// SWAP ANIMATIONS
-	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && keyUpPressed == false) {
+	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && !keyUpPressed) {
 		keyUpPressed = true;
 		meshes[0].curAnimId = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
 	}
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE) {
 		keyUpPressed = false;
 	}
-	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && keyDownPressed == false) {
+	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && !keyDownPressed) {
 		keyDownPressed = true;
 		meshes[0].curAnimId = (meshes[0].curAnimId - 1) % meshes[0].animations.size();
 	}
@@ -1337,16 +1468,12 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		keyDownPressed = false;
 	}
 
-	if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(*window, true);
-
 	camera->Translate(lookRot * translation);
 
 #pragma endregion
 
-
 #pragma region Global Uniforms
-	RvUniformBufferObject ubo = {};
+	RvGlobalBufferObject ubo = {};
 
 	//Make the view matrix
 	ubo.view = camera->GetViewMatrix();
@@ -1362,9 +1489,9 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 	//Transfering uniform data to uniform buffer
 	void* data;
-	vkMapMemory(device->handle, uniformBuffers[currentFrame].memory, 0, sizeof(ubo), 0, &data);
+	vkMapMemory(device->handle, globalBuffers[currentFrame].memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(device->handle, uniformBuffers[currentFrame].memory);
+	vkUnmapMemory(device->handle, globalBuffers[currentFrame].memory);
 #pragma endregion
 
 	//TODO: Change this to a per-material basis instead of per-mesh
@@ -1376,23 +1503,26 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		materialsUbo.customColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 		void* materialsData;
-		vkMapMemory(device->handle, materialsBuffers[currentFrame*meshesCount + meshId].memory, 0, sizeof(materialsUbo), 0, &materialsData);
+		vkMapMemory(device->handle, materialsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(materialsUbo), 0, &materialsData);
 		memcpy(materialsData, &materialsUbo, sizeof(materialsUbo));
-		vkUnmapMemory(device->handle, materialsBuffers[currentFrame*meshesCount + meshId].memory);
+		vkUnmapMemory(device->handle, materialsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
 
 #pragma region Models
 		RvModelBufferObject modelsUbo = {};
 
-		//Rotating object 90 degrees per second
-		//modelsUbo.model = glm::rotate(glm::mat4(1.0f), /*(float)Time::elapsedTime() * */glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		modelsUbo.model = glm::scale(modelsUbo.model, glm::vec3(1.00f, 1.00f, 1.00f));
+		//Model matrix updates
+		modelsUbo.model = glm::translate(glm::mat4(1.0f), uniformPosition);
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		modelsUbo.model = glm::scale(modelsUbo.model, uniformScale);
 
 		//Transfering model data to gpu buffer
 		void* modelData;
-		vkMapMemory(device->handle, modelsBuffers[currentFrame*meshesCount+meshId].memory, 0, sizeof(modelsUbo), 0, &modelData);
+		vkMapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(modelsUbo), 0, &modelData);
 		memcpy(modelData, &modelsUbo, sizeof(modelsUbo));
-		vkUnmapMemory(device->handle, modelsBuffers[currentFrame*meshesCount + meshId].memory);
+		vkUnmapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
 
 #pragma region Animations
@@ -1404,52 +1534,35 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		}
 
 		void* bonesData;
-		vkMapMemory(device->handle, animationsBuffers[currentFrame*meshesCount + meshId].memory, 0, sizeof(bonesUbo), 0, &bonesData);
+		vkMapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(bonesUbo), 0, &bonesData);
 		memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
-		vkUnmapMemory(device->handle, animationsBuffers[currentFrame*meshesCount + meshId].memory);
+		vkUnmapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
 	}
 
 }
 
-void Ravine::cleanupSwapChain() {
-
-	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(primaryCmdBuffers.size()), primaryCmdBuffers.data());
-	vkFreeCommandBuffers(device->handle, device->commandPool, static_cast<uint32_t>(secondaryCmdBuffers.size()), secondaryCmdBuffers.data());
-
-	//Destroy Graphics Pipeline and all it's components
-	vkDestroyPipeline(device->handle, *skinnedGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, skinnedGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *skinnedWireframeGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, skinnedWireframeGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *staticGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, staticGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *staticWireframeGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, staticWireframeGraphicsPipeline->layout, nullptr);
-	vkDestroyPipeline(device->handle, *staticLineGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device->handle, staticLineGraphicsPipeline->layout, nullptr);
-
-	//Destroy swap chain and all it's images
-	swapChain->Clear();
-	delete swapChain;
-}
-
 void Ravine::cleanup()
 {
-	//Cleanup RvGUI data
+	//Cleanup RvGui data
 	delete gui;
 
 	//Hold number of swapchain images
-	uint32_t swapImagesCount = swapChain->images.size();
+	const uint32_t swapImagesCount = swapChain->images.size();
+
+	//Cleanup render-pass
+	renderPass->clear();
+	delete renderPass;
 
 	//Cleanup swap-chain related data
-	cleanupSwapChain();
+	swapChain->clear();
+	delete swapChain;
 
 	//Cleaning up texture related objects
 	vkDestroySampler(device->handle, textureSampler, nullptr);
 	for (uint32_t i = 0; i < texturesSize; i++)
 	{
-		textures[i].Free();
+		textures[i].free();
 	}
 	delete[] textures;
 	texturesSize = 0;
@@ -1457,27 +1570,22 @@ void Ravine::cleanup()
 	//Destroy descriptor pool
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
 
-	//Destroying uniforms buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, uniformBuffers[i].buffer, nullptr);
-		vkFreeMemory(device->handle, uniformBuffers[i].memory, nullptr);
-	}
+	for (uint32_t i = 0; i < swapImagesCount; i++)
+	{
+		//Destroying global buffers
+		vkDestroyBuffer(device->handle, globalBuffers[i].handle, nullptr);
+		vkFreeMemory(device->handle, globalBuffers[i].memory, nullptr);
 
-	//Destroying materials buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, materialsBuffers[i].buffer, nullptr);
+		//Destroying materials buffers
+		vkDestroyBuffer(device->handle, materialsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, materialsBuffers[i].memory, nullptr);
-	}
 
-	//Destroying models buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, modelsBuffers[i].buffer, nullptr);
+		//Destroying models buffers
+		vkDestroyBuffer(device->handle, modelsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, modelsBuffers[i].memory, nullptr);
-	}
 
-	//Destroying animations buffers
-	for (size_t i = 0; i < swapImagesCount; i++) {
-		vkDestroyBuffer(device->handle, animationsBuffers[i].buffer, nullptr);
+		//Destroying animations buffers
+		vkDestroyBuffer(device->handle, animationsBuffers[i].handle, nullptr);
 		vkFreeMemory(device->handle, animationsBuffers[i].memory, nullptr);
 	}
 
@@ -1487,7 +1595,7 @@ void Ravine::cleanup()
 	vkDestroyDescriptorSetLayout(device->handle, modelDescriptorSetLayout, nullptr);
 
 	//TODO: FIX HERE!
-	for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
+	for (uint32_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 	{
 		//Destroy Vertex and Index Buffer Objects
 		vkDestroyBuffer(device->handle, vertexBuffers[meshIndex].handle, nullptr);
@@ -1498,17 +1606,19 @@ void Ravine::cleanup()
 		vkFreeMemory(device->handle, indexBuffers[meshIndex].memory, nullptr);
 	}
 
-	//Destroy graphics pipeline
+	//Destroy pipelines
 	delete skinnedGraphicsPipeline;
 	delete skinnedWireframeGraphicsPipeline;
 	delete staticGraphicsPipeline;
+	delete staticWireframeGraphicsPipeline;
+	delete staticLineGraphicsPipeline;
 
 	//Destroy vulkan logical device and validation layer
-	device->Clear();
+	device->clear();
 	delete device;
 
 #ifdef VALIDATION_LAYERS_ENABLED
-	rvDebug::DestroyDebugReportCallbackEXT(instance, rvDebug::callback, nullptr);
+	rvDebug::destroyDebugCallback(instance);
 #endif
 
 	//Destroy VK surface and instance

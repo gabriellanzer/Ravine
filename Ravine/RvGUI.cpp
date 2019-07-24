@@ -1,4 +1,4 @@
-#include "RvGUI.h"
+#include "RvGui.h"
 
 //Hash Includes
 #include "crc32.hpp"
@@ -9,20 +9,23 @@
 //GLFW Includes
 #include <glfw/glfw3.h>
 
-RvGUI::RvGUI(RvDevice& device, RvSwapChain& swapChain, RvWindow& window) : device(&device), swapChain(&swapChain), window(&window), swapChainImagesCount(swapChain.images.size())
+#include "imgui_impl_glfw.h"
+
+RvGui::RvGui(RvDevice* device, RvSwapChain* swapChain, RvWindow* window, RvRenderPass* renderPass) : 
+	device(device), swapChain(swapChain), window(window), renderPass(renderPass), swapChainImagesCount(swapChain->images.size())
 {
 	ImGui::CreateContext();
 	io = &ImGui::GetIO();
 }
 
-RvGUI::~RvGUI()
+RvGui::~RvGui()
 {
 	//Freeup Pipeline
 	delete guiPipeline;
 
 	//Freeup Texture Samplers
 	vkDestroySampler(device->handle, textureSampler, nullptr);
-	fontTexture.Free();
+	fontTexture.free();
 
 	//Destroy Descriptor pool with descriptor sets allocation
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
@@ -48,10 +51,14 @@ RvGUI::~RvGUI()
 	window = nullptr;
 	io = nullptr;
 	guiPipeline = nullptr;
+
+	ImGui_ImplGlfw_Shutdown();
 }
 
-void RvGUI::Init(VkSampleCountFlagBits samplesCount)
+void RvGui::init(VkSampleCountFlagBits samplesCount)
 {
+	ImGui_ImplGlfw_InitForVulkan(*window, true);
+
 	//Color scheme
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
@@ -61,25 +68,25 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
 
 	//Dimensions
-	io->DisplaySize = ImVec2(swapChain->WIDTH, swapChain->HEIGHT);
+	io->DisplaySize = ImVec2(swapChain->width, swapChain->height);
 	io->DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
 	//Initialize Vulkan Resources
 	VkExtent2D extent;
-	extent.width = swapChain->WIDTH;
-	extent.height = swapChain->HEIGHT;
+	extent.width = swapChain->width;
+	extent.height = swapChain->height;
 
 	//Load Font Texture
-	CreateFontTexture();
+	createFontTexture();
 
 	//Setup Sampler
-	CreateTextureSampler();
+	createTextureSampler();
 
 	//Descriptors define how date is acessed by the pipeline
-	CreateDescriptorPool(); //They are allocated in a pool by the device
-	CreateDescriptorSetLayout(); //The Layout indicate which binding is used in which pipeline stage
-	CreateDescriptorSet(); //The descriptor set holds information regarding data location and types
-	CreatePushConstants(); //Create the structure that defines the push constant range
+	createDescriptorPool(); //They are allocated in a pool by the device
+	createDescriptorSetLayout(); //The Layout indicate which binding is used in which pipeline stage
+	createDescriptorSet(); //The descriptor set holds information regarding data location and types
+	createPushConstants(); //Create the structure that defines the push constant range
 
 	//Reset Buffers
 	swapChainImagesCount = swapChain->images.size();
@@ -87,55 +94,35 @@ void RvGUI::Init(VkSampleCountFlagBits samplesCount)
 	indexBuffer.resize(swapChainImagesCount);
 
 	//Create Cmd Buffers for drwaing
-	CreateCmdBuffers();
+	createCmdBuffers();
 
 	//Create GUI Graphics Pipeline
-	guiPipeline = new RvGUIPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, swapChain->renderPass);
+	guiPipeline = new RvGuiPipeline(*device, extent, samplesCount, descriptorSetLayout, &pushConstantRange, renderPass->handle);
 }
 
-void RvGUI::AcquireFrame()
+void RvGui::acquireFrame()
 {
-	double mouseX, mouseY;
-	glfwGetCursorPos(*window, &mouseX, &mouseY);
-	io->DisplaySize = ImVec2((float)swapChain->WIDTH, (float)swapChain->HEIGHT);
-	io->DeltaTime = RvTime::deltaTime();
+	ImGui_ImplGlfw_NewFrame();
 
-	io->MousePos = ImVec2(mouseX, mouseY);
-	io->MouseDown[0] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_LEFT);
-	io->MouseDown[1] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_RIGHT);
+	//double mouseX, mouseY;
+	//glfwGetCursorPos(*window, &mouseX, &mouseY);
+	//io->DisplaySize = ImVec2((float)swapChain->WIDTH, (float)swapChain->HEIGHT);
+	//io->DeltaTime = RvTime::deltaTime();
+
+	//io->MousePos = ImVec2(mouseX, mouseY);
+	//io->MouseDown[0] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_LEFT);
+	//io->MouseDown[1] = glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_RIGHT);
 
 	ImGui::NewFrame();
 }
 
-void RvGUI::SubmitFrame()
+void RvGui::submitFrame()
 {
 	//Render generates draw buffers
 	ImGui::Render();
 }
 
-void RvGUI::CreateFrameBuffers()
-{
-	//Resize FrameBuffer data arrays
-	framebuffers.resize(swapChainImagesCount);
-	framebufferAttachments.resize(swapChainImagesCount);
-
-	//Create Framebuffer Images, Views and Memory regions
-	for (uint32_t i = 0; i < swapChainImagesCount; i++)
-	{
-		device->createImage(swapChain->WIDTH, swapChain->HEIGHT, 0,
-							VK_SAMPLE_COUNT_1_BIT,
-							swapChain->imageFormat, VK_IMAGE_TILING_OPTIMAL,
-							VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-							framebufferAttachments[i].image, framebufferAttachments[i].memory);
-
-		framebufferAttachments[i].imageView = rvTools::createImageView(
-			device->handle,framebufferAttachments[i].image, swapChain->imageFormat, VK_IMAGE_ASPECT_COLOR_BIT
-		);
-	}
-}
-
-void RvGUI::CreateCmdBuffers()
+void RvGui::createCmdBuffers()
 {
 	//Resize according to swapChain size
 	cmdBuffers.resize(swapChainImagesCount);
@@ -152,7 +139,7 @@ void RvGUI::CreateCmdBuffers()
 	}
 }
 
-void RvGUI::CreateTextureSampler()
+void RvGui::createTextureSampler()
 {
 	VkSamplerCreateInfo samplerCreateInfo = {};
 	samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -191,7 +178,7 @@ void RvGUI::CreateTextureSampler()
 	}
 }
 
-void RvGUI::CreateFontTexture()
+void RvGui::createFontTexture()
 {
 	//Get font data
 	unsigned char* fontData;
@@ -202,7 +189,7 @@ void RvGUI::CreateFontTexture()
 	fontTexture = device->createTexture(fontData, texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM);
 }
 
-void RvGUI::CreateDescriptorPool()
+void RvGui::createDescriptorPool()
 {
 	VkDescriptorPoolSize poolSize = {};
 	poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -219,7 +206,7 @@ void RvGUI::CreateDescriptorPool()
 	}
 }
 
-void RvGUI::CreateDescriptorSetLayout()
+void RvGui::createDescriptorSetLayout()
 {
 	//Texture Sampler layout
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
@@ -242,7 +229,7 @@ void RvGUI::CreateDescriptorSetLayout()
 	}
 }
 
-void RvGUI::CreateDescriptorSet()
+void RvGui::createDescriptorSet()
 {
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -274,7 +261,7 @@ void RvGUI::CreateDescriptorSet()
 	vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(1), &descriptorWrites, 0, nullptr);
 }
 
-void RvGUI::CreatePushConstants()
+void RvGui::createPushConstants()
 {
 	pushConstantRange = {};
 	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -282,7 +269,7 @@ void RvGUI::CreatePushConstants()
 	pushConstantRange.offset = 0;
 }
 
-void RvGUI::UpdateBuffers(uint32_t frameIndex)
+void RvGui::updateBuffers(uint32_t frameIndex)
 {
 	ImDrawData* imDrawData = ImGui::GetDrawData();
 
@@ -312,12 +299,8 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 	lastVtxCrc[frameIndex] = vtxCrc;
 
 #pragma region Vertex Buffer
-	//Cleanup from old buffer
-	vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
-	vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
-	vertexBuffer[frameIndex].~RvPersistentBuffer();
 
-	//Allocate new one
+	//Allocate new CPU Vertex Buffer
 	ImDrawVert* vtxRsc = new ImDrawVert[imDrawData->TotalVtxCount];
 	ImDrawVert* vtxItt = vtxRsc;
 	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
@@ -326,20 +309,26 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 		vtxItt += cmd_list->VtxBuffer.Size;
 	}
 
-	//Create buffer on GPU
-	vertexBuffer[frameIndex] = device->createPersistentBuffer(vtxRsc, vertexBufferSize, sizeof(ImDrawVert),
-		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	//Recreate Buffers if allocated size is not enough
+	if(vertexBuffer[frameIndex].bufferSize < vertexBufferSize)
+	{
+		//Cleanup from old buffer
+		vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
+		vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
+
+		//Create buffer on GPU
+		vertexBuffer[frameIndex] = device->createDynamicBuffer(vertexBufferSize,
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+
+	//Copy data to buffers
+	rvTools::copyToMemory(*device, reinterpret_cast<char*>(vtxRsc), vertexBuffer[frameIndex].memory, vertexBufferSize);
 
 	//Free-up memory
-	delete vtxRsc;
+	delete[] vtxRsc;
 #pragma endregion
 
 #pragma region Index Buffer
-	//Cleanup from old buffer
-	vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
-	vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
-	indexBuffer[frameIndex].~RvPersistentBuffer();
-
 	//Allocate new one
 	ImDrawIdx* idxRsc = new ImDrawIdx[imDrawData->TotalIdxCount];
 	ImDrawIdx* idxItt = idxRsc;
@@ -349,31 +338,40 @@ void RvGUI::UpdateBuffers(uint32_t frameIndex)
 		idxItt += cmd_list->IdxBuffer.Size;
 	}
 
-	//Create buffer on GPU
-	indexBuffer[frameIndex] = device->createPersistentBuffer(idxRsc, indexBufferSize, sizeof(ImDrawIdx),
-		(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	//Recreate Buffers if allocated size is not enough
+	if(indexBuffer[frameIndex].bufferSize < indexBufferSize)
+	{
+		//Cleanup from old buffer
+		vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
+		vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
+
+		//Create buffer on GPU
+		indexBuffer[frameIndex] = device->createDynamicBuffer(indexBufferSize,
+			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+	
+	//Copy data to buffers
+	rvTools::copyToMemory(*device, reinterpret_cast<char*>(idxRsc), indexBuffer[frameIndex].memory, indexBufferSize);
 
 	//Free-up memory
-	delete idxRsc;
+	delete[] idxRsc;
 #pragma endregion
 
 }
 
-void RvGUI::RecordCmdBuffers(uint32_t frameIndex)
+void RvGui::recordCmdBuffers(uint32_t frameIndex)
 {
-	ImGuiIO& io = ImGui::GetIO();
-
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 	//Setup inheritance information to provide access modifiers from RenderPass
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
 	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritanceInfo.renderPass = swapChain->renderPass;
+	inheritanceInfo.renderPass = renderPass->handle;
 	//inheritanceInfo.subpass = 0; TODO: USE SUBPASS FOR DEPENDENCIES (BLITTING)
 	inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-	inheritanceInfo.framebuffer = swapChain->framebuffers[frameIndex]; //TODO: USE INTERNAL FRAMEBUFFER
+	inheritanceInfo.framebuffer = renderPass->framebuffers[frameIndex]; //TODO: USE INTERNAL FRAMEBUFFER
 	inheritanceInfo.pipelineStatistics = 0;
 	beginInfo.pInheritanceInfo = &inheritanceInfo;
 
@@ -386,14 +384,14 @@ void RvGUI::RecordCmdBuffers(uint32_t frameIndex)
 	vkCmdBindPipeline(cmdBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, guiPipeline->handle);
 
 	VkViewport viewport = {};
-	viewport.width = io.DisplaySize.x;
-	viewport.height = io.DisplaySize.y;
+	viewport.width = io->DisplaySize.x;
+	viewport.height = io->DisplaySize.y;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(cmdBuffers[frameIndex], 0, 1, &viewport);
 
 	//UI scale and translate via push constants
-	pushConstBlock.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
+	pushConstBlock.scale = glm::vec2(2.0f / io->DisplaySize.x, 2.0f / io->DisplaySize.y);
 	pushConstBlock.translate = glm::vec2(-1.0f);
 	vkCmdPushConstants(cmdBuffers[frameIndex], guiPipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstBlock), &pushConstBlock);
 

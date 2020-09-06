@@ -1,12 +1,15 @@
 # Ravine
 Ravine is a graphics framework built with Vulkan.
 
+![Preview Image](/images/preview_1_0a.png)
+
 Used libraries are:
 - Vulkan
 - GLFW
 - ImGUI
 - Volk
 - GLM
+- FMT
 - Assimp
 - EA's Stl
 - Google's ShaderC

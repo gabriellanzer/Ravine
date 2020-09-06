@@ -1,4 +1,4 @@
-#include "RvGUIPipeline.h"
+#include "RvGuiPipeline.h"
 
 //Ravine Includes
 #include "RvTools.h"
@@ -6,7 +6,10 @@
 //ImGUI Includes
 #include "imgui.h"
 
-RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass) : device(&device)
+//STD Include
+#include <stdexcept>
+
+RvGuiPipeline::RvGuiPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout descriptorSetLayout, VkPushConstantRange* pushConstantRange, VkRenderPass renderPass) : device(&device)
 {
 	//Create Pipeline cache
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
@@ -17,10 +20,14 @@ RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountF
 	}
 
 	//Load Shaders
-	std::vector<char> vertShaderCode = rvTools::readFile("../data/shaders/gui.vert.spv");
-	std::vector<char> fragShaderCode = rvTools::readFile("../data/shaders/gui.frag.spv");
-	vertModule = rvTools::createShaderModule(device.handle, vertShaderCode);
-	fragModule = rvTools::createShaderModule(device.handle, fragShaderCode);
+	vector<char> vertShaderCode = rvTools::readFile("../data/shaders/gui.vert");
+	vector<char> fragShaderCode = rvTools::readFile("../data/shaders/gui.frag");
+	vector<char> vertexShader = rvTools::compileShaderText("Polygon Vertex Shader", vertShaderCode,
+		shaderc_vertex_shader, "main");
+	vertModule = rvTools::createShaderModule(device.handle, vertexShader);
+	vector<char> fragmentShader = rvTools::compileShaderText("Polygon Fragment Shader", fragShaderCode,
+		shaderc_fragment_shader, "main");
+	fragModule = rvTools::createShaderModule(device.handle, fragmentShader);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -215,11 +222,16 @@ RvGUIPipeline::RvGUIPipeline(RvDevice& device, VkExtent2D extent, VkSampleCountF
 	}
 }
 
-RvGUIPipeline::~RvGUIPipeline()
+RvGuiPipeline::~RvGuiPipeline()
 {
 	vkDestroyShaderModule(device->handle, fragModule, nullptr);
 	vkDestroyShaderModule(device->handle, vertModule, nullptr);
 	vkDestroyPipelineCache(device->handle, pipelineCache, nullptr);
 	vkDestroyPipelineLayout(device->handle, layout, nullptr);
 	vkDestroyPipeline(device->handle, handle, nullptr);
+}
+
+RvGuiPipeline::operator VkPipeline() const
+{
+	return handle;
 }

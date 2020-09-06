@@ -1,15 +1,15 @@
 #include "RvConfig.h"
 
-bool rvCfg::CheckValidationLayerSupport()
+bool rvCfg::checkValidationLayerSupport()
 {
 
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for (const char* layerName : ValidationLayers) {
+	for (const char* layerName : VALIDATION_LAYERS) {
 		bool layerFound = false;
 
 		for (const VkLayerProperties& layerProperties : availableLayers) {

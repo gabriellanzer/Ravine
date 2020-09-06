@@ -3,12 +3,8 @@
 
 
 RvCmdBuffer::RvCmdBuffer()
-{
-
-}
+= default;
 
 
 RvCmdBuffer::~RvCmdBuffer()
-{
-
-}
+= default;

@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{87811100-07A1-4E4F-BE1D-3286A257ADB6}</ProjectGuid>
     <RootNamespace>Ravine</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -87,15 +87,16 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x86\;..\lib\x86\Debug\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;EAStdC.lib;fmt.lib;shaderc_shared.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -104,15 +105,18 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x64\;..\lib\x64\Debug\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;EAStdC.lib;fmt.lib;shaderc_shared.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -123,18 +127,19 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\lib\x86\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x86\;..\lib\x86\Release\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;EAStdC.lib;fmt.lib;shaderc_shared.lib;assimp32.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
-      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,77 +150,106 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;VK_NO_PROTOTYPES;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\lib\x64\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\lib\x64\;..\lib\x64\Release\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;EASTL.lib;EAStdC.lib;fmt.lib;shaderc_shared.lib;assimp64.lib;glfw3.lib;glm_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
-      <Command>$(OutDir)\..\data\shaders\convert.bat</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="crc32.h" />
+    <ClCompile Include="crc32.hpp" />
+    <ClCompile Include="EASTL_new.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_vulkan.cpp" />
     <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ravine.cpp" />
+    <ClCompile Include="RvAnimationTools.cpp" />
     <ClCompile Include="RvCamera.cpp" />
     <ClCompile Include="RvCmdBuffer.cpp" />
     <ClCompile Include="RvDynamicBuffer.cpp" />
-    <ClCompile Include="RvGUI.cpp" />
-    <ClCompile Include="RvGUIPipeline.cpp" />
+    <ClCompile Include="RvGraphicsPipeline.cpp" />
+    <ClCompile Include="RvGui.cpp" />
+    <ClCompile Include="RvGuiPipeline.cpp" />
+    <ClCompile Include="RvLinePipeline.cpp" />
+    <ClCompile Include="RvPhysics.cpp" />
+    <ClCompile Include="RvRenderPass.cpp" />
+    <ClCompile Include="RvWireframePipeline.cpp" />
     <ClCompile Include="RvTexture.cpp" />
     <ClCompile Include="RvPersistentBuffer.cpp" />
     <ClCompile Include="RvConfig.cpp" />
     <ClCompile Include="RvDebug.cpp" />
     <ClCompile Include="RvDevice.cpp" />
-    <ClCompile Include="RvGraphicsPipeline.cpp" />
+    <ClCompile Include="RvPolygonPipeline.cpp" />
     <ClCompile Include="RvSwapChain.cpp" />
     <ClCompile Include="RvWindow.cpp" />
-    <ClCompile Include="Time.cpp" />
+    <ClCompile Include="RvTime.cpp" />
     <ClCompile Include="RvTools.cpp" />
+    <ClCompile Include="spirv_reflect.c" />
+    <ClCompile Include="volk.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EASTL_new.h" />
+    <ClInclude Include="imconfig.h" />
     <ClInclude Include="imgui.h" />
+    <ClInclude Include="imgui_impl_glfw.h" />
+    <ClInclude Include="imgui_impl_vulkan.h" />
     <ClInclude Include="imgui_internal.h" />
     <ClInclude Include="imstb_rectpack.h" />
     <ClInclude Include="imstb_textedit.h" />
     <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="Ravine.h" />
+    <ClInclude Include="RvAnimationTools.h" />
     <ClInclude Include="RvCamera.h" />
     <ClInclude Include="RvCmdBuffer.h" />
     <ClInclude Include="RvDynamicBuffer.h" />
-    <ClInclude Include="RvGUI.h" />
-    <ClInclude Include="RvGUIPipeline.h" />
+    <ClInclude Include="RvGraphicsPipeline.h" />
+    <ClInclude Include="RvGui.h" />
+    <ClInclude Include="RvGuiPipeline.h" />
+    <ClInclude Include="RvLinePipeline.h" />
+    <ClInclude Include="RvPhysics.h" />
+    <ClInclude Include="RvRenderPass.h" />
+    <ClInclude Include="RvTypeDefs.h" />
+    <ClInclude Include="RvWireframePipeline.h" />
     <ClInclude Include="RvTexture.h" />
     <ClInclude Include="RvPersistentBuffer.h" />
     <ClInclude Include="RvConfig.h" />
     <ClInclude Include="RvDataTypes.h" />
     <ClInclude Include="RvDebug.h" />
     <ClInclude Include="RvDevice.h" />
-    <ClInclude Include="RvGraphicsPipeline.h" />
+    <ClInclude Include="RvPolygonPipeline.h" />
     <ClInclude Include="RvFramebufferAttachment.h" />
     <ClInclude Include="RvSwapChain.h" />
     <ClInclude Include="RvUniformTypes.h" />
     <ClInclude Include="RvWindow.h" />
-    <ClInclude Include="SingleFileLibraries\stb_image.h" />
-    <ClInclude Include="Time.h" />
+    <ClInclude Include="RvTime.h" />
     <ClInclude Include="RvTools.h" />
+    <ClInclude Include="spirv_reflect.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="volk.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\gui.frag" />
     <None Include="bin\data\shaders\gui.vert" />
-    <None Include="bin\data\shaders\skinned_shader.frag" />
-    <None Include="bin\data\shaders\skinned_shader.vert" />
-    <None Include="bin\data\shaders\tex_skinned_shader.frag" />
+    <None Include="bin\data\shaders\phong_tex_color.frag" />
+    <None Include="bin\data\shaders\skinned_wireframe.vert" />
+    <None Include="bin\data\shaders\skinned_tex_color.vert" />
+    <None Include="bin\data\shaders\solid_color.frag" />
+    <None Include="bin\data\shaders\static_tex_color.vert" />
+    <None Include="bin\data\shaders\static_wireframe.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,7 +1,14 @@
 ﻿#include "RvTools.h"
 
-//STD Include
+//EASTL Includes
+#include <eastl/algorithm.h>
+
+//STD Includes
+#include <stdexcept>
 #include <fstream>
+
+//FMT Includes
+#include <fmt/printf.h>
 
 #pragma region USEFULL DEFINES
 #define VK_CHECK_RESULT(f)																				\
@@ -9,7 +16,7 @@
 	VkResult res = (f);																					\
 	if (res != VK_SUCCESS)																				\
 	{																									\
-		std::cout << "Fatal : VkResult is \"" << vks::tools::errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
+		fmt::print(stdout, "Fatal : VkResult is \"{0}\" in {1} at line {2}\n", eastl::to_string(res), __FILE__, __LINE__); \
 		assert(res == VK_SUCCESS);																		\
 	}																									\
 }
@@ -22,7 +29,7 @@ namespace rvTools {
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 
-	RvTexture createTexture(RvDevice* device, void *pixels, uint32_t width, uint32_t height, VkFormat format)
+	RvTexture createTexture(RvDevice* device, void* pixels, uint32_t width, uint32_t height, VkFormat format)
 	{
 		//Create ravine texture instance
 		RvTexture texture;
@@ -59,15 +66,16 @@ namespace rvTools {
 		Floor - handles case where the dimension is not power of 2
 		+1 - Add a mip level for the original level
 		*/
-		size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
+		const size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(eastl::max(width, height)))) + 1;
 
 		//Creating new image
-		device->createImage(width, height, mipLevels,
-							VK_SAMPLE_COUNT_1_BIT,
-							format, VK_IMAGE_TILING_OPTIMAL,
-							VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-							VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-							texture.handle, texture.memory);
+		const VkExtent3D extent {width, height, 1};
+		device->createImage(extent, mipLevels,
+			VK_SAMPLE_COUNT_1_BIT,
+			format, VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+			texture.handle, texture.memory);
 
 		//Assign mipLevel
 		texture.mipLevels = mipLevels;
@@ -76,14 +84,14 @@ namespace rvTools {
 		transitionImageLayout(*device, texture.handle, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 
 		//Transfering buffer data to image object
-		copyBufferToImage(device, stagingBuffer.buffer, texture.handle, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+		copyBufferToImage(device, stagingBuffer.handle, texture.handle, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
 		//Clearing staging buffer
-		vkDestroyBuffer(device->handle, stagingBuffer.buffer, nullptr);
+		vkDestroyBuffer(device->handle, stagingBuffer.handle, nullptr);
 		vkFreeMemory(device->handle, stagingBuffer.memory, nullptr);
 
 		//Transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
-		generateMipmaps(device, texture.handle, format, width, height, mipLevels);
+		generateMipmap(device, texture.handle, format, width, height, mipLevels);
 
 		//Create ImageView for this texture
 		texture.view = createImageView(device->handle, texture.handle, format, VK_IMAGE_ASPECT_COLOR_BIT, texture.mipLevels);
@@ -92,7 +100,7 @@ namespace rvTools {
 
 	}
 
-	void generateMipmaps(RvDevice* device, VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)
+	void generateMipmap(RvDevice* device, VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)
 	{
 		//Checking device support for linear blitting
 		VkFormatProperties formatProperties = device->getFormatProperties(imageFormat);
@@ -126,10 +134,10 @@ namespace rvTools {
 
 			//Transition waits for level (i - 1) to be filled (from Blitting or vkCmdCopyBufferToImage)
 			vkCmdPipelineBarrier(commandBuffer,
-								 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-								 0, nullptr,
-								 0, nullptr,
-								 1, &barrier);
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
 
 			//Image blit object
 			VkImageBlit blit = {};
@@ -150,11 +158,11 @@ namespace rvTools {
 
 			//Blit command
 			vkCmdBlitImage(commandBuffer,
-						   image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						   image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						   1, &blit,
-						   VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
-					   //TODO: Change sampler filtering to variable
+				image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &blit,
+				VK_FILTER_LINEAR);	//Filter must be the same from the sampler.
+			//TODO: Change sampler filtering to variable
 
 			if (mipWidth > 1) mipWidth /= 2;
 			if (mipHeight > 1) mipHeight /= 2;
@@ -169,10 +177,10 @@ namespace rvTools {
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 			vkCmdPipelineBarrier(commandBuffer,
-								 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-								 0, nullptr,
-								 0, nullptr,
-								 1, &barrier);
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
 		}
 
 		//Changing layout here because last mipLevel is never blitted from
@@ -183,10 +191,10 @@ namespace rvTools {
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 		vkCmdPipelineBarrier(commandBuffer,
-							 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-							 0, nullptr,
-							 0, nullptr,
-							 1, &barrier);
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
 
 		device->endSingleTimeCommands(commandBuffer);
 	}
@@ -262,7 +270,7 @@ namespace rvTools {
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
-		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
 		int i = 0;
@@ -288,9 +296,9 @@ namespace rvTools {
 		return indices;
 	}
 
-	SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface)
+	RvSwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface)
 	{
-		SwapChainSupportDetails details;
+		RvSwapChainSupportDetails details;
 
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
@@ -313,21 +321,51 @@ namespace rvTools {
 		return details;
 	}
 
-	std::vector<char> readFile(const std::string & filename)
+	vector<char> readFile(const string& filename)
 	{
-		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+		std::ifstream file(filename.c_str(), std::ios::ate | std::ios::binary);
 
 		if (!file.is_open()) {
-			throw std::runtime_error("Failed to open file at " + filename);
+			string error("Failed to open file at " + filename);
+			throw std::runtime_error(error.c_str());
 		}
 
 		size_t fileSize = (size_t)file.tellg();
-		std::vector<char> buffer(fileSize);
+		vector<char> buffer(fileSize);
 
 		file.seekg(0);
 		file.read(buffer.data(), fileSize);
 
 		file.close();
+
+		return buffer;
+	}
+
+	vector<char> compileShaderText(const string& shaderName, const vector<char>& shaderText, shaderc_shader_kind shaderKind, const char* entryPoint)
+	{
+		//Use ShaderC to compile a SPIR-V shader
+		shaderc_compiler_t compiler = shaderc_compiler_initialize();
+		shaderc_compilation_result_t result = nullptr;
+		result = shaderc_compile_into_spv(compiler, shaderText.data(), shaderText.size(), shaderKind, shaderName.c_str(), entryPoint, nullptr);
+		if (shaderc_result_get_compilation_status(result) != shaderc_compilation_status::shaderc_compilation_status_success)
+		{
+			const char* compilationError = shaderc_result_get_error_message(result);
+			fmt::print(stderr, "Error while compiling shader {0}, message:{1}\n", shaderName.c_str(), compilationError);
+
+			//Cleanup
+			shaderc_compiler_release(compiler);
+			shaderc_result_release(result);
+
+			throw std::runtime_error(compilationError);
+		}
+
+		size_t shaderSize = shaderc_result_get_length(result);
+		vector<char> buffer(shaderSize);
+		memcpy_s(buffer.data(), shaderSize, shaderc_result_get_bytes(result), shaderSize);
+
+		//Cleanup
+		shaderc_compiler_release(compiler);
+		shaderc_result_release(result);
 
 		return buffer;
 	}
@@ -425,7 +463,20 @@ namespace rvTools {
 		device.endSingleTimeCommands(commandBuffer);
 	}
 
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code)
+	void copyToMemory(RvDevice& device, char* data, const VkDeviceMemory dstMemory, const VkDeviceSize size)
+	{
+		char* gpuBuffer = nullptr;
+		vkMapMemory(device.handle, dstMemory, 0, size, 0, reinterpret_cast<void**>(&gpuBuffer));
+        memcpy(gpuBuffer, data, size);
+		VkMappedMemoryRange range = {};
+		range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+		range.memory = dstMemory;
+		range.size = VK_WHOLE_SIZE;
+		vkFlushMappedMemoryRanges(device.handle, 1, &range);
+		vkUnmapMemory(device.handle, dstMemory);
+	}
+
+	VkShaderModule createShaderModule(VkDevice device, const vector<char>& code)
 	{
 
 		//Create shader module with data pointer (uint32_t ptr) and size (in bytes)
@@ -443,18 +494,13 @@ namespace rvTools {
 		return shaderModule;
 	}
 
-	RvFramebufferAttachment createFrameBufferAttachment(RvDevice* device, uint32_t width, uint32_t height, RvFramebufferAttachmentCreateInfo createInfo)
+	RvFramebufferAttachment createFramebufferAttachment(const RvDevice& device, const RvFramebufferAttachmentCreateInfo& createInfo)
 	{
 		RvFramebufferAttachment newAttachment = {};
-		device->createImage(
-			width, height, createInfo.mipLevels, device->sampleCount, createInfo.format,
-			createInfo.tilling,
-			createInfo.usage,
-			createInfo.memoryProperties,
-			createInfo.createFlag,
-			newAttachment.image, newAttachment.memory);
-		newAttachment.imageView = createImageView(device->handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
-		transitionImageLayout(*device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
+		device.createImage(createInfo.extent, createInfo.mipLevels, device.sampleCount, createInfo.format, createInfo.tilling, createInfo.usage,
+			createInfo.memoryProperties, createInfo.createFlag, newAttachment.image, newAttachment.memory);
+		newAttachment.imageView = createImageView(device.handle, newAttachment.image, createInfo.format, createInfo.aspectFlag, createInfo.mipLevels);
+		transitionImageLayout(device, newAttachment.image, createInfo.format, createInfo.initialLayout, createInfo.finalLayout, createInfo.mipLevels);
 
 		return newAttachment;
 	}

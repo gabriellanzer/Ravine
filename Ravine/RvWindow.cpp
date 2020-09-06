@@ -1,8 +1,8 @@
 #include "RvWindow.h"
 
 
-RvWindow::RvWindow(uint32_t width, uint32_t height, const std::string title, bool fullscreen, GLFWframebuffersizefun resizeCallback) :
-	extent({ width, height }), title(title)
+RvWindow::RvWindow(uint32_t width, uint32_t height, const string title, bool fullscreen, GLFWframebuffersizefun resizeCallback) :
+	title(title), extent({ width, height })
 {
 	if (resizeCallback != NULL)
 	{

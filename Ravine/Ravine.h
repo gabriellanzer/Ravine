@@ -1,62 +1,49 @@
-#pragma once
+#ifndef RAVINE_H
+#define RAVINE_H
+
+//Vulkan Include
+#include "volk.h"
 
 //GLFW Includes
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <glfw/glfw3.h>
 
-//STD includes
-#include <vector>
-#include <array>
-#include <unordered_set>
-#include <map>
+//EASTL includes
+#include <eastl/vector.h>
+#include <eastl/array.h>
+#include <eastl/string.h>
 
-//Vulkan Include
-#include <vulkan\vulkan.h>
+using eastl::string;
+using eastl::vector;
+using eastl::array;
 
 
-//GLM includes
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
-
-//Types dependencies
+//Ravine Includes
 #include "RvDataTypes.h"
-#include "RvUniformTypes.h"
-
-//VK Wrappers
-#include "RvTools.h"
+#include "RvAnimationTools.h"
 #include "RvDevice.h"
 #include "RvSwapChain.h"
-#include "RvGraphicsPipeline.h"
+#include "RvPolygonPipeline.h"
+#include "RvWireframePipeline.h"
+#include "RvLinePipeline.h"
 #include "RvWindow.h"
 #include "RvTexture.h"
 #include "RvCamera.h"
-
-//GUI Includes
-#include "RvGUI.h"
+#include "RvGui.h"
+#include "RvRenderPass.h"
 
 //Math defines
-#define f_max(a,b)            (((a) > (b)) ? (a) : (b))
-#define f_min(a,b)            (((a) < (b)) ? (a) : (b))
+#define F_MAX(a,b)            (((a) > (b)) ? (a) : (b))
+#define F_MIN(a,b)            (((a) < (b)) ? (a) : (b))
 
 //Assimp Includes
-#include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
 
-//Specific usages of STD library
-using std::string;
-using std::vector;
-
-//Specific usages of ASSIMP library
-using Assimp::Importer;
+//Specific usages of Ravine library
+using namespace rvTools::animation;
 
 class Ravine
 {
-
 public:
 	Ravine();
 	~Ravine();
@@ -68,14 +55,27 @@ private:
 	//Todo: Move to Window
 	const int WIDTH = 1920;
 	const int HEIGHT = 1080;
-	const std::string WINDOW_NAME = "Ravine Engine";
+	const string WINDOW_NAME = "Ravine Engine";
 
 	//Ravine objects
 	RvWindow* window;
 	//Todo: Move to VULKAN APP
 	RvDevice* device;
 	RvSwapChain* swapChain;
-	RvGraphicsPipeline* graphicsPipeline;
+	RvRenderPass* renderPass;
+
+	//TODO: Fix Creation flow with shaders integration
+	vector<char> skinnedTexColCode;
+	vector<char> skinnedWireframeCode;
+	vector<char> staticTexColCode;
+	vector<char> staticWireframeCode;
+	vector<char> phongTexColCode;
+	vector<char> solidColorCode;
+	RvPolygonPipeline* skinnedGraphicsPipeline;
+	RvWireframePipeline* skinnedWireframeGraphicsPipeline;
+	RvPolygonPipeline* staticGraphicsPipeline;
+	RvWireframePipeline* staticWireframeGraphicsPipeline;
+	RvLinePipeline* staticLineGraphicsPipeline;
 
 	//Mouse parameters
 	//Todo: Move to INPUT
@@ -86,25 +86,23 @@ private:
 	RvCamera* camera;
 
 	//GUI
-	RvGUI* gui;
+	RvGui* gui;
+
+	//PROTOTYPE PRESENTATION STUFF
+	bool staticSolidPipelineEnabled = false;
+	bool staticWiredPipelineEnabled = false;
+	bool skinnedSolidPipelineEnabled = true;
+	bool skinnedWiredPipelineEnabled = false;
+	glm::vec3 uniformPosition = glm::vec3(0);
+	glm::vec3 uniformScale = glm::vec3(0.01f, 0.01f, 0.01f);
+	glm::vec3 uniformRotation = glm::vec3(0, 0, 0);
+	//PROTOTYPE PRESENTATION STUFF
 
 	const aiScene* scene;
 	//Todo: Move to MESH
-	RvMeshData* meshes;
+	RvSkinnedMeshColored* meshes;
 	uint32_t meshesCount;
 	vector<string> texturesToLoad;
-	//ANIMATION STUFF
-	uint32_t animationsCount;
-	aiAnimation* animations;
-	double* ticksPerSecond;
-	double* animationDuration;
-	aiMatrix4x4 animGlobalInverseTransform;
-	uint16_t numBones;
-	std::map<std::string, uint16_t> boneMapping;
-	std::vector<BoneInfo> boneInfo;
-	uint32_t curAnimId;
-	aiNode* rootNode;
-	std::vector<aiMatrix4x4> boneTransforms;
 
 	// Animation interpolation helper
 	float animInterpolation = 0.0f;
@@ -121,36 +119,37 @@ private:
 	VkInstance instance;
 
 	//Descriptors related content
-	//TODO: Move to DESCRIPTOR
-	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorSetLayout globalDescriptorSetLayout;
+	VkDescriptorSetLayout materialDescriptorSetLayout;
+	VkDescriptorSetLayout modelDescriptorSetLayout;
 	VkDescriptorPool descriptorPool;
-	std::vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptol pool
+	vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptor pool
 
 	//Commands Buffers and it's Pool
 	//TODO: Move to COMMAND BUFFER
-	std::vector<VkCommandBuffer> primaryCmdBuffers;
-	std::vector<VkCommandBuffer> secondaryCmdBuffers;
+	vector<VkCommandBuffer> primaryCmdBuffers;
+	vector<VkCommandBuffer> secondaryCmdBuffers;
 
 	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
 	//Reference: https://developer.nvidia.com/vulkan-memory-management
 
 	//TODO: Move vertex and index buffer in MESH class
 	//Verter buffer
-	std::vector<RvPersistentBuffer> vertexBuffers;
+	vector<RvPersistentBuffer> vertexBuffers;
 	//Index buffer
-	std::vector<RvPersistentBuffer> indexBuffers;
+	vector<RvPersistentBuffer> indexBuffers;
 
 	//Uniform buffers (per swap chain image)
 	//TODO: Move to UNIFORM
-	std::vector<RvDynamicBuffer> uniformBuffers;
-
-	//TODO: Move to UNIFORM
-	std::vector<RvDynamicBuffer> materialBuffers;
+	vector<RvDynamicBuffer> globalBuffers;
+	vector<RvDynamicBuffer> materialsBuffers;
+	vector<RvDynamicBuffer> modelsBuffers;
+	vector<RvDynamicBuffer> animationsBuffers;
 
 	//Texture related objects
 	uint32_t mipLevels;
 	RvTexture *textures;
-#define RV_IMAGES_COUNT 32
+#define RV_MAX_IMAGES_COUNT 32
 	uint32_t texturesSize;
 	VkSampler textureSampler;
 
@@ -162,9 +161,6 @@ private:
 
 	//Setup Vulkan Pipeline
 	void initVulkan();
-
-	//Returns a list of extensions required by the Vulkan Instance
-	std::vector<const char*> getRequiredInstanceExtensions();
 
 	//Create Vulkan Instance for the start of the application
 	void createInstance();
@@ -191,18 +187,11 @@ private:
 	void createDescriptorSets();
 
 	//Load scene file and populates meshes vector
-	bool loadScene(const std::string& filePath);
-	void loadBones(const aiMesh* pMesh, RvMeshData& meshData);
-	void BoneTransform(double TimeInSeconds, vector<aiMatrix4x4>& Transforms);
-	void ReadNodeHeirarchy(double AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
-
-	aiMatrix4x4 interpolateTranslation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
-	aiMatrix4x4 interpolateRotation(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
-	aiMatrix4x4 interpolateScale(float time, float othertime, const aiNodeAnim* pNodeAnim, const aiNodeAnim* otherNodeAnim);
-
-	uint16_t FindRotation(double AnimationTime, const aiNodeAnim* pNodeAnim);
-	uint16_t FindScale(double AnimationTime, const aiNodeAnim* pNodeAnim);
-	uint16_t FindPosition(double AnimationTime, const aiNodeAnim* pNodeAnim);
+	bool loadScene(const string& filePath);
+	void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
+	//TODO: Move to Blend-tree
+	void boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms);
+	void readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode, const aiMatrix4x4& parentTransform);
 
 	//Create vertex buffer
 	void createVertexBuffer();
@@ -219,12 +208,6 @@ private:
 	//Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();
 
-	//Create resources for depth testing
-	void createDepthResources();
-
-	//Create resources for sampling
-	void createMultiSamplingResources();
-
 	//Creates command buffers array
 	void allocateCommandBuffers();
 
@@ -234,17 +217,17 @@ private:
 	//Main application loop
 	void mainLoop();
 
+	//Gui Calls
+	void drawGuiElements();
+
 	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();
 
 	//First person camera setup
-	void setupFPSCam();
+	void setupFpsCam();
 
 	//Updates uniform buffer for given image
-	void updateUniformBuffer(uint32_t currentImage);
-
-	//Partial Cleanup of Swap Chain data
-	void cleanupSwapChain();
+	void updateUniformBuffer(uint32_t currentFrame);
 
 	//Finalize
 	void cleanup();
@@ -252,7 +235,14 @@ private:
 #pragma endregion
 
 #pragma region Static
+
+	//Returns a list of extensions required by the Vulkan Instance
+	static vector<const char*> getRequiredInstanceExtensions();
+
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
 #pragma endregion
+
 };
 
+#endif

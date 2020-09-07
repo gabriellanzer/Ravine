@@ -1,5 +1,5 @@
 # Ravine
-Ravine is a graphics framework built with Vulkan.
+Ravine is a graphics framework built with Vulkan:
 
 ![Preview Image](/images/preview_1_0a.png)
 
@@ -49,7 +49,7 @@ Ravine is a graphics framework built with Vulkan.
 ---
 
 ## TODO(s):
- - Integrate with ![Ravine ECS](https://github.com/gabriellanzer/Ravine-ECS) architecture
+ - Integrate with [Ravine ECS](https://github.com/gabriellanzer/Ravine-ECS) architecture
  - Individual update rate for UI (render fixed in 60FPS, blit every other frames)
  - Optimize animations performance
  - Scene Graph (of sorts, ECS based)

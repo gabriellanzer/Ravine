@@ -124,8 +124,7 @@
 		#define EA_ASM_STYLE_ATT 1
 	#endif
 
-
-#elif defined(EA_PLATFORM_XBOXONE) || defined(_DURANGO) || defined(EA_PLATFORM_CAPILANO) || (defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_GAMES || WINAPI_FAMILY == WINAPI_FAMILY_TV_TITLE))
+#elif defined(EA_PLATFORM_XBOXONE) || defined(_DURANGO) || defined(_XBOX_ONE) || defined(EA_PLATFORM_CAPILANO) || defined(_GAMING_XBOX)
 	// XBox One
 	// Durango was Microsoft's code-name for the platform, which is now obsolete.
 	// Microsoft uses _DURANGO instead of some variation of _XBOX, though it's not natively defined by the compiler.
@@ -170,11 +169,11 @@
 	
 	#if defined(WINAPI_FAMILY) 
 		#include <winapifamily.h>
-		#if WINAPI_FAMILY == WINAPI_FAMILY_TV_TITLE
+		#if defined(WINAPI_FAMILY_TV_TITLE) && WINAPI_FAMILY == WINAPI_FAMILY_TV_TITLE
 			#define EA_WINAPI_FAMILY EA_WINAPI_FAMILY_TV_TITLE
-		#elif WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+		#elif defined(WINAPI_FAMILY_DESKTOP_APP) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 			#define EA_WINAPI_FAMILY EA_WINAPI_FAMILY_DESKTOP_APP
-		#elif WINAPI_FAMILY == WINAPI_FAMILY_GAMES
+		#elif defined(WINAPI_FAMILY_GAMES) && WINAPI_FAMILY == WINAPI_FAMILY_GAMES
 			#define EA_WINAPI_FAMILY EA_WINAPI_FAMILY_GAMES
 		#else
 			#error Unsupported WINAPI_FAMILY
@@ -216,9 +215,15 @@
 	#else
 		#error Unsupported WINAPI_FAMILY
 	#endif
-	
 
-// Larrabee                                           // This part to be removed once __LRB__ is supported by the Larrabee compiler in 2009.
+	#if EA_WINAPI_FAMILY_PARTITION(EA_WINAPI_PARTITION_GAMES)
+		#define CS_UNDEFINED_STRING 			1
+		#define CS_UNDEFINED_STRING 		1
+	#endif
+
+	#if EA_WINAPI_FAMILY_PARTITION(EA_WINAPI_PARTITION_TV_TITLE)
+		#define EA_PLATFORM_XBOXONE_XDK 	1
+	#endif
 #elif defined(EA_PLATFORM_LRB) || defined(__LRB__) || (defined(__EDG__) && defined(__ICC) && defined(__x86_64__))
 	#undef  EA_PLATFORM_LRB
 	#define EA_PLATFORM_LRB         1
@@ -548,6 +553,10 @@
 		#define EA_PROCESSOR_ARM32 1
 		#define EA_SYSTEM_LITTLE_ENDIAN 1
 		#define EA_PLATFORM_DESCRIPTION "Windows on ARM"
+	#elif defined(_M_ARM64)
+		#define EA_PROCESSOR_ARM64 1
+		#define EA_SYSTEM_LITTLE_ENDIAN 1
+		#define EA_PLATFORM_DESCRIPTION "Windows on ARM64"
 	#else //Possibly other Windows CE variants
 		#error Unknown processor
 		#error Unknown endianness
@@ -563,6 +572,7 @@
 	// WINAPI_FAMILY defines to support Windows 8 Metro Apps - mirroring winapifamily.h in the Windows 8 SDK
 	#define EA_WINAPI_FAMILY_APP         1000
 	#define EA_WINAPI_FAMILY_DESKTOP_APP 1001
+	#define EA_WINAPI_FAMILY_GAMES       1006
 
 	#if defined(WINAPI_FAMILY)
 		#if defined(_MSC_VER)
@@ -572,10 +582,12 @@
 		#if defined(_MSC_VER)
 			#pragma warning(pop)
 		#endif
-		#if WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+		#if defined(WINAPI_FAMILY_DESKTOP_APP) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 			#define EA_WINAPI_FAMILY EA_WINAPI_FAMILY_DESKTOP_APP
-		#elif WINAPI_FAMILY == WINAPI_FAMILY_APP
+		#elif defined(WINAPI_FAMILY_APP) && WINAPI_FAMILY == WINAPI_FAMILY_APP
 			#define EA_WINAPI_FAMILY EA_WINAPI_FAMILY_APP
+		#elif defined(WINAPI_FAMILY_GAMES) && WINAPI_FAMILY == WINAPI_FAMILY_GAMES
+			#define EA_WINAPI_FAMILY EA_WINAPI_FAMILY_GAMES
 		#else
 			#error Unsupported WINAPI_FAMILY
 		#endif
@@ -585,6 +597,7 @@
 
 	#define EA_WINAPI_PARTITION_DESKTOP   1
 	#define EA_WINAPI_PARTITION_APP       1
+	#define EA_WINAPI_PARTITION_GAMES    (EA_WINAPI_FAMILY == EA_WINAPI_FAMILY_GAMES)
 
 	#define EA_WINAPI_FAMILY_PARTITION(Partition)   (Partition)
 
@@ -593,7 +606,7 @@
 	// WinRT doesn't doesn't have access to the Windows "desktop" API, but WinRT can nevertheless run on 
 	// desktop computers in addition to tablets. The Windows Phone API is a subset of WinRT and is not included
 	// in it due to it being only a part of the API.
-	#if (defined(EA_PLATFORM_WINDOWS) && !EA_WINAPI_FAMILY_PARTITION(EA_WINAPI_PARTITION_DESKTOP))
+	#if defined(__cplusplus_winrt)
 		#define EA_PLATFORM_WINRT 1 
 	#endif
 

@@ -9,66 +9,68 @@
 #define FMT_LOCALE_H_
 
 #include <locale>
+
 #include "format.h"
 
 FMT_BEGIN_NAMESPACE
 
-namespace internal {
+namespace detail {
 template <typename Char>
-typename buffer_context<Char>::type::iterator vformat_to(
+typename buffer_context<Char>::iterator vformat_to(
     const std::locale& loc, buffer<Char>& buf,
     basic_string_view<Char> format_str,
-    basic_format_args<typename buffer_context<Char>::type> args) {
-  typedef back_insert_range<buffer<Char>> range;
-  return vformat_to<arg_formatter<range>>(buf, to_string_view(format_str), args,
-                                          internal::locale_ref(loc));
+    basic_format_args<buffer_context<type_identity_t<Char>>> args) {
+  using af = arg_formatter<typename buffer_context<Char>::iterator, Char>;
+  return vformat_to<af>(buffer_appender<Char>(buf), to_string_view(format_str),
+                        args, detail::locale_ref(loc));
 }
 
 template <typename Char>
 std::basic_string<Char> vformat(
     const std::locale& loc, basic_string_view<Char> format_str,
-    basic_format_args<typename buffer_context<Char>::type> args) {
+    basic_format_args<buffer_context<type_identity_t<Char>>> args) {
   basic_memory_buffer<Char> buffer;
-  internal::vformat_to(loc, buffer, format_str, args);
+  detail::vformat_to(loc, buffer, format_str, args);
   return fmt::to_string(buffer);
 }
-}  // namespace internal
+}  // namespace detail
 
-template <typename S, typename Char = FMT_CHAR(S)>
+template <typename S, typename Char = char_t<S>>
 inline std::basic_string<Char> vformat(
     const std::locale& loc, const S& format_str,
-    basic_format_args<typename buffer_context<Char>::type> args) {
-  return internal::vformat(loc, to_string_view(format_str), args);
+    basic_format_args<buffer_context<type_identity_t<Char>>> args) {
+  return detail::vformat(loc, to_string_view(format_str), args);
 }
 
-template <typename S, typename... Args>
-inline std::basic_string<FMT_CHAR(S)> format(const std::locale& loc,
-                                             const S& format_str,
-                                             const Args&... args) {
-  return internal::vformat(loc, to_string_view(format_str),
-                           {internal::make_args_checked(format_str, args...)});
+template <typename S, typename... Args, typename Char = char_t<S>>
+inline std::basic_string<Char> format(const std::locale& loc,
+                                      const S& format_str, Args&&... args) {
+  return detail::vformat(
+      loc, to_string_view(format_str),
+      fmt::make_args_checked<Args...>(format_str, args...));
 }
 
-template <typename String, typename OutputIt, typename... Args,
-          FMT_ENABLE_IF(internal::is_output_iterator<OutputIt>::value)>
+template <typename S, typename OutputIt, typename... Args,
+          typename Char = enable_if_t<
+              detail::is_output_iterator<OutputIt>::value, char_t<S>>>
 inline OutputIt vformat_to(
-    OutputIt out, const std::locale& loc, const String& format_str,
-    typename format_args_t<OutputIt, FMT_CHAR(String)>::type args) {
-  typedef output_range<OutputIt, FMT_CHAR(String)> range;
-  return vformat_to<arg_formatter<range>>(
-      range(out), to_string_view(format_str), args, internal::locale_ref(loc));
+    OutputIt out, const std::locale& loc, const S& format_str,
+    basic_format_args<buffer_context<type_identity_t<Char>>> args) {
+  decltype(detail::get_buffer<Char>(out)) buf(detail::get_buffer_init(out));
+  using af =
+    detail::arg_formatter<typename buffer_context<Char>::iterator, Char>;
+  vformat_to<af>(detail::buffer_appender<Char>(buf), to_string_view(format_str),
+                 args, detail::locale_ref(loc));
+  return detail::get_iterator(buf);
 }
 
 template <typename OutputIt, typename S, typename... Args,
-          FMT_ENABLE_IF(internal::is_string<S>::value&&
-                            internal::is_output_iterator<OutputIt>::value)>
+          FMT_ENABLE_IF(detail::is_output_iterator<OutputIt>::value&&
+                            detail::is_string<S>::value)>
 inline OutputIt format_to(OutputIt out, const std::locale& loc,
-                          const S& format_str, const Args&... args) {
-  internal::check_format_string<Args...>(format_str);
-  typedef typename format_context_t<OutputIt, FMT_CHAR(S)>::type context;
-  format_arg_store<context, Args...> as{args...};
-  return vformat_to(out, loc, to_string_view(format_str),
-                    basic_format_args<context>(as));
+                          const S& format_str, Args&&... args) {
+  const auto& vargs = fmt::make_args_checked<Args...>(format_str, args...);
+  return vformat_to(out, loc, to_string_view(format_str), vargs);
 }
 
 FMT_END_NAMESPACE

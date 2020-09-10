@@ -162,15 +162,11 @@ namespace eastl
 	inline void ref_count_sp::release()
 	{
 		EASTL_ASSERT((mRefCount > 0) && (mWeakRefCount > 0));
-		if(Internal::atomic_decrement(&mRefCount) > 0)
-			Internal::atomic_decrement(&mWeakRefCount);
-		else
-		{
+		if(Internal::atomic_decrement(&mRefCount) == 0)
 			free_value();
 
-			if(Internal::atomic_decrement(&mWeakRefCount) == 0)
-				free_ref_count_sp();
-		}
+		if(Internal::atomic_decrement(&mWeakRefCount) == 0)
+			free_ref_count_sp();
 	}
 
 	inline void ref_count_sp::weak_addref() EA_NOEXCEPT
@@ -196,7 +192,7 @@ namespace eastl
 			}
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 
@@ -224,7 +220,7 @@ namespace eastl
 		void free_value() EA_NOEXCEPT
 		{
 			mDeleter(mValue);
-			mValue = NULL;
+			mValue = nullptr;
 		}
 
 		void free_ref_count_sp() EA_NOEXCEPT
@@ -237,7 +233,7 @@ namespace eastl
 		#if EASTL_RTTI_ENABLED
 			void* get_deleter(const std::type_info& type) const EA_NOEXCEPT
 			{
-				return (type == typeid(deleter_type)) ? (void*)&mDeleter : NULL;
+				return (type == typeid(deleter_type)) ? (void*)&mDeleter : nullptr;
 			}
 		#else
 			void* get_deleter() const EA_NOEXCEPT
@@ -288,12 +284,12 @@ namespace eastl
 		#if EASTL_RTTI_ENABLED
 			void* get_deleter(const std::type_info&) const EA_NOEXCEPT
 			{
-				return NULL; // Default base implementation.
+				return nullptr; // Default base implementation.
 			}
 		#else
 			void* get_deleter() const EA_NOEXCEPT
 			{
-				return NULL;
+				return nullptr;
 			}
 		#endif
 	};
@@ -380,8 +376,8 @@ namespace eastl
 		/// Initializes and "empty" shared_ptr.
 		/// Postcondition: use_count() == zero and get() == 0
 		shared_ptr() EA_NOEXCEPT
-			: mpValue(NULL),
-			  mpRefCount(NULL)
+			: mpValue(nullptr),
+			  mpRefCount(nullptr)
 		{
 			// Intentionally leaving mpRefCount as NULL. Can't allocate here due to noexcept.
 		}
@@ -397,7 +393,7 @@ namespace eastl
 		template <typename U>
 		explicit shared_ptr(U* pValue,
 		                    typename eastl::enable_if<eastl::is_convertible<U*, element_type*>::value>::type* = 0)
-		    : mpValue(NULL), mpRefCount(NULL) // alloc_internal will set this.
+		    : mpValue(nullptr), mpRefCount(nullptr) // alloc_internal will set this.
 		{
 			// We explicitly use default_delete<U>. You can use the other version of this constructor to provide a
 			// custom version.
@@ -411,8 +407,8 @@ namespace eastl
 
 
 		shared_ptr(std::nullptr_t) EA_NOEXCEPT
-			: mpValue(NULL),
-			  mpRefCount(NULL)
+			: mpValue(nullptr),
+			  mpRefCount(nullptr)
 		{
 			// Intentionally leaving mpRefCount as NULL. Can't allocate here due to noexcept.
 		}
@@ -431,16 +427,16 @@ namespace eastl
 		shared_ptr(U* pValue,
 		           Deleter deleter,
 		           typename eastl::enable_if<eastl::is_convertible<U*, element_type*>::value>::type* = 0)
-		    : mpValue(NULL), mpRefCount(NULL)
+		    : mpValue(nullptr), mpRefCount(nullptr)
 		{
 			alloc_internal(pValue, default_allocator_type(), eastl::move(deleter));
 		}
 
 		template <typename Deleter>
 		shared_ptr(std::nullptr_t, Deleter deleter)
-		    : mpValue(NULL), mpRefCount(NULL) // alloc_internal will set this.
+		    : mpValue(nullptr), mpRefCount(nullptr) // alloc_internal will set this.
 		{
-			alloc_internal(NULL, default_allocator_type(), eastl::move(deleter));
+			alloc_internal(nullptr, default_allocator_type(), eastl::move(deleter));
 		}
 
 
@@ -458,17 +454,17 @@ namespace eastl
 		                    Deleter deleter,
 		                    const Allocator& allocator,
 		                    typename eastl::enable_if<eastl::is_convertible<U*, element_type*>::value>::type* = 0)
-		    : mpValue(NULL), mpRefCount(NULL) // alloc_internal will set this.
+		    : mpValue(nullptr), mpRefCount(nullptr) // alloc_internal will set this.
 		{
 			alloc_internal(pValue, eastl::move(allocator), eastl::move(deleter));
 		}
 
 		template <typename Deleter, typename Allocator>
 		shared_ptr(std::nullptr_t, Deleter deleter, Allocator allocator)
-			: mpValue(NULL),
-			  mpRefCount(NULL) // alloc_internal will set this.
+			: mpValue(nullptr),
+			  mpRefCount(nullptr) // alloc_internal will set this.
 		{
-			alloc_internal(NULL, eastl::move(allocator), eastl::move(deleter));
+			alloc_internal(nullptr, eastl::move(allocator), eastl::move(deleter));
 		}
 
 
@@ -532,8 +528,8 @@ namespace eastl
 			: mpValue(sharedPtr.mpValue),
 			  mpRefCount(sharedPtr.mpRefCount)
 		{
-			sharedPtr.mpValue = NULL;
-			sharedPtr.mpRefCount = NULL;
+			sharedPtr.mpValue = nullptr;
+			sharedPtr.mpRefCount = nullptr;
 		}
 
 
@@ -543,8 +539,8 @@ namespace eastl
 		    : mpValue(sharedPtr.mpValue),
 		      mpRefCount(sharedPtr.mpRefCount)
 		{
-			sharedPtr.mpValue = NULL;
-			sharedPtr.mpRefCount = NULL;
+			sharedPtr.mpValue = nullptr;
+			sharedPtr.mpRefCount = nullptr;
 		}
 
 		// unique_ptr constructor
@@ -552,7 +548,7 @@ namespace eastl
 		shared_ptr(unique_ptr<U, Deleter>&& uniquePtr,
 		           typename eastl::enable_if<!eastl::is_array<U>::value && !is_lvalue_reference<Deleter>::value &&
 		                                     eastl::is_convertible<U*, element_type*>::value>::type* = 0)
-		    : mpValue(NULL), mpRefCount(NULL)
+		    : mpValue(nullptr), mpRefCount(nullptr)
 		{
 			alloc_internal(uniquePtr.release(), default_allocator_type(), uniquePtr.get_deleter());
 		}
@@ -564,7 +560,7 @@ namespace eastl
 		           const Allocator& allocator,
 		           typename eastl::enable_if<!eastl::is_array<U>::value && !is_lvalue_reference<Deleter>::value &&
 		                                     eastl::is_convertible<U*, element_type*>::value>::type* = 0)
-		    : mpValue(NULL), mpRefCount(NULL)
+		    : mpValue(nullptr), mpRefCount(nullptr)
 		{
 			alloc_internal(uniquePtr.release(), allocator, uniquePtr.get_deleter());
 		}
@@ -583,7 +579,7 @@ namespace eastl
 		{
 			if (!mpRefCount)
 			{
-				mpValue = NULL; // Question: Is it right for us to NULL this or not?
+				mpValue = nullptr; // Question: Is it right for us to NULL this or not?
 
 			#if EASTL_EXCEPTIONS_ENABLED
 				throw eastl::bad_weak_ptr();
@@ -606,8 +602,8 @@ namespace eastl
 			// shared_ptr(const shared_ptr<U>& sharedPtr, element_type* pValue) constructor).
 
 			#if EASTL_DEBUG
-				mpValue = NULL;
-				mpRefCount = NULL;
+				mpValue = nullptr;
+				mpRefCount = nullptr;
 			#endif
 		}
 
@@ -845,14 +841,14 @@ namespace eastl
 		Deleter* get_deleter() const EA_NOEXCEPT
 		{
 			#if EASTL_RTTI_ENABLED
-				return mpRefCount ? static_cast<Deleter*>(mpRefCount->get_deleter(typeid(typename remove_cv<Deleter>::type))) : NULL;
+				return mpRefCount ? static_cast<Deleter*>(mpRefCount->get_deleter(typeid(typename remove_cv<Deleter>::type))) : nullptr;
 			#else
 				// This is probably unsafe but without typeid there is no way to ensure that the
 				// stored deleter is actually of the templated Deleter type.
-				return NULL;
+				return nullptr;
 
 				// Alternatively:
-				// return mpRefCount ? static_cast<Deleter*>(mpRefCount->get_deleter()) : NULL;
+				// return mpRefCount ? static_cast<Deleter*>(mpRefCount->get_deleter()) : nullptr;
 			#endif
 		}
 
@@ -865,12 +861,12 @@ namespace eastl
 			{
 				if(mpValue)
 					return &this_type::get;
-				return NULL;
+				return nullptr;
 			}
 
 			bool operator!() const EA_NOEXCEPT
 			{
-				return (mpValue == NULL);
+				return (mpValue == nullptr);
 			}
 		#else
 			/// Explicit operator bool
@@ -881,7 +877,7 @@ namespace eastl
 			///        ++*ptr;
 			explicit operator bool() const EA_NOEXCEPT
 			{
-				return (mpValue != NULL);
+				return (mpValue != nullptr);
 			}
 		#endif
 
@@ -903,9 +899,9 @@ namespace eastl
 		// Handles the allocating of mpRefCount, while assigning mpValue.
 		// The provided pValue may be NULL, as with constructing with a deleter and allocator but NULL pointer.
 		template <typename U, typename Allocator, typename Deleter>
-		void alloc_internal(U* pValue, Allocator allocator, Deleter deleter)
+		void alloc_internal(U pValue, Allocator allocator, Deleter deleter)
 		{
-			typedef ref_count_sp_t<U*, Allocator, Deleter> ref_count_type;
+			typedef ref_count_sp_t<U, Allocator, Deleter> ref_count_type;
 
 			#if EASTL_EXCEPTIONS_ENABLED
 				try
@@ -1284,7 +1280,7 @@ namespace eastl
 	template <typename T>
 	inline shared_ptr<T> atomic_exchange_explicit(shared_ptr<T>* pSharedPtrA, shared_ptr<T> sharedPtrB, ... /*std::memory_order memoryOrder*/)
 	{
-		atomic_exchange(pSharedPtrA, sharedPtrB);
+		return atomic_exchange(pSharedPtrA, sharedPtrB);
 	}
 
 	// Compares the shared pointers pointed-to by p and expected. If they are equivalent (share ownership of the 
@@ -1371,8 +1367,8 @@ namespace eastl
 	public:
 		/// weak_ptr
 		weak_ptr() EA_NOEXCEPT
-			: mpValue(NULL),
-			  mpRefCount(NULL)
+			: mpValue(nullptr),
+			  mpRefCount(nullptr)
 		{
 		}
 
@@ -1394,8 +1390,8 @@ namespace eastl
 			: mpValue(weakPtr.mpValue),
 			  mpRefCount(weakPtr.mpRefCount)
 		{
-			weakPtr.mpValue = NULL;
-			weakPtr.mpRefCount = NULL;
+			weakPtr.mpValue = nullptr;
+			weakPtr.mpRefCount = nullptr;
 		}
 
 
@@ -1419,8 +1415,8 @@ namespace eastl
 		    : mpValue(weakPtr.mpValue),
 		      mpRefCount(weakPtr.mpRefCount)
 		{
-			weakPtr.mpValue = NULL;
-			weakPtr.mpRefCount = NULL;
+			weakPtr.mpValue = nullptr;
+			weakPtr.mpRefCount = nullptr;
 		}
 
 
@@ -1527,8 +1523,8 @@ namespace eastl
 			if(mpRefCount)
 				mpRefCount->weak_release();
 
-			mpValue    = NULL;
-			mpRefCount = NULL;
+			mpValue    = nullptr;
+			mpRefCount = nullptr;
 		}
 
 		void swap(this_type& weakPtr)

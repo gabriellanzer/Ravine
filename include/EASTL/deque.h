@@ -1514,11 +1514,12 @@ namespace eastl
 	typename deque<T, Allocator, kDequeSubarraySize>::reference
 	deque<T, Allocator, kDequeSubarraySize>::operator[](size_type n)
 	{
-		#if EASTL_EMPTY_REFERENCE_ASSERT_ENABLED    // We allow the user to use a reference to v[0] of an empty container.
-			if(EASTL_UNLIKELY((n != 0) && n >= (size_type)(mItEnd - mItBegin)))
+		#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
+			if (EASTL_UNLIKELY(n >= (size_type)(mItEnd - mItBegin)))
 				EASTL_FAIL_MSG("deque::operator[] -- out of range");
 		#elif EASTL_ASSERT_ENABLED
-			if(EASTL_UNLIKELY(n >= (size_type)(mItEnd - mItBegin)))
+			// We allow taking a reference to deque[0]
+			if (EASTL_UNLIKELY((n != 0) && n >= (size_type)(mItEnd - mItBegin)))
 				EASTL_FAIL_MSG("deque::operator[] -- out of range");
 		#endif
 
@@ -1536,11 +1537,12 @@ namespace eastl
 	typename deque<T, Allocator, kDequeSubarraySize>::const_reference
 	deque<T, Allocator, kDequeSubarraySize>::operator[](size_type n) const
 	{
-		#if EASTL_EMPTY_REFERENCE_ASSERT_ENABLED    // We allow the user to use a reference to v[0] of an empty container.
-			if(EASTL_UNLIKELY((n != 0) && n >= (size_type)(mItEnd - mItBegin)))
+		#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
+			if (EASTL_UNLIKELY(n >= (size_type)(mItEnd - mItBegin)))
 				EASTL_FAIL_MSG("deque::operator[] -- out of range");
 		#elif EASTL_ASSERT_ENABLED
-			if(EASTL_UNLIKELY(n >= (size_type)(mItEnd - mItBegin)))
+			// We allow the user to use a reference to deque[0] of an empty container.
+			if (EASTL_UNLIKELY((n != 0) && n >= (size_type)(mItEnd - mItBegin)))
 				EASTL_FAIL_MSG("deque::operator[] -- out of range");
 		#endif
 
@@ -1588,11 +1590,11 @@ namespace eastl
 	typename deque<T, Allocator, kDequeSubarraySize>::reference
 	deque<T, Allocator, kDequeSubarraySize>::front()
 	{
-		#if EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-			// We allow the user to reference an empty container.
-		#elif EASTL_ASSERT_ENABLED
-			if(EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
+		#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
+			if (EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
 				EASTL_FAIL_MSG("deque::front -- empty deque");
+		#else
+			// We allow the user to reference an empty container.
 		#endif
 
 		return *mItBegin;
@@ -1603,11 +1605,11 @@ namespace eastl
 	typename deque<T, Allocator, kDequeSubarraySize>::const_reference
 	deque<T, Allocator, kDequeSubarraySize>::front() const
 	{
-		#if EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-			// We allow the user to reference an empty container.
-		#elif EASTL_ASSERT_ENABLED
-			if(EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
+		#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
+			if (EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
 				EASTL_FAIL_MSG("deque::front -- empty deque");
+		#else
+			// We allow the user to reference an empty container.
 		#endif
 
 		return *mItBegin;
@@ -1618,11 +1620,11 @@ namespace eastl
 	typename deque<T, Allocator, kDequeSubarraySize>::reference
 	deque<T, Allocator, kDequeSubarraySize>::back()
 	{
-		#if EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-			// We allow the user to reference an empty container.
-		#elif EASTL_ASSERT_ENABLED
-			if(EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
+		#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
+			if (EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
 				EASTL_FAIL_MSG("deque::back -- empty deque");
+		#else
+			// We allow the user to reference an empty container.
 		#endif
 
 		return *iterator(mItEnd, typename iterator::Decrement());
@@ -1633,11 +1635,11 @@ namespace eastl
 	typename deque<T, Allocator, kDequeSubarraySize>::const_reference
 	deque<T, Allocator, kDequeSubarraySize>::back() const
 	{
-		#if EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-			// We allow the user to reference an empty container.
-		#elif EASTL_ASSERT_ENABLED
-			if(EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
+		#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
+			if (EASTL_UNLIKELY((size_type)(mItEnd == mItBegin)))
 				EASTL_FAIL_MSG("deque::back -- empty deque");
+		#else
+			// We allow the user to reference an empty container.
 		#endif
 
 		return *iterator(mItEnd, typename iterator::Decrement());
@@ -2612,19 +2614,19 @@ namespace eastl
 	template <typename T, typename Allocator, unsigned kDequeSubarraySize>
 	inline bool operator==(const deque<T, Allocator, kDequeSubarraySize>& a, const deque<T, Allocator, kDequeSubarraySize>& b)
 	{
-		return ((a.size() == b.size()) && equal(a.begin(), a.end(), b.begin()));
+		return ((a.size() == b.size()) && eastl::equal(a.begin(), a.end(), b.begin()));
 	}
 
 	template <typename T, typename Allocator, unsigned kDequeSubarraySize>
 	inline bool operator!=(const deque<T, Allocator, kDequeSubarraySize>& a, const deque<T, Allocator, kDequeSubarraySize>& b)
 	{
-		return ((a.size() != b.size()) || !equal(a.begin(), a.end(), b.begin()));
+		return ((a.size() != b.size()) || !eastl::equal(a.begin(), a.end(), b.begin()));
 	}
 
 	template <typename T, typename Allocator, unsigned kDequeSubarraySize>
 	inline bool operator<(const deque<T, Allocator, kDequeSubarraySize>& a, const deque<T, Allocator, kDequeSubarraySize>& b)
 	{
-		return lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+		return eastl::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 	}
 
 	template <typename T, typename Allocator, unsigned kDequeSubarraySize>
@@ -2649,6 +2651,25 @@ namespace eastl
 	inline void swap(deque<T, Allocator, kDequeSubarraySize>& a, deque<T, Allocator, kDequeSubarraySize>& b)
 	{
 		a.swap(b);
+	}
+
+	///////////////////////////////////////////////////////////////////////
+	// erase / erase_if
+	//
+	// https://en.cppreference.com/w/cpp/container/deque/erase2
+	///////////////////////////////////////////////////////////////////////
+	template <class T, class Allocator, class U>
+	void erase(deque<T, Allocator>& c, const U& value)
+	{
+		// Erases all elements that compare equal to value from the container.
+		c.erase(eastl::remove(c.begin(), c.end(), value), c.end());
+	}
+
+	template <class T, class Allocator, class Predicate>
+	void erase_if(deque<T, Allocator>& c, Predicate predicate)
+	{
+		// Erases all elements that satisfy the predicate pred from the container.
+		c.erase(eastl::remove_if(c.begin(), c.end(), predicate), c.end());
 	}
 
 

@@ -1,0 +1,19 @@
+[requires]
+glfw/3.3.2
+eastl/3.17.06
+volk/1.2.170
+fmt/7.1.3
+glm/0.9.9.8
+spirv-cross/20210115
+openfbx/cci.20210426
+
+[generators]
+cmake_multi
+
+[options]
+#poco:shared=True
+#openssl:shared=True
+
+[imports]
+., license* -> ../licenses @ folder=True, ignore_case=True
+include, * -> ../include @ ignore_case=True

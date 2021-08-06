@@ -49,20 +49,23 @@ Ravine is a graphics framework built with Vulkan:
 ---
 
 ## TODO(s):
- - Integrate with [Ravine ECS](https://github.com/gabriellanzer/Ravine-ECS) architecture
- - Individual update rate for UI (render fixed in 60FPS, blit every other frames)
- - Optimize animations performance
- - Scene Graph (of sorts, ECS based)
- - VkPipeline abstraction and boilerplate for ease of use
- - Node Editor for:
-   - Render Pass Graph
-   - Animation State Machines
- - Resource Manager (integrated with ECS)
- - Audio (duh)
-   - 2D/3D Sound Sources
-   - 7.1 Spatial Support
-   - Mixers and Audio Source Pools
- - PBR default pipeline
- - Render Pass with deferred renering
- - Get rid of the 2K lines *ravine.cpp* file
- - Project a layer of abstraction for DirectX 12.0
+- [ ] Integrate with [Ravine ECS](https://github.com/gabriellanzer/Ravine-ECS) architecture
+- [ ] Individual update rate for UI (render fixed in 60FPS, blit every other frames)
+- [ ] Optimize animations performance
+- [ ] Scene Graph (of sorts, ECS based)
+- [ ] VkPipeline abstraction and boilerplate for ease of use
+- [ ] Resource Manager (integrated with ECS)
+- [ ] PBR default pipeline
+- [ ] Render Pass with deferred renering
+- [ ] Get rid of the 2K lines *ravine.cpp* file
+- [ ] Project a layer of abstraction for DirectX 12.0
+---
+### Node Editor for:
+  - [ ] Render Pass Graph
+  - [ ] Animation State Machines
+---
+### Audio (duh)
+  - [ ] 2D/3D Sound Sources
+  - [ ] HRTF Support
+  - [ ] Mixers and Audio Source Pools
+---

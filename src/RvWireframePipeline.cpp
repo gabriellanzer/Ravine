@@ -5,6 +5,7 @@
 
 //Ravine Systems
 #include "RvTools.h"
+#include "vulkan/vulkan_core.h"
 
 //STD Include
 #include <stdexcept>
@@ -12,11 +13,9 @@
 RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, VkSampleCountFlagBits sampleCount, VkDescriptorSetLayout* descriptorSetLayout, size_t descriptorSetLayoutCount, VkRenderPass renderPass, const vector<char>& vertShaderCode, const vector<char>& fragShaderCode) : device(&device)
 {
 	//ShaderModules
-	vector<char> vertexShader = rvTools::compileShaderText("Wireframe Vertex Shader", vertShaderCode,
-		shaderc_shader_kind::shaderc_vertex_shader, "main");
+	vector<char> vertexShader = rvTools::GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderCode);
 	vertModule = rvTools::createShaderModule(device.handle, vertexShader);
-	vector<char> fragmentShader = rvTools::compileShaderText("Wireframe Fragment Shader", fragShaderCode,
-		shaderc_shader_kind::shaderc_fragment_shader, "main");
+	vector<char> fragmentShader = rvTools::GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderCode);
 	fragModule = rvTools::createShaderModule(device.handle, fragmentShader);
 
 	//Shader Stage creation (assign shader modules to vertex or fragment shader stages in the pipeline).
@@ -38,8 +37,8 @@ RvWireframePipeline::RvWireframePipeline(RvDevice& device, VkExtent2D extent, Vk
 	//Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Vertex_input
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	auto bindingDescription = RvSkinnedVertexColored::getBindingDescription();
-	auto attributeDescriptions = RvSkinnedVertexColored::getAttributeDescriptions();
+	auto bindingDescription = RvVertexColored::getBindingDescription();
+	auto attributeDescriptions = RvVertexColored::getAttributeDescriptions();
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;

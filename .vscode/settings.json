@@ -1,3 +1,4 @@
 {
-	"cmake.configureOnOpen": true
+	"cmake.configureOnOpen": false,
+	"cmake.preferredGenerators": [ "Ninja" ]
 }

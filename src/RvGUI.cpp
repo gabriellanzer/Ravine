@@ -1,6 +1,7 @@
 #include "RvGui.h"
 
 //Hash Includes
+#include "RvDynamicBuffer.h"
 #include "crc32.hpp"
 
 //Ravine Include
@@ -35,15 +36,15 @@ RvGui::~RvGui()
 	for (size_t i = 0; i < swapChainImagesCount; i++)
 	{
 		//Destroy Vertex Buffers
-		vkDestroyBuffer(device->handle, vertexBuffer[i].handle, nullptr);
-		vkFreeMemory(device->handle, vertexBuffer[i].memory, nullptr);
+		vkDestroyBuffer(device->handle, vertexBuffers[i].handle, nullptr);
+		vkFreeMemory(device->handle, vertexBuffers[i].memory, nullptr);
 
 		//Destroy Index Buffers
-		vkDestroyBuffer(device->handle, indexBuffer[i].handle, nullptr);
-		vkFreeMemory(device->handle, indexBuffer[i].memory, nullptr);
+		vkDestroyBuffer(device->handle, indexBuffers[i].handle, nullptr);
+		vkFreeMemory(device->handle, indexBuffers[i].memory, nullptr);
 	}
-	vertexBuffer.clear();
-	indexBuffer.clear();
+	vertexBuffers.clear();
+	indexBuffers.clear();
 
 	//Cleanup Pointers
 	device = nullptr;
@@ -90,8 +91,8 @@ void RvGui::init(VkSampleCountFlagBits samplesCount)
 
 	//Reset Buffers
 	swapChainImagesCount = swapChain->images.size();
-	vertexBuffer.resize(swapChainImagesCount);
-	indexBuffer.resize(swapChainImagesCount);
+	vertexBuffers.resize(swapChainImagesCount);
+	indexBuffers.resize(swapChainImagesCount);
 
 	//Create Cmd Buffers for drwaing
 	createCmdBuffers();
@@ -274,11 +275,11 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 	ImDrawData* imDrawData = ImGui::GetDrawData();
 
 	// Note: Alignment is done inside buffer creation
-	VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
-	VkDeviceSize indexBufferSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
+	VkDeviceSize vtxRscSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
+	VkDeviceSize idxRscSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
 
 	//Avoid drawing empty buffers
-	if ((vertexBufferSize == 0) || (indexBufferSize == 0)) {
+	if ((vtxRscSize == 0) || (idxRscSize == 0)) {
 		return;
 	}
 
@@ -310,19 +311,20 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 	}
 
 	//Recreate Buffers if allocated size is not enough
-	if(vertexBuffer[frameIndex].bufferSize < vertexBufferSize)
+	RvDynamicBuffer& vertexBuf = vertexBuffers[frameIndex];
+	if(vertexBuf.bufferSize < vtxRscSize)
 	{
 		//Cleanup from old buffer
-		vkDestroyBuffer(device->handle, vertexBuffer[frameIndex].handle, nullptr);
-		vkFreeMemory(device->handle, vertexBuffer[frameIndex].memory, nullptr);
+		vkDestroyBuffer(device->handle, vertexBuf.handle, nullptr);
+		vkFreeMemory(device->handle, vertexBuf.memory, nullptr);
 
 		//Create buffer on GPU
-		vertexBuffer[frameIndex] = device->createDynamicBuffer(vertexBufferSize,
+		vertexBuf = device->createDynamicBuffer(vtxRscSize,
 			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 
 	//Copy data to buffers
-	rvTools::copyToMemory(*device, reinterpret_cast<char*>(vtxRsc), vertexBuffer[frameIndex].memory, vertexBufferSize);
+	rvTools::copyToMemory(*device, reinterpret_cast<char*>(vtxRsc), vtxRscSize, vertexBuf);
 
 	//Free-up memory
 	delete[] vtxRsc;
@@ -339,19 +341,20 @@ void RvGui::updateBuffers(uint32_t frameIndex)
 	}
 
 	//Recreate Buffers if allocated size is not enough
-	if(indexBuffer[frameIndex].bufferSize < indexBufferSize)
+	RvDynamicBuffer& indexBuf = indexBuffers[frameIndex];
+	if(indexBuf.bufferSize < idxRscSize)
 	{
 		//Cleanup from old buffer
-		vkDestroyBuffer(device->handle, indexBuffer[frameIndex].handle, nullptr);
-		vkFreeMemory(device->handle, indexBuffer[frameIndex].memory, nullptr);
+		vkDestroyBuffer(device->handle, indexBuf.handle, nullptr);
+		vkFreeMemory(device->handle, indexBuf.memory, nullptr);
 
 		//Create buffer on GPU
-		indexBuffer[frameIndex] = device->createDynamicBuffer(indexBufferSize,
+		indexBuf = device->createDynamicBuffer(idxRscSize,
 			static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 	
 	//Copy data to buffers
-	rvTools::copyToMemory(*device, reinterpret_cast<char*>(idxRsc), indexBuffer[frameIndex].memory, indexBufferSize);
+	rvTools::copyToMemory(*device, reinterpret_cast<char*>(idxRsc), idxRscSize, indexBuf);
 
 	//Free-up memory
 	delete[] idxRsc;
@@ -403,8 +406,8 @@ void RvGui::recordCmdBuffers(uint32_t frameIndex)
 	if (imDrawData->CmdListsCount > 0) {
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(cmdBuffers[frameIndex], 0, 1, &vertexBuffer[frameIndex].handle, offsets);
-		vkCmdBindIndexBuffer(cmdBuffers[frameIndex], indexBuffer[frameIndex].handle, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindVertexBuffers(cmdBuffers[frameIndex], 0, 1, &vertexBuffers[frameIndex].handle, offsets);
+		vkCmdBindIndexBuffer(cmdBuffers[frameIndex], indexBuffers[frameIndex].handle, 0, VK_INDEX_TYPE_UINT16);
 
 		for (int32_t i = 0; i < imDrawData->CmdListsCount; i++)
 		{

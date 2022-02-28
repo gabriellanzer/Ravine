@@ -1,8 +1,8 @@
-#include <eastl/algorithm.h>
-#include <eastl/array.h>
-#include <eastl/numeric.h>
+//STD Includes
+#include "RvStdDefs.h"
 
-using eastl::array;
+#include <EASTL/algorithm.h>
+#include <EASTL/numeric.h>
 
 // Generates a lookup table for the checksums of all 8-bit values.
 __inline array<uint32_t, 256> generate_crc_lookup_table() noexcept

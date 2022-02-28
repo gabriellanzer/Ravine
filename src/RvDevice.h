@@ -1,11 +1,8 @@
 #ifndef RAVINE_DEVICE_H
 #define RAVINE_DEVICE_H
 
-//EASTL Includes
-#include <eastl/vector.h>
-#include <eastl/string.h>
-using eastl::vector;
-using eastl::string;
+//STD Includes
+#include "RvStdDefs.h"
 
 //Vulkan Includes
 #include "volk.h"
@@ -14,13 +11,14 @@ using eastl::string;
 #include "RvPersistentBuffer.h"
 #include "RvDynamicBuffer.h"
 #include "RvTexture.h"
+#include "vulkan/vulkan_core.h"
 
 class RvDevice
 {
 private:
 	VkSurfaceKHR* surface;
 	void createCommandPool();
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	VkDeviceSize createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
 public:
 	RvDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface);

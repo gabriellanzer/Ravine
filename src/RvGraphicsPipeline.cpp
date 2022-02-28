@@ -2,6 +2,7 @@
 
 #include <fmt/printf.h>
 #include "RvTools.h"
+#include "vulkan/vulkan_core.h"
 
 RvGraphicsPipeline::RvGraphicsPipeline(const RvDevice* device, const VkPipeline basePipeline) : device(device), basePipeline(basePipeline)
 {
@@ -112,9 +113,9 @@ void RvGraphicsPipeline::forceAttachShader(const VkShaderStageFlagBits stageFlag
 void RvGraphicsPipeline::detachShader(const VkShaderModule * shaderModule)
 {
 	int32_t i = 0;
-	vector<const VkShaderModule*>::const_iterator mIt = nullptr;
-	vector<VkShaderStageFlagBits>::const_iterator sIt = nullptr;
-	vector<const char*>::const_iterator eIt = nullptr;
+	vector<const VkShaderModule*>::const_iterator mIt;
+	vector<VkShaderStageFlagBits>::const_iterator sIt;
+	vector<const char*>::const_iterator eIt;
 	for (mIt = attachedShaderModules.begin(), sIt = attachedShaderStageBits.begin(), eIt = shaderEntryPoints.begin();
 		mIt != attachedShaderModules.end(); mIt++, sIt++, eIt++)
 	{
@@ -145,13 +146,12 @@ RvGraphicsPipeline* RvGraphicsPipeline::defaultGraphicsPipeline(RvDevice& device
 		
 		//ShaderModules
 		vector<char> vertexCode = rvTools::readFile("../data/shaders/skinned_tex_color.vert");
-		vector<char> vertexShader = rvTools::compileShaderText("Polygon Vertex Shader", vertexCode,
-			shaderc_shader_kind::shaderc_vertex_shader, "main");
+		vector<char> vertexShader = rvTools::GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertexCode);
 		VkShaderModule vertexModule = rvTools::createShaderModule(device.handle, vertexShader);
 		defaultPipeline->attachShader(VK_SHADER_STAGE_VERTEX_BIT, &vertexModule, "main");
+
 		vector<char> fragmentCode = rvTools::readFile("../data/shaders/phong_tex_color.frag");
-		vector<char> fragmentShader = rvTools::compileShaderText("Polygon Fragment Shader", fragmentCode,
-			shaderc_shader_kind::shaderc_fragment_shader, "main");
+		vector<char> fragmentShader = rvTools::GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentCode);
 		VkShaderModule fragModule = rvTools::createShaderModule(device.handle, fragmentShader);
 		defaultPipeline->attachShader(VK_SHADER_STAGE_FRAGMENT_BIT, &fragModule, "main");
 	}
@@ -169,7 +169,7 @@ VkPipelineCache RvGraphicsPipeline::defaultPipelineCache(RvDevice& device)
 		//Try loading cache from disk
 		try
 		{
-			vector<char> data = rvTools::readFile("..\data\cache\default.pipeline");
+			vector<char> data = rvTools::readFile("..\\data\\cache\\default.pipeline");
 			cacheCreateInfo.initialDataSize = data.size();
 			cacheCreateInfo.pInitialData = data.data();
 		}

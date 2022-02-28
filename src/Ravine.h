@@ -1,107 +1,104 @@
 #ifndef RAVINE_H
 #define RAVINE_H
 
-//Vulkan Include
+// GLFW Includes
+#define VK_NO_PROTOTYPES
+#define GLFW_INCLUDE_VULKAN
+#include "GLFW/glfw3.h"
+
+// Vulkan Includes
 #include "volk.h"
 
-//GLFW Includes
-#define GLFW_INCLUDE_VULKAN
-#include <glfw/glfw3.h>
+// STD Includes
+#include "RvStdDefs.h"
 
-//EASTL includes
-#include <eastl/vector.h>
-#include <eastl/array.h>
-#include <eastl/string.h>
+// OpenFBX Includes
+#include "ofbx.h"
 
-using eastl::string;
-using eastl::vector;
-using eastl::array;
-
-
-//Ravine Includes
-#include "RvDataTypes.h"
+// Ravine Includes
 #include "RvAnimationTools.h"
-#include "RvDevice.h"
-#include "RvSwapChain.h"
-#include "RvPolygonPipeline.h"
-#include "RvWireframePipeline.h"
-#include "RvLinePipeline.h"
-#include "RvWindow.h"
-#include "RvTexture.h"
 #include "RvCamera.h"
-#include "RvGui.h"
+#include "RvDataTypes.h"
+#include "RvDevice.h"
+#include "RvGUI.h"
+#include "RvLinePipeline.h"
+#include "RvPolygonPipeline.h"
 #include "RvRenderPass.h"
+#include "RvSwapChain.h"
+#include "RvTexture.h"
+#include "RvWindow.h"
+#include "RvWireframePipeline.h"
 
-//Math defines
-#define F_MAX(a,b)            (((a) > (b)) ? (a) : (b))
-#define F_MIN(a,b)            (((a) < (b)) ? (a) : (b))
 
-//Assimp Includes
-#include <assimp/scene.h>           // Output data structure
+// Math defines
+#define F_MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define F_MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-//Specific usages of Ravine library
-using namespace rvTools::animation;
+// Specific usages of Ravine library
+// using namespace rvTools::animation;
 
 class Ravine
 {
-public:
+  public:
 	Ravine();
 	~Ravine();
 
 	void run();
 
-private:
-
-	//Todo: Move to Window
+  private:
+	// Todo: Move to Window
 	const int WIDTH = 1920;
 	const int HEIGHT = 1080;
 	const string WINDOW_NAME = "Ravine Engine";
 
-	//Ravine objects
-	RvWindow* window;
-	//Todo: Move to VULKAN APP
-	RvDevice* device;
-	RvSwapChain* swapChain;
-	RvRenderPass* renderPass;
+	// Ravine objects
+	RvWindow* window = nullptr;
+	// Todo: Move to VULKAN APP
+	RvDevice* device = nullptr;
+	RvSwapChain* swapChain = nullptr;
+	RvRenderPass* renderPass = nullptr;
 
-	//TODO: Fix Creation flow with shaders integration
+	// TODO: Fix Creation flow with shaders integration
 	vector<char> skinnedTexColCode;
 	vector<char> skinnedWireframeCode;
 	vector<char> staticTexColCode;
 	vector<char> staticWireframeCode;
 	vector<char> phongTexColCode;
 	vector<char> solidColorCode;
-	RvPolygonPipeline* skinnedGraphicsPipeline;
-	RvWireframePipeline* skinnedWireframeGraphicsPipeline;
-	RvPolygonPipeline* staticGraphicsPipeline;
-	RvWireframePipeline* staticWireframeGraphicsPipeline;
-	RvLinePipeline* staticLineGraphicsPipeline;
+	RvPolygonPipeline* skinnedGraphicsPipeline = nullptr;
+	RvWireframePipeline* skinnedWireframeGraphicsPipeline = nullptr;
+	RvPolygonPipeline* staticGraphicsPipeline = nullptr;
+	RvWireframePipeline* staticWireframeGraphicsPipeline = nullptr;
+	RvLinePipeline* staticLineGraphicsPipeline = nullptr;
 
-	//Mouse parameters
-	//Todo: Move to INPUT
+	// Mouse parameters
+	// Todo: Move to INPUT
 	double lastMouseX = 0, lastMouseY = 0;
 	double mouseX, mouseY;
 
-	//Camera
-	RvCamera* camera;
+	// Camera
+	RvCamera* camera = nullptr;
 
-	//GUI
-	RvGui* gui;
+	// GUI
+	RvGui* gui = nullptr;
 
-	//PROTOTYPE PRESENTATION STUFF
-	bool staticSolidPipelineEnabled = false;
+	// PROTOTYPE PRESENTATION STUFF
+	bool staticSolidPipelineEnabled = true;
 	bool staticWiredPipelineEnabled = false;
-	bool skinnedSolidPipelineEnabled = true;
+	bool skinnedSolidPipelineEnabled = false;
 	bool skinnedWiredPipelineEnabled = false;
 	glm::vec3 uniformPosition = glm::vec3(0);
 	glm::vec3 uniformScale = glm::vec3(0.01f, 0.01f, 0.01f);
 	glm::vec3 uniformRotation = glm::vec3(0, 0, 0);
-	//PROTOTYPE PRESENTATION STUFF
+	// PROTOTYPE PRESENTATION STUFF
 
-	const aiScene* scene;
-	//Todo: Move to MESH
-	RvSkinnedMeshColored* meshes;
-	uint32_t meshesCount;
+	ofbx::IScene* scene = nullptr;
+	const ofbx::IElement* selectedElement = nullptr;
+	const ofbx::Object* selectedObject = nullptr;
+
+	// Todo: Move to MESH
+	RvMeshColored* meshes = nullptr;
+	uint32_t meshesCount = 0;
 	vector<string> texturesToLoad;
 
 	// Animation interpolation helper
@@ -114,41 +111,41 @@ private:
 
 #pragma region Attributes
 
-	//Vulkan Instance
-	//TODO: Move to VULKAN APP
+	// Vulkan Instance
+	// TODO: Move to VULKAN APP
 	VkInstance instance;
 
-	//Descriptors related content
+	// Descriptors related content
 	VkDescriptorSetLayout globalDescriptorSetLayout;
 	VkDescriptorSetLayout materialDescriptorSetLayout;
 	VkDescriptorSetLayout modelDescriptorSetLayout;
 	VkDescriptorPool descriptorPool;
-	vector<VkDescriptorSet> descriptorSets; //Automatically freed with descriptor pool
+	vector<VkDescriptorSet> descriptorSets; // Automatically freed with descriptor pool
 
-	//Commands Buffers and it's Pool
-	//TODO: Move to COMMAND BUFFER
+	// Commands Buffers and it's Pool
+	// TODO: Move to COMMAND BUFFER
 	vector<VkCommandBuffer> primaryCmdBuffers;
 	vector<VkCommandBuffer> secondaryCmdBuffers;
 
-	//TODO: Optimally we should use a single buffer with offsets for vertices and indices
-	//Reference: https://developer.nvidia.com/vulkan-memory-management
+	// TODO: Optimally we should use a single buffer with offsets for vertices and indices
+	// Reference: https://developer.nvidia.com/vulkan-memory-management
 
-	//TODO: Move vertex and index buffer in MESH class
-	//Verter buffer
+	// TODO: Move vertex and index buffer in MESH class
+	// Verter buffer
 	vector<RvPersistentBuffer> vertexBuffers;
-	//Index buffer
+	// Index buffer
 	vector<RvPersistentBuffer> indexBuffers;
 
-	//Uniform buffers (per swap chain image)
-	//TODO: Move to UNIFORM
+	// Uniform buffers (per swap chain image)
+	// TODO: Move to UNIFORM
 	vector<RvDynamicBuffer> globalBuffers;
 	vector<RvDynamicBuffer> materialsBuffers;
 	vector<RvDynamicBuffer> modelsBuffers;
 	vector<RvDynamicBuffer> animationsBuffers;
 
-	//Texture related objects
+	// Texture related objects
 	uint32_t mipLevels;
-	RvTexture *textures;
+	RvTexture* textures;
 #define RV_MAX_IMAGES_COUNT 32
 	uint32_t texturesSize;
 	VkSampler textureSampler;
@@ -159,90 +156,94 @@ private:
 
 	void initWindow();
 
-	//Setup Vulkan Pipeline
+	// Setup Vulkan Pipeline
 	void initVulkan();
 
-	//Create Vulkan Instance for the start of the application
+	// Create Vulkan Instance for the start of the application
 	void createInstance();
 
-	//Get a suitable device and set it up
+	// Get a suitable device and set it up
 	void pickPhysicalDevice();
 
-	//Is this device suitable to this application needs
+	// Is this device suitable to this application needs
 	bool isDeviceSuitable(VkPhysicalDevice device);
 
-	//Checks 
+	// Checks
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 
-	//Recreate swap chain
+	// Recreate swap chain
 	void recreateSwapChain();
 
-	//Creating descriptor binding layouts (uniform layouts)
+	// Creating descriptor binding layouts (uniform layouts)
 	void createDescriptorSetLayout();
 
-	//Creating pool for descriptor sets (uniforms bindings)
+	// Creating pool for descriptor sets (uniforms bindings)
 	void createDescriptorPool();
 
-	//Creating descriptors sets (uniforms bindings)
+	// Creating descriptors sets (uniforms bindings)
 	void createDescriptorSets();
 
-	//Load scene file and populates meshes vector
+	// Load scene file and populates meshes vector
 	bool loadScene(const string& filePath);
-	void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
-	//TODO: Move to Blend-tree
-	void boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms);
-	void readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode, const aiMatrix4x4& parentTransform);
+	// void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
+	// //TODO: Move to Blend-tree
+	// void boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms);
+	// void readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode,
+	// const aiMatrix4x4& parentTransform);
 
-	//Create vertex buffer
+	// Create vertex buffer
 	void createVertexBuffer();
 
-	//Create index buffer
+	// Create index buffer
 	void createIndexBuffer();
 
-	//Create uniform buffers
+	// Create uniform buffers
 	void createUniformBuffers();
 
-	//Load image and upload into Vulkan Image Object
+	// Load image and upload into Vulkan Image Object
 	void loadTextureImages();
 
-	//Create texture sampler - interface for extracting colors from a texture
+	// Create texture sampler - interface for extracting colors from a texture
 	void createTextureSampler();
 
-	//Creates command buffers array
+	// Creates command buffers array
 	void allocateCommandBuffers();
 
-	//Records new draw commands
+	// Records new draw commands
 	void recordCommandBuffers(uint32_t currentFrame);
 
-	//Main application loop
+	// Main application loop
 	void mainLoop();
 
-	//Gui Calls
+	// Gui Calls
+	void showObjectGUI(const ofbx::Object* object);
+	void showObjectsGUI(const ofbx::IScene* scene);
+	void showFbxGUI(ofbx::IElementProperty* prop);
+	void showFbxGUI(const ofbx::IElement* parent);
 	void drawGuiElements();
 
-	//Acquires an image from the swap chain, execute command buffer, returns the image for presentation
+	// Acquires an image from the swap chain, execute command buffer, returns the image for presentation
 	void drawFrame();
 
-	//First person camera setup
+	// First person camera setup
 	void setupFpsCam();
 
-	//Updates uniform buffer for given image
+	// Updates uniform buffer for given image
 	void updateUniformBuffer(uint32_t currentFrame);
 
-	//Finalize
+	// Finalize
 	void cleanup();
 
 #pragma endregion
 
 #pragma region Static
 
-	//Returns a list of extensions required by the Vulkan Instance
+	// Returns a list of extensions required by the Vulkan Instance
 	static vector<const char*> getRequiredInstanceExtensions();
 
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
 #pragma endregion
-
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "RvDevice.h"
+#include "vulkan/vulkan_core.h"
 
 //EASTL Includes
 #include <eastl/algorithm.h>
@@ -91,7 +92,7 @@ void RvDevice::createCommandPool()
 	}
 }
 
-void RvDevice::createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
+VkDeviceSize RvDevice::createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
                             VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
 	//Defining buffer creation info
@@ -121,6 +122,9 @@ void RvDevice::createBuffer(const VkDeviceSize size, const VkBufferUsageFlags us
 
 	//Binding buffer memory
 	vkBindBufferMemory(handle, buffer, bufferMemory, 0);
+
+	// Return size of allocated memory
+	return memRequirements.size;
 }
 
 void RvDevice::clear()
@@ -176,7 +180,7 @@ void RvDevice::createImage(VkExtent3D extent, uint32_t mipLevels, VkSampleCountF
 RvDynamicBuffer RvDevice::createDynamicBuffer(VkDeviceSize bufferSize, VkBufferUsageFlagBits usageFlags, VkMemoryPropertyFlagBits memoryPropertyFlags)
 {
 	RvDynamicBuffer newBuffer(bufferSize);
-	createBuffer(bufferSize, usageFlags, memoryPropertyFlags, newBuffer.handle, newBuffer.memory);
+	newBuffer.allocatedSize = createBuffer(bufferSize, usageFlags, memoryPropertyFlags, newBuffer.handle, newBuffer.memory);
 	return newBuffer;
 }
 

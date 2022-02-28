@@ -29,7 +29,8 @@ glm::quat RvCamera::GetLookRot() const
 
 glm::mat4 RvCamera::GetViewMatrix() const
 {
-	return  glm::mat4() * glm::lookAt(glm::vec3(pos),
+	glm::mat4 lookAt = glm::lookAt(glm::vec3(pos),
 		glm::vec3(pos) + GetLookRot() * glm::vec3(0, 0, -1),
 		glm::vec3(0, 1, 0));
+	return lookAt;
 }

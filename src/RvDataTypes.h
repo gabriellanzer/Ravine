@@ -8,29 +8,22 @@ using glm::vec3;
 #include <glm/gtc/quaternion.hpp>
 using glm::quat;
 
-//EASTL Includes
-#include <eastl/array.h>
-#include <eastl/vector.h>
-#include <eastl/map.h>
-#include <eastl/string.h>
+//STD Includes
+#include "RvStdDefs.h"
 
 //Vulkan Includes
 #include "volk.h"
 
-//Assimp Includes
-#include <assimp/scene.h>
-
-using eastl::array;
-using eastl::vector;
-using eastl::map;
-using eastl::string;
+/* TODO: Add a new Animation Solution include
+// //Assimp Includes
+// #include <assimp/scene.h>
 
 #pragma region RvAnimation
 
 struct RvAnimation
 {
 	aiAnimation* aiAnim;
-	//Map<boneId, singleBoneAnimationFrames/*aiNodeAnim*/>
+	//Map<boneId, singleBoneAnimationFrames/>
 };
 
 struct RvBoneInfo
@@ -41,20 +34,22 @@ struct RvBoneInfo
 
 #pragma endregion
 
+*/
+
 #pragma region RvBaseMesh
 
 template<typename RvVertexType>
 struct RvBaseMesh
 {
-	RvVertexType* vertices;
-	uint32_t	vertexCount;
+	RvVertexType* vertices = nullptr;
+	uint32_t	vertexCount = 0;
 
-	uint32_t*	indices;
-	uint32_t	indexCount;
+	uint32_t*	indices = nullptr;
+	uint32_t	indexCount = 0;
 
 	//TODO: Move to RvMaterialState
-	uint32_t*	textureIds;
-	uint32_t	texturesCount;
+	uint32_t*	textureIds = nullptr;
+	uint32_t	texturesCount = 0;
 };
 
 #pragma endregion
@@ -161,6 +156,8 @@ struct RvMeshColored : RvBaseMesh<RvVertexColored>
 };
 
 #pragma endregion
+
+/*
 
 #pragma region RvSkinnedMesh
 
@@ -338,5 +335,7 @@ struct RvSkinnedMeshColored : RvBaseMesh<RvSkinnedVertexColored>
 };
 
 #pragma endregion
+
+*/
 
 #endif

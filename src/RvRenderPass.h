@@ -4,10 +4,8 @@
 //Vulkan Includes
 #include "volk.h"
 
-//EASTL Includes
-#include <eastl/vector.h>
-
-using eastl::vector;
+//STD Includes
+#include "RvStdDefs.h"
 
 //Ravine Includes
 #include "RvDevice.h"

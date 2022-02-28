@@ -1,9 +1,8 @@
 #ifndef RV_SWAPCHAIN_H
 #define RV_SWAPCHAIN_H
 
-//EASTL Includes
-#include <eastl/vector.h>
-using eastl::vector;
+//STD Includes
+#include "RvStdDefs.h"
 
 //Vulkan Includes
 #include "volk.h"

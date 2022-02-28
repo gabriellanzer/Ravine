@@ -1,9 +1,8 @@
 #ifndef RV_CONFIG_H
 #define RV_CONFIG_H
 
-//EASTL Includes
-#include <eastl/vector.h>
-using eastl::vector;
+//STD Includes
+#include "RvStdDefs.h"
 
 //Vulkan Includes
 #include "volk.h"

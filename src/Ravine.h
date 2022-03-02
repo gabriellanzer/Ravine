@@ -147,7 +147,7 @@ class Ravine
 	uint32_t mipLevels;
 	RvTexture* textures;
 #define RV_MAX_IMAGES_COUNT 32
-	uint32_t texturesSize;
+	size_t texturesSize;
 	VkSampler textureSampler;
 
 #pragma endregion

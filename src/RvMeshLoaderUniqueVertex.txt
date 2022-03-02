@@ -1,0 +1,214 @@
+bool Ravine::loadScene(const string& filePath)
+{
+	auto buffer = rvTools::readFile(filePath);
+	scene = ofbx::load((ofbx::u8*)buffer.data(), static_cast<int>(buffer.size()),
+			   (ofbx::u64)ofbx::LoadFlags::TRIANGULATE);
+	if (scene == nullptr)
+	{
+		return false;
+	}
+
+	// Load mesh
+	meshesCount = scene->getMeshCount();
+	meshes = new RvMeshColored[meshesCount];
+
+	// Load each mesh
+	for (uint32_t i = 0; i < meshesCount; i++)
+	{
+		// Default Initialize
+		meshes[i] = {};
+
+		// Hold reference
+		const ofbx::Mesh* mesh = scene->getMesh(i);
+		const ofbx::Geometry* geom = mesh->getGeometry();
+		
+		// Allocate data structures
+		int vertexCount = geom->getVertexCount();
+		int indexCount = geom->getIndexCount();
+		meshes[i].vertexCount = vertexCount;
+		meshes[i].vertices = new RvVertexColored[indexCount];
+		meshes[i].indexCount = indexCount;
+		meshes[i].indices = new uint32_t[indexCount];
+
+		// In order to reconstruct the unique vertex information
+		// we recreate the index buffer and vertex buffer with two
+		// different look-up tables. One that serves as a linked
+		// list to all unique occurencies of a given vertex and
+		// another which maps the old indices to their positions to
+		// in new one (so we don't throw the index buffer cache to
+		// the garbage by just appending to the end of the buffer).
+		uint32_t* uniqueLUT = new uint32_t[indexCount];
+		for (int i = 0; i < indexCount; i++)
+		{
+			uniqueLUT[i] = UINT_MAX;
+		}
+		uint32_t* oldToNewLUT = new uint32_t[indexCount];
+		for (int i = 0; i < indexCount; i++)
+		{
+			oldToNewLUT[i] = i;
+		}
+		// Holds the amount of unique vertices generated
+		// used to offset vertex buffer translation
+		uint32_t uniqueOffset = 0;
+
+		// Setup vertex and index buffers
+		const ofbx::Vec3* verts = geom->getVertices();
+		const int* indices = geom->getFaceIndices();
+
+		// TODO: Query if the attributes are per-index or per-vertex
+		// UVs, colors and normals are per-index attributes
+		const ofbx::Vec2* uvs = geom->getUVs();
+		bool hasCoords = uvs != nullptr;
+		const ofbx::Vec4* cols = geom->getColors();
+		bool hasColors = cols != nullptr;
+		const ofbx::Vec3* norms = geom->getNormals();
+		bool hasNormals = norms != nullptr;
+
+		// Compute the unique vertices based on their attributes
+		for (int j = 0; j < indexCount; j++)
+		{
+			// Get current index
+			uint32_t origId = (indices[j] >= 0) ? indices[j] : ~indices[j];
+
+			// Traverse the old to new lut for this id
+			uint32_t index = oldToNewLUT[origId];
+
+			RvVertexColored& vertex = meshes[i].vertices[index];
+			glm::vec3 pos = {verts[origId].x, verts[origId].y, verts[origId].z};
+			glm::vec2 uv = hasCoords ? glm::vec2{uvs[j].x, uvs[j].y} : glm::vec2{0, 0};
+			glm::vec3 col = hasColors ? glm::vec3{cols[j].x, cols[j].y, cols[j].z} : glm::vec3{1, 1, 1};
+			glm::vec3 nor = hasNormals ? glm::vec3{norms[j].x, norms[j].y, norms[j].z} : glm::vec3{0, 0, 0};
+
+			// New occurency of this index, use offset to fetch slot.
+			// Can also happen when we have overriten an original id
+			// location with another unique vertex (so the positions
+			// don't match).
+			if (uniqueLUT[index] == UINT_MAX || pos != vertex.pos)
+			{
+				// Fetch a new index based on the offset
+				index = uniqueOffset;
+
+				// Ensure the old to new table has the new index
+				oldToNewLUT[origId] = index;
+
+				// Mark the LUT as valid (self-referencing)
+				uniqueLUT[index] = index;
+
+				// Create new vertex
+				vertex = meshes[i].vertices[index];
+				vertex.pos = pos;
+				vertex.texCoord = uv;
+				vertex.color = col;
+				vertex.normal = nor;
+				uniqueOffset++;
+			}
+			// Either positions match, or they don't. In case they
+			// don't, it means we need to look for new vertex slot
+			// for this original vertex. If they do, we need to go
+			// through the unique lut checking if the attributes
+			// match, or we will also look for a new vertex slot.
+			else
+			{
+				bool match = true;
+				// All attributes are equal if we have a match
+				match &= vertex.texCoord == uv;
+				match &= vertex.color == col;
+				match &= vertex.normal == nor;
+
+				// Stop list iteration if we have a match or
+				// reached the end of the list (index == lut)
+				while (!(match || uniqueLUT[index] == index))
+				{
+					// Fetch next vertex in the unique LUT
+					index = uniqueLUT[index];
+					vertex = meshes[i].vertices[index];
+
+					match = true;
+					match &= vertex.texCoord == uv;
+					match &= vertex.color == col;
+					match &= vertex.normal == nor;
+				}
+
+				// Since we could not find a match, e need to fetch
+				// a new slot and redirect the uniqueLUT to its pos.
+				// We don't update the oldToNewLUT here, we are not
+				// retargeting a new original vertex, we are making
+				// an unique copy of an existing one that has other
+				// attributes, requiring a new vertex slot.
+				if (!match)
+				{
+					// Point the uniqueLUT to our new slot id
+					uniqueLUT[index] = uniqueOffset;
+
+					// Fetch a new index based on the offset
+					index = uniqueOffset;
+
+					// Mark the LUT as valid (self-referencing)
+					uniqueLUT[index] = index;
+
+					// Create new vertex
+					vertex = meshes[i].vertices[index];
+					vertex.pos = pos;
+					vertex.texCoord = uv;
+					vertex.color = col;
+					vertex.normal = nor;
+					uniqueOffset++;
+				}
+			}
+
+			// Update the index buffer
+			meshes[i].indices[j] = index;
+		}
+
+		// New vertex count is marked by the unique offset
+		meshes[i].vertexCount = uniqueOffset;
+
+		// Register textures for late-loading (and generate texture Ids)
+		const ofbx::Material* mat = mesh->getMaterial(0);
+
+		// TODO: Change this for proper texture fetch logic
+		// Get the number of textures
+		uint32_t textureCounts = 3; // mat->GetTextureCount(aiTextureType_DIFFUSE);
+		meshes[i].texturesCount = textureCounts;
+		meshes[i].textureIds = new uint32_t[textureCounts];
+
+		// List each texture on the texturesToLoad list and hold texture ids
+		for (uint32_t tId = 0; tId < textureCounts; tId++)
+		{
+			const ofbx::Texture* tex = mat->getTexture((ofbx::Texture::TextureType)tId);
+			if (tex == nullptr)
+				continue;
+
+			int textureId = 0;
+			char texPath[128];
+			tex->getRelativeFileName().toString(texPath);
+
+			// Check if the texture is listed and set it's list id
+			bool listed = false;
+			for (auto it = texturesToLoad.begin(); it != texturesToLoad.end(); it++)
+			{
+				if (strcmp(it->data(), texPath) == 0)
+				{
+					listed = true;
+					break;
+				}
+
+				// Make sure to update textureId
+				textureId++;
+			}
+
+			// Hold textureId
+			meshes[i].textureIds[tId] = textureId;
+
+			// List texture if it isn't already
+			if (!listed)
+			{
+				texturesToLoad.push_back(texPath);
+			}
+		}
+
+		// 	loadBones(mesh, meshes[i]);
+	}
+
+	return true;
+}

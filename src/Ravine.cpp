@@ -10,7 +10,9 @@
 #include "RvDataTypes.h"
 #include "RvTools.h"
 #include "fmt/core.h"
+#include "glm/ext/vector_float3.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "vulkan/vulkan_core.h"
 
 // STB Includes
 #define STB_IMAGE_IMPLEMENTATION
@@ -335,7 +337,8 @@ void Ravine::recreateSwapChain()
 	swapChain->createSyncObjects();
 	swapChain->createImageViews();
 	const VkExtent3D extent = {swapChain->extent.width, swapChain->extent.height, 1};
-	renderPass->resizeAttachments(swapChain->imageViews.size(), extent, swapChain->imageViews.data());
+	renderPass->resizeAttachments(static_cast<uint32_t>(swapChain->imageViews.size()), extent,
+				      swapChain->imageViews.data());
 
 	// swapChain->createFramebuffers();
 	allocateCommandBuffers();
@@ -372,8 +375,8 @@ void Ravine::createDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets =
-	    swapChain->images.size() * (1 + meshesCount * 2); /*Global, Material (per mesh), Model (per mesh)*/
+	/*Global, Material (per mesh), Model Matrix (per mesh)*/
+	poolInfo.maxSets = static_cast<uint32_t>(swapChain->images.size()) * (1 + meshesCount * 4);
 
 	if (vkCreateDescriptorPool(device->handle, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
 	{
@@ -509,7 +512,8 @@ void Ravine::createDescriptorSets()
 		}
 
 		// Update the sets for this frame
-		vkUpdateDescriptorSets(device->handle, writesPerFrame, descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(writesPerFrame), descriptorWrites.data(),
+				       0, nullptr);
 
 		delete[] materialsInfo;
 		delete[] imageInfo;
@@ -613,7 +617,8 @@ void Ravine::createDescriptorSetLayout()
 bool Ravine::loadScene(const string& filePath)
 {
 	auto buffer = rvTools::readFile(filePath);
-	scene = ofbx::load((ofbx::u8*)buffer.data(), buffer.size(), (ofbx::u64)ofbx::LoadFlags::TRIANGULATE);
+	scene = ofbx::load((ofbx::u8*)buffer.data(), static_cast<int>(buffer.size()),
+			   (ofbx::u64)ofbx::LoadFlags::TRIANGULATE);
 	if (scene == nullptr)
 	{
 		return false;
@@ -655,7 +660,7 @@ bool Ravine::loadScene(const string& filePath)
 		// Treat each case for optimal performance
 		if (hasCoords && hasColors && hasNormals)
 		{
-			for (uint32_t j = 0; j < vertexCount; j++)
+			for (int j = 0; j < vertexCount; j++)
 			{
 				// Vertices
 				meshes[i].vertices[j].pos = {verts[j].x, verts[j].y, verts[j].z};
@@ -672,7 +677,7 @@ bool Ravine::loadScene(const string& filePath)
 		}
 		else if (hasCoords && hasNormals)
 		{
-			for (uint32_t j = 0; j < vertexCount; j++)
+			for (int j = 0; j < vertexCount; j++)
 			{
 				// Vertices
 				meshes[i].vertices[j].pos = {verts[j].x, verts[j].y, verts[j].z};
@@ -689,7 +694,7 @@ bool Ravine::loadScene(const string& filePath)
 		}
 		else if (hasNormals)
 		{
-			for (uint32_t j = 0; j < vertexCount; j++)
+			for (int j = 0; j < vertexCount; j++)
 			{
 				// Vertices
 				meshes[i].vertices[j].pos = {verts[j].x, verts[j].y, verts[j].z};
@@ -706,7 +711,7 @@ bool Ravine::loadScene(const string& filePath)
 		}
 		else if (hasCoords)
 		{
-			for (uint32_t j = 0; j < vertexCount; j++)
+			for (int j = 0; j < vertexCount; j++)
 			{
 				// Vertices
 				meshes[i].vertices[j].pos = {verts[j].x, verts[j].y, verts[j].z};
@@ -723,7 +728,7 @@ bool Ravine::loadScene(const string& filePath)
 		}
 		else
 		{
-			for (uint32_t j = 0; j < vertexCount; j++)
+			for (int j = 0; j < vertexCount; j++)
 			{
 				// Vertices
 				meshes[i].vertices[j].pos = {verts[j].x, verts[j].y, verts[j].z};
@@ -747,48 +752,49 @@ bool Ravine::loadScene(const string& filePath)
 			meshes[i].indices[j] = (indices[j] > 0) ? indices[j] : ~indices[j];
 		}
 
-		// 	//Register textures for late-loading (and generate texture Ids)
-		// 	uint32_t matId = mesh->mMaterialIndex;
-		// 	const aiMaterial* mat = scene->mMaterials[matId];
+		// Register textures for late-loading (and generate texture Ids)
+		const ofbx::Material* mat = mesh->getMaterial(0);
 
-		// 	//Get the number of textures
-		// 	uint32_t textureCounts = mat->GetTextureCount(aiTextureType_DIFFUSE);
-		// 	meshes[i].texturesCount = textureCounts;
-		// 	meshes[i].textureIds = new uint32_t[textureCounts];
+		// TODO: Change this for proper texture fetch logic
+		// Get the number of textures
+		uint32_t textureCounts = 3; // mat->GetTextureCount(aiTextureType_DIFFUSE);
+		meshes[i].texturesCount = textureCounts;
+		meshes[i].textureIds = new uint32_t[textureCounts];
 
-		// 	//List each texture on the texturesToLoad list and hold texture ids
-		// 	aiString aiTexPath;
-		// 	for (uint32_t tId = 0; tId < textureCounts; tId++)
-		// 	{
-		// 		if (mat->GetTexture(aiTextureType_DIFFUSE, tId, &aiTexPath) == AI_SUCCESS)
-		// 		{
-		// 			int textureId = 0;
-		// 			string texPath = aiTexPath.C_Str();
+		// List each texture on the texturesToLoad list and hold texture ids
+		for (uint32_t tId = 0; tId < textureCounts; tId++)
+		{
+			const ofbx::Texture* tex = mat->getTexture((ofbx::Texture::TextureType)tId);
+			if (tex == nullptr)
+				continue;
 
-		// 			//Check if the texture is listed and set it's list id
-		// 			bool listed = false;
-		// 			for (auto it = texturesToLoad.begin(); it != texturesToLoad.end(); it++)
-		// 			{
-		// 				if ((it->data()) == texPath)
-		// 				{
-		// 					listed = true;
-		// 					break;
-		// 				}
+			int textureId = 0;
+			char texPath[128];
+			tex->getRelativeFileName().toString(texPath);
 
-		// 				//Make sure to update textureId
-		// 				textureId++;
-		// 			}
+			// Check if the texture is listed and set it's list id
+			bool listed = false;
+			for (auto it = texturesToLoad.begin(); it != texturesToLoad.end(); it++)
+			{
+				if (strcmp(it->data(), texPath) == 0)
+				{
+					listed = true;
+					break;
+				}
 
-		// 			//Hold textureId
-		// 			meshes[i].textureIds[tId] = textureId;
+				// Make sure to update textureId
+				textureId++;
+			}
 
-		// 			//List texture if it isn't already
-		// 			if (!listed)
-		// 			{
-		// 				texturesToLoad.push_back(texPath);
-		// 			}
-		// 		}
-		// 	}
+			// Hold textureId
+			meshes[i].textureIds[tId] = textureId;
+
+			// List texture if it isn't already
+			if (!listed)
+			{
+				texturesToLoad.push_back(texPath);
+			}
+		}
 
 		// 	loadBones(mesh, meshes[i]);
 	}
@@ -1333,8 +1339,6 @@ static void toString(ofbx::DataView view, char (&out)[N])
 	out[len] = 0;
 }
 
-static int getPropertyCount(ofbx::IElementProperty* prop) { return prop ? getPropertyCount(prop->getNext()) + 1 : 0; }
-
 template <int N>
 static void catProperty(char (&out)[N], const ofbx::IElementProperty* prop)
 {
@@ -1647,7 +1651,7 @@ void Ravine::drawGuiElements()
 		}
 		ImGui::End();
 
-		// showObjectsGUI(scene);
+		showObjectsGUI(scene);
 	}
 }
 
@@ -1743,12 +1747,13 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		}
 
 		// Delta Mouse Positions
-		double deltaX = mouseX - lastMouseX;
-		double deltaY = mouseY - lastMouseY;
+		float deltaX = static_cast<float>(mouseX - lastMouseX);
+		float deltaY = static_cast<float>(mouseY - lastMouseY);
 
+		float deltaTime = static_cast<float>(RvTime::deltaTime());
 		// Calculate look rotation update
-		camera->horRot -= deltaX * 32.0f * RvTime::deltaTime();
-		camera->verRot -= deltaY * 32.0f * RvTime::deltaTime();
+		camera->horRot -= deltaX * 32.0f * deltaTime;
+		camera->verRot -= deltaY * 32.0f * deltaTime;
 
 		// Limit vertical angle
 		camera->verRot = F_MAX(F_MIN(89.9f, camera->verRot), -89.9f);
@@ -1759,22 +1764,22 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 		// Calculate translation
 		if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
-			translation.z -= 2.0 * RvTime::deltaTime();
+			translation.z -= 2.0f * deltaTime;
 
 		if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
-			translation.x -= 2.0 * RvTime::deltaTime();
+			translation.x -= 2.0f * deltaTime;
 
 		if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
-			translation.z += 2.0 * RvTime::deltaTime();
+			translation.z += 2.0f * deltaTime;
 
 		if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
-			translation.x += 2.0 * RvTime::deltaTime();
+			translation.x += 2.0f * deltaTime;
 
 		if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-			translation.y -= 2.0 * RvTime::deltaTime();
+			translation.y -= 2.0f * deltaTime;
 
 		if (glfwGetKey(*window, GLFW_KEY_E) || glfwGetKey(*window, GLFW_KEY_SPACE) == GLFW_PRESS)
-			translation.y += 2.0 * RvTime::deltaTime();
+			translation.y += 2.0f * deltaTime;
 	}
 	else if (shiftDown)
 	{
@@ -1911,7 +1916,7 @@ void Ravine::cleanup()
 	delete gui;
 
 	// Hold number of swapchain images
-	const uint32_t swapImagesCount = swapChain->images.size();
+	const size_t swapImagesCount = swapChain->images.size();
 
 	// Cleanup render-pass
 	renderPass->clear();
@@ -1933,15 +1938,15 @@ void Ravine::cleanup()
 	// Destroy descriptor pool
 	vkDestroyDescriptorPool(device->handle, descriptorPool, nullptr);
 
-	for (int framesIt = 0; framesIt < swapImagesCount; framesIt++)
+	for (size_t framesIt = 0; framesIt < swapImagesCount; framesIt++)
 	{
 		// Destroying global buffers
 		vkDestroyBuffer(device->handle, globalBuffers[framesIt].handle, nullptr);
 		vkFreeMemory(device->handle, globalBuffers[framesIt].memory, nullptr);
 
-		for (int meshesIt = 0; meshesIt < meshesCount; meshesIt++)
+		for (uint32_t meshesIt = 0; meshesIt < meshesCount; meshesIt++)
 		{
-			const int instanceId = framesIt * meshesCount + meshesIt;
+			const size_t instanceId = framesIt * meshesCount + meshesIt;
 
 			// Destroying materials buffers
 			vkDestroyBuffer(device->handle, materialsBuffers[instanceId].handle, nullptr);

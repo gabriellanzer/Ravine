@@ -48,5 +48,5 @@ void main() {
 
     vec3 result = (ambient + diffuse + specular);
 
-    outColor = vec4(fragColor * texture(texSampler, fragTexCoord).rgb * result, 1.0) * material.customColor;
+	outColor = vec4(fragColor * texture(texSampler, fragTexCoord).rgb * result, 1.0) * material.customColor;
 }

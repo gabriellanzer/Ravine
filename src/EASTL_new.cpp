@@ -15,7 +15,7 @@ void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned 
 int __cdecl Vsnprintf8(char* pDestination, size_t n, const char* pFormat, va_list arguments)
 {
     #ifdef _MSC_VER
-        return _vsnprintf(pDestination, n, pFormat, arguments);
+        return _vsnprintf_s(pDestination, n, n, pFormat, arguments);
     #else
         return vsnprintf(pDestination, n, pFormat, arguments);
     #endif
@@ -24,7 +24,7 @@ int __cdecl Vsnprintf8(char* pDestination, size_t n, const char* pFormat, va_lis
 int __cdecl Vsnprintf16(char16_t* pDestination, size_t n, const char16_t* pFormat, va_list arguments)
 {
     #ifdef _MSC_VER
-        return _vsnwprintf((wchar_t*)pDestination, n, (wchar_t*)pFormat, arguments);
+        return _vsnwprintf_s((wchar_t*)pDestination, n, n, (wchar_t*)pFormat, arguments);
     #else
 		char* d = new char[n+1];
 		int r = vsnprintf(d, n, convertstring<char16_t, char>(pFormat).c_str(), arguments);

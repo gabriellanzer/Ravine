@@ -18,9 +18,9 @@ RvGraphicsPipeline::~RvGraphicsPipeline()
 void RvGraphicsPipeline::create()
 {
 	//Shader Stage creation (assign shader modules to shader stages in the pipeline).
-	const uint32_t modulesCount = attachedShaderModules.size();
+	const size_t modulesCount = attachedShaderModules.size();
 	vector<VkPipelineShaderStageCreateInfo> shaderStagesCreateInfos(modulesCount);
-	for (uint32_t i = 0; i < modulesCount; i++)
+	for (size_t i = 0; i < modulesCount; i++)
 	{
 		VkPipelineShaderStageCreateInfo shaderStageCreateInfo = {};
 		shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

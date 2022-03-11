@@ -41,25 +41,25 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 	}
 
 	//For each frame, create a framebuffer with it's attachments
-	for (uint32_t frameIt = 0; frameIt < framesCount; frameIt++)
+	for (size_t frameIt = 0; frameIt < framesCount; frameIt++)
 	{
-		const uint32_t attachmentCount = 
+		const size_t attachmentCount = 
 			sharedFramebufferAttachments.size() +
 			framebufferAttachmentsCreateInfos.size() +
 			(swapchainImages != VK_NULL_HANDLE ? 1 : 0);
 
 		VkImageView* attachments = new VkImageView[attachmentCount];
-		uint32_t it = 0;
+		size_t it = 0;
 
 		//Link all shared attachments
-		for (uint32_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
+		for (size_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
 		{
 			attachments[it + i] = sharedFramebufferAttachments[i].imageView;
 		}
 		it += sharedFramebufferAttachments.size();
 
 		//Create and link individual attachments
-		for (uint32_t i = 0; i < framebufferAttachmentsCreateInfos.size(); ++i)
+		for (size_t i = 0; i < framebufferAttachmentsCreateInfos.size(); ++i)
 		{
 			RvFramebufferAttachment attachment = rvTools::createFramebufferAttachment(device, framebufferAttachmentsCreateInfos[i]);
 			framebufferAttachments.push_back(attachment);
@@ -76,7 +76,7 @@ void RvRenderPass::construct(const RvDevice& device, const uint32_t framesCount,
 		VkFramebufferCreateInfo framebufferCreateInfo = {};
 		framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferCreateInfo.renderPass = handle;
-		framebufferCreateInfo.attachmentCount = attachmentCount;
+		framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachmentCount);
 		framebufferCreateInfo.pAttachments = attachments;
 		framebufferCreateInfo.width = sizeAndLayers.width;
 		framebufferCreateInfo.height = sizeAndLayers.height;
@@ -143,24 +143,24 @@ void RvRenderPass::resizeAttachments(const uint32_t framesCount, const VkExtent3
 	}
 
 	//For each frame, create a framebuffer with it's attachments
-	for (uint32_t frameIt = 0; frameIt < framesCount; frameIt++)
+	for (size_t frameIt = 0; frameIt < framesCount; frameIt++)
 	{
-		const uint32_t attachmentCount = 
+		const size_t attachmentCount = 
 			sharedFramebufferAttachments.size() +
 			framebufferAttachmentsCreateInfos.size() +
 			(swapchainImages != VK_NULL_HANDLE ? 1 : 0);
 		VkImageView* attachments = new VkImageView[attachmentCount];
-		uint32_t it = 0;
+		size_t it = 0;
 
 		//Link all shared attachments
-		for (uint32_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
+		for (size_t i = 0; i < sharedFramebufferAttachments.size(); ++i)
 		{
 			attachments[it + i] = sharedFramebufferAttachments[i].imageView;
 		}
 		it += sharedFramebufferAttachments.size();
 
 		//Create and link individual attachments
-		for (uint32_t i = 0; i < framebufferAttachmentsCreateInfos.size(); ++i)
+		for (size_t i = 0; i < framebufferAttachmentsCreateInfos.size(); ++i)
 		{
 			RvFramebufferAttachment attachment = rvTools::createFramebufferAttachment(*device, framebufferAttachmentsCreateInfos[i]);
 			framebufferAttachments.push_back(attachment);
@@ -177,7 +177,7 @@ void RvRenderPass::resizeAttachments(const uint32_t framesCount, const VkExtent3
 		VkFramebufferCreateInfo framebufferCreateInfo = {};
 		framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferCreateInfo.renderPass = handle;
-		framebufferCreateInfo.attachmentCount = attachmentCount;
+		framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachmentCount);
 		framebufferCreateInfo.pAttachments = attachments;
 		framebufferCreateInfo.width = sizeAndLayers.width;
 		framebufferCreateInfo.height = sizeAndLayers.height;
@@ -309,7 +309,8 @@ RvRenderPass* RvRenderPass::defaultRenderPass(RvDevice& device, const RvSwapChai
 	renderPass->addSubpass(RvSubpass::defaultSubpass());
 
 	//Proper Creation
-	renderPass->construct(device, swapChain.imageViews.size(), size, swapChain.imageViews.data());
+	const uint32_t viewsCount = static_cast<uint32_t>(swapChain.imageViews.size());
+	renderPass->construct(device, viewsCount, size, swapChain.imageViews.data());
 
 	return renderPass;
 }

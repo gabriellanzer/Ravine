@@ -757,7 +757,7 @@ bool Ravine::loadScene(const string& filePath)
 
 		// TODO: Change this for proper texture fetch logic
 		// Get the number of textures
-		uint32_t textureCounts = 3; // mat->GetTextureCount(aiTextureType_DIFFUSE);
+		uint32_t textureCounts = 1; // mat->GetTextureCount(aiTextureType_DIFFUSE);
 		meshes[i].texturesCount = textureCounts;
 		meshes[i].textureIds = new uint32_t[textureCounts];
 

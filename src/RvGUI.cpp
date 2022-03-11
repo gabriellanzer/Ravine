@@ -13,7 +13,8 @@
 #include "imgui_impl_glfw.h"
 
 RvGui::RvGui(RvDevice* device, RvSwapChain* swapChain, RvWindow* window, RvRenderPass* renderPass) : 
-	device(device), swapChain(swapChain), window(window), renderPass(renderPass), swapChainImagesCount(swapChain->images.size())
+	device(device), swapChain(swapChain), window(window), renderPass(renderPass),
+	swapChainImagesCount(static_cast<uint32_t>(swapChain->images.size()))
 {
 	ImGui::CreateContext();
 	io = &ImGui::GetIO();
@@ -69,7 +70,10 @@ void RvGui::init(VkSampleCountFlagBits samplesCount)
 	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
 
 	//Dimensions
-	io->DisplaySize = ImVec2(swapChain->width, swapChain->height);
+	io->DisplaySize = ImVec2(
+		static_cast<float>(swapChain->width),
+		static_cast<float>(swapChain->height)
+	);
 	io->DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
 	//Initialize Vulkan Resources
@@ -90,7 +94,7 @@ void RvGui::init(VkSampleCountFlagBits samplesCount)
 	createPushConstants(); //Create the structure that defines the push constant range
 
 	//Reset Buffers
-	swapChainImagesCount = swapChain->images.size();
+	swapChainImagesCount = static_cast<uint32_t>(swapChain->images.size());
 	vertexBuffers.resize(swapChainImagesCount);
 	indexBuffers.resize(swapChainImagesCount);
 

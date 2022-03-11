@@ -78,7 +78,7 @@ namespace rvTools
 		Floor - handles case where the dimension is not power of 2
 		+1 - Add a mip level for the original level
 		*/
-		const size_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(eastl::max(width, height)))) + 1;
+		const uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(eastl::max(width, height)))) + 1;
 
 		// Creating new image
 		const VkExtent3D extent{width, height, 1};

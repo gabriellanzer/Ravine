@@ -212,7 +212,7 @@ RvPersistentBuffer RvDevice::createPersistentBuffer(void * data, VkDeviceSize bu
 
 RvTexture RvDevice::createTexture(void* pixels, size_t width, size_t height, VkFormat format)
 {
-	return rvTools::createTexture(this, pixels, width, height, format);
+	return rvTools::createTexture(this, pixels, static_cast<uint32_t>(width), static_cast<uint32_t>(height), format);
 }
 
 uint32_t RvDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const

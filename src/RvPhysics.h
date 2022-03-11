@@ -8,7 +8,7 @@ using glm::vec3;
 
 class RvPhysics
 {
-	constexpr static float EPSILON = 0.0000001;
+	constexpr static double EPSILON = 0.0000001;
 
 	struct Ray
 	{

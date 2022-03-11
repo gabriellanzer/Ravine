@@ -11,7 +11,7 @@ bool RvPhysics::rayTriangleIntersection(const Ray& ray, const Tri& tri, vec3& hi
 	a = glm::dot(edge1, h);
 	if (a > -EPSILON && a < EPSILON)
 		return false;    // This ray is parallel to this triangle.
-	f = 1.0 / a;
+	f = 1.0f / a;
 	s = ray.orig - tri.p0;
 	u = f * glm::dot(s, h);
 	if (u < 0.0 || u > 1.0)

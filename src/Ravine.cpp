@@ -796,7 +796,7 @@ bool Ravine::loadScene(const string& filePath)
 			}
 		}
 
-		// 	loadBones(mesh, meshes[i]);
+		loadBones(mesh, meshes[i]);
 	}
 
 	// fmt::print(stdout, "Loaded file with {0} animations.\n", scene->mNumAnimations);
@@ -819,32 +819,255 @@ bool Ravine::loadScene(const string& filePath)
 	return true;
 }
 
-// void Ravine::loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData)
-// {
-// 	for (uint16_t i = 0; i < pMesh->mNumBones; i++) {
-// 		uint16_t boneIndex = 0;
-// 		string boneName(pMesh->mBones[i]->mName.data);
+void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
+{
+	const auto geometry = mesh->getGeometry();
+	const ofbx::Skin* skin = geometry->getSkin();
 
-// 		if (meshData.boneMapping.find(boneName) == meshData.boneMapping.end()) {
-// 			boneIndex = meshes[0].numBones;
-// 			meshes[0].numBones++;
-// 			RvBoneInfo bi;
-// 			meshes[0].boneInfo.push_back(bi);
-// 		}
-// 		else {
-// 			boneIndex = meshData.boneMapping[boneName];
-// 		}
+	if (skin == nullptr || IsMeshInvalid(mesh))
+		continue;
 
-// 		meshData.boneMapping[boneName] = boneIndex;
-// 		meshes[0].boneInfo[boneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
+	for (int clusterIndex = 0, c = skin->getClusterCount(); clusterIndex < c; clusterIndex++)
+	{
+		const ofbx::Cluster* cluster = skin->getCluster(clusterIndex);
 
-// 		for (uint16_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++) {
-// 			uint16_t vertexId = 0 + pMesh->mBones[i]->mWeights[j].mVertexId;
-// 			float weight = pMesh->mBones[i]->mWeights[j].mWeight;
-// 			meshData.vertices[vertexId].AddBoneData(boneIndex, weight);
-// 		}
-// 	}
-// }
+		if (cluster->getIndicesCount() == 0)
+			continue;
+
+		const auto link = cluster->getLink();
+		ASSERT(link != nullptr);
+
+		// Create bone if missing
+		int32 boneIndex = data.FindBone(link);
+		if (boneIndex == -1)
+		{
+			// Find the node where the bone is mapped
+			int32 nodeIndex = data.FindNode(link);
+			if (nodeIndex == -1)
+			{
+				nodeIndex = data.FindNode(String(link->name), StringSearchCase::IgnoreCase);
+				if (nodeIndex == -1)
+				{
+					LOG(Warning, "Invalid mesh bone linkage. Mesh: {0}, bone: {1}. Skipping...",
+					    String(mesh->name), String(link->name));
+					continue;
+				}
+			}
+
+			// Add bone
+			boneIndex = data.Bones.Count();
+			data.Bones.EnsureCapacity(Math::Max(128, boneIndex + 16));
+			data.Bones.Resize(boneIndex + 1);
+			auto& bone = data.Bones[boneIndex];
+
+			// Setup bone
+			bone.NodeIndex = nodeIndex;
+			bone.ParentBoneIndex = -1;
+			bone.FbxObj = link;
+			bone.OffsetMatrix = GetOffsetMatrix(data, aMesh, link);
+			bone.OffsetMatrix.Invert();
+
+			// Mirror offset matrices (RH to LH)
+			if (data.ConvertRH)
+			{
+				auto& m = bone.OffsetMatrix;
+				m.M13 = -m.M13;
+				m.M23 = -m.M23;
+				m.M43 = -m.M43;
+				m.M31 = -m.M31;
+				m.M32 = -m.M32;
+				m.M34 = -m.M34;
+			}
+		}
+	}
+
+	/*
+		
+
+		// 
+
+		// Sample Animation Data
+		{
+			// Skip if animation is not ready to use
+			if (anim == nullptr || !anim->IsLoaded())
+				return Value::Null;
+			PROFILE_CPU_ASSET(anim);
+			const float oldTimePos = prevTimePos;
+
+			// Calculate actual time position within the animation node (defined by length and loop mode)
+			const float pos = GetAnimPos(newTimePos, startTimePos, loop, length);
+			const float prevPos = GetAnimPos(prevTimePos, startTimePos, loop, length);
+
+			// Get animation position (animation track position for channels sampling)
+			const float animPos = GetAnimSamplePos(length, anim, pos, speed);
+			const float animPrevPos = GetAnimSamplePos(length, anim, prevPos, speed);
+
+			// Sample the animation
+			const auto nodes = node->GetNodes(this);
+			nodes->RootMotion = RootMotionData::Identity;
+			nodes->Position = pos;
+			nodes->Length = length;
+			const auto mapping = anim->GetMapping(_graph.BaseModel);
+			const auto emptyNodes = GetEmptyNodes();
+			for (int32 i = 0; i < nodes->Nodes.Count(); i++)
+			{
+				const int32 nodeToChannel = mapping->At(i);
+				nodes->Nodes[i] = emptyNodes->Nodes[i];
+				if (nodeToChannel != -1)
+				{
+					// Calculate the animated node transformation
+					anim->Data.Channels[nodeToChannel].Evaluate(animPos, &nodes->Nodes[i], false);
+				}
+			}
+		}
+		
+		// Sample Animation Data Blended 2 Clips
+		Variant AnimGraphExecutor::SampleAnimationsWithBlend(AnimGraphNode* node, bool loop, float length, float startTimePos, float prevTimePos, float& newTimePos, Animation* animA, Animation* animB, float speedA, float speedB, float alpha)
+		{
+			// Skip if any animation is not ready to use
+			if (animA == nullptr || !animA->IsLoaded() ||
+				animB == nullptr || !animB->IsLoaded())
+				return Value::Null;
+
+			// Calculate actual time position within the animation node (defined by length and loop mode)
+			const float pos = GetAnimPos(newTimePos, startTimePos, loop, length);
+			const float prevPos = GetAnimPos(prevTimePos, startTimePos, loop, length);
+
+			// Get animation position (animation track position for channels sampling)
+			const float animPosA = GetAnimSamplePos(length, animA, pos, speedA);
+			const float animPrevPosA = GetAnimSamplePos(length, animA, prevPos, speedA);
+			const float animPosB = GetAnimSamplePos(length, animB, pos, speedB);
+			const float animPrevPosB = GetAnimSamplePos(length, animB, prevPos, speedB);
+
+			// Sample the animations with blending
+			const auto nodes = node->GetNodes(this);
+			nodes->RootMotion = RootMotionData::Identity;
+			nodes->Position = pos;
+			nodes->Length = length;
+			const auto mappingA = animA->GetMapping(_graph.BaseModel);
+			const auto mappingB = animB->GetMapping(_graph.BaseModel);
+			const auto emptyNodes = GetEmptyNodes();
+			RootMotionData rootMotionA, rootMotionB;
+			int32 rootNodeIndexA = -1, rootNodeIndexB = -1;
+			if (_rootMotionMode != RootMotionMode::NoExtraction)
+			{
+				rootMotionA = rootMotionB = RootMotionData::Identity;
+				if (animA->Data.EnableRootMotion)
+					rootNodeIndexA = GetRootNodeIndex(animA);
+				if (animB->Data.EnableRootMotion)
+					rootNodeIndexB = GetRootNodeIndex(animB);
+			}
+			for (int32 i = 0; i < nodes->Nodes.Count(); i++)
+			{
+				const int32 nodeToChannelA = mappingA->At(i);
+				const int32 nodeToChannelB = mappingB->At(i);
+				Transform nodeA = emptyNodes->Nodes[i];
+				Transform nodeB = nodeA;
+
+				// Calculate the animated node transformations
+				if (nodeToChannelA != -1)
+				{
+					animA->Data.Channels[nodeToChannelA].Evaluate(animPosA, &nodeA, false);
+					if (rootNodeIndexA == i)
+						ExtractRootMotion(mappingA, rootNodeIndexA, animA, animPosA, animPrevPosA, nodeA, rootMotionA);
+				}
+				if (nodeToChannelB != -1)
+				{
+					animB->Data.Channels[nodeToChannelB].Evaluate(animPosB, &nodeB, false);
+					if (rootNodeIndexB == i)
+						ExtractRootMotion(mappingB, rootNodeIndexB, animB, animPosB, animPrevPosB, nodeB, rootMotionB);
+				}
+
+				// Blend
+				Transform::Lerp(nodeA, nodeB, alpha, nodes->Nodes[i]);
+			}
+
+			// Handle root motion
+			if (_rootMotionMode != RootMotionMode::NoExtraction)
+			{
+				RootMotionData::Lerp(rootMotionA, rootMotionB, alpha, nodes->RootMotion);
+			}
+
+			return nodes;
+		}
+
+		// Setup GPU Data
+		void AnimatedModel::PreInitSkinningData()
+		{
+			ASSERT(SkinnedModel && SkinnedModel->IsLoaded());
+
+			ScopeLock lock(SkinnedModel->Locker);
+
+			SetupSkinningData();
+			auto& skeleton = SkinnedModel->Skeleton;
+			const int32 bonesCount = skeleton.Bones.Count();
+			const int32 nodesCount = skeleton.Nodes.Count();
+
+			// Get nodes global transformations for the initial pose
+			GraphInstance.NodesPose.Resize(nodesCount, false);
+			for (int32 nodeIndex = 0; nodeIndex < nodesCount; nodeIndex++)
+			{
+				Matrix localTransform;
+				skeleton.Nodes[nodeIndex].LocalTransform.GetWorld(localTransform);
+				const int32 parentIndex = skeleton.Nodes[nodeIndex].ParentIndex;
+				if (parentIndex != -1)
+					GraphInstance.NodesPose[nodeIndex] = localTransform * GraphInstance.NodesPose[parentIndex];
+				else
+					GraphInstance.NodesPose[nodeIndex] = localTransform;
+			}
+			GraphInstance.Invalidate();
+			GraphInstance.RootTransform = skeleton.Nodes[0].LocalTransform;
+
+			// Setup bones transformations including bone offset matrix
+			Array<Matrix> identityMatrices; // TODO: use shared memory?
+			identityMatrices.Resize(bonesCount, false);
+			for (int32 boneIndex = 0; boneIndex < bonesCount; boneIndex++)
+			{
+				auto& bone = skeleton.Bones[boneIndex];
+				identityMatrices[boneIndex] = bone.OffsetMatrix * GraphInstance.NodesPose[bone.NodeIndex];
+			}
+			_skinningData.SetData(identityMatrices.Get(), true);
+
+			UpdateBounds();
+			UpdateSockets();
+		}
+
+		// Update data to GPU
+		void AnimatedModel::OnAnimationUpdated_Async()
+		{
+			// Update asynchronous stuff
+			auto& skeleton = SkinnedModel->Skeleton;
+
+			// Copy pose from the master
+			if (_masterPose && _masterPose->SkinnedModel->Skeleton.Nodes.Count() == skeleton.Nodes.Count())
+			{
+				ANIM_GRAPH_PROFILE_EVENT("Copy Master Pose");
+				const auto& masterInstance = _masterPose->GraphInstance;
+				GraphInstance.NodesPose = masterInstance.NodesPose;
+				GraphInstance.RootTransform = masterInstance.RootTransform;
+				GraphInstance.RootMotion = masterInstance.RootMotion;
+			}
+
+			// Calculate the final bones transformations and update skinning
+			{
+				ANIM_GRAPH_PROFILE_EVENT("Final Pose");
+				const int32 bonesCount = skeleton.Bones.Count();
+				Matrix3x4* output = (Matrix3x4*)_skinningData.Data.Get();
+				ASSERT(_skinningData.Data.Count() == bonesCount * sizeof(Matrix3x4));
+				for (int32 boneIndex = 0; boneIndex < bonesCount; boneIndex++)
+				{
+					auto& bone = skeleton.Bones[boneIndex];
+					Matrix matrix = bone.OffsetMatrix * GraphInstance.NodesPose[bone.NodeIndex];
+					output[boneIndex].SetMatrixTranspose(matrix);
+				}
+				_skinningData.OnDataChanged(!PerBoneMotionBlur);
+			}
+
+			UpdateBounds();
+			_blendShapes.Update(SkinnedModel.Get());
+		}
+	*/
+}
 
 // void Ravine::boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms)
 // {

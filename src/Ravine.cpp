@@ -53,7 +53,8 @@ void Ravine::run()
 
 #pragma region Static Methods
 
-// Static method because GLFW doesn't know how to call a member function with the "this" pointer to our Ravine instance.
+// Static method because GLFW doesn't know how to call a member function with
+// the "this" pointer to our Ravine instance.
 void Ravine::framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
 	auto rvWindowTemp = reinterpret_cast<RvWindow*>(glfwGetWindowUserPointer(window));
@@ -99,10 +100,7 @@ void Ravine::initVulkan()
 
 	// Load Scene
 	string modelName = "guard.fbx";
-	if (loadScene("../data/" + modelName))
-	{
-		fmt::print(stdout, "{0} loaded!\n", modelName.c_str());
-	}
+	if (loadScene("../data/" + modelName)) { fmt::print(stdout, "{0} loaded!\n", modelName.c_str()); }
 	else
 	{
 		fmt::print(stdout, "File not fount at path: {0}\n", modelName.c_str());
@@ -118,32 +116,35 @@ void Ravine::initVulkan()
 
 	// Shaders Loading
 	glslang::InitializeProcess();
-	// skinnedTexColCode = rvTools::readFile("../data/shaders/skinned_tex_color.vert");
-	// skinnedWireframeCode = rvTools::readFile("../data/shaders/skinned_wireframe.vert");
+	// skinnedTexColCode =
+	// rvTools::readFile("../data/shaders/skinned_tex_color.vert");
+	// skinnedWireframeCode =
+	// rvTools::readFile("../data/shaders/skinned_wireframe.vert");
 	staticTexColCode = rvTools::readFile("../data/shaders/static_tex_color.vert");
 	staticWireframeCode = rvTools::readFile("../data/shaders/static_wireframe.vert");
 	phongTexColCode = rvTools::readFile("../data/shaders/phong_tex_color.frag");
 	solidColorCode = rvTools::readFile("../data/shaders/solid_color.frag");
 
-	VkDescriptorSetLayout* descriptorSetLayouts = new VkDescriptorSetLayout[3]{
-	    globalDescriptorSetLayout, materialDescriptorSetLayout, modelDescriptorSetLayout};
+	VkDescriptorSetLayout* descriptorSetLayouts =
+		new VkDescriptorSetLayout[3]{globalDescriptorSetLayout, materialDescriptorSetLayout, modelDescriptorSetLayout};
 	// skinnedGraphicsPipeline =
-	//     new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-	//     descriptorSetLayouts,
-	// 			  3, renderPass->handle, skinnedTexColCode, phongTexColCode);
-	// skinnedWireframeGraphicsPipeline =
-	//     new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(),
-	//     descriptorSetLayouts,
-	// 			    3, renderPass->handle, skinnedWireframeCode, solidColorCode);
+	//     new RvPolygonPipeline(*device, swapChain->extent,
+	//     device->getMaxUsableSampleCount(), descriptorSetLayouts,
+	// 			  3, renderPass->handle, skinnedTexColCode,
+	// phongTexColCode); skinnedWireframeGraphicsPipeline =
+	//     new RvWireframePipeline(*device, swapChain->extent,
+	//     device->getMaxUsableSampleCount(), descriptorSetLayouts,
+	// 			    3, renderPass->handle, skinnedWireframeCode,
+	// solidColorCode);
 	staticGraphicsPipeline =
-	    new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayouts,
-				  3, renderPass->handle, staticTexColCode, phongTexColCode);
+		new RvPolygonPipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayouts, 3,
+							  renderPass->handle, staticTexColCode, phongTexColCode);
 	staticWireframeGraphicsPipeline =
-	    new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayouts,
-				    3, renderPass->handle, staticWireframeCode, solidColorCode);
+		new RvWireframePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayouts, 3,
+								renderPass->handle, staticWireframeCode, solidColorCode);
 	staticLineGraphicsPipeline =
-	    new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayouts, 3,
-			       renderPass->handle, staticWireframeCode, solidColorCode);
+		new RvLinePipeline(*device, swapChain->extent, device->getMaxUsableSampleCount(), descriptorSetLayouts, 3,
+						   renderPass->handle, staticWireframeCode, solidColorCode);
 	gui = new RvGui(device, swapChain, window, renderPass);
 	gui->init(device->getMaxUsableSampleCount());
 
@@ -191,9 +192,11 @@ void Ravine::createInstance()
 
 	// Query for available extensions
 	uint32_t extensionCount = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);	     // Query size
-	vector<VkExtensionProperties> extensions(extensionCount);			     // Reserve
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data()); // Query data
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount,
+										   nullptr);		  // Query size
+	vector<VkExtensionProperties> extensions(extensionCount); // Reserve
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount,
+										   extensions.data()); // Query data
 	fmt::print(stdout, "Vulkan available extensions:\n");
 	for (const VkExtensionProperties& extension : extensions)
 	{
@@ -243,10 +246,7 @@ void Ravine::pickPhysicalDevice()
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
-	if (deviceCount == 0)
-	{
-		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
-	}
+	if (deviceCount == 0) { throw std::runtime_error("Failed to find GPUs with Vulkan support!"); }
 
 	vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
@@ -260,10 +260,7 @@ void Ravine::pickPhysicalDevice()
 		}
 	}
 
-	if (device->physicalDevice == VK_NULL_HANDLE)
-	{
-		throw std::runtime_error("failed to find a suitable GPU!");
-	}
+	if (device->physicalDevice == VK_NULL_HANDLE) { throw std::runtime_error("failed to find a suitable GPU!"); }
 }
 
 bool Ravine::isDeviceSuitable(const VkPhysicalDevice device)
@@ -289,11 +286,8 @@ bool Ravine::isDeviceSuitable(const VkPhysicalDevice device)
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
 	bool isSuitable = indices.isComplete() && extensionsSupported && swapChainAdequate &&
-			  supportedFeatures.samplerAnisotropy; // Checking for anisotropy support
-	if (isSuitable)
-	{
-		fmt::print(stdout, "{0} is suitable and was selected!\n", deviceProperties.deviceName);
-	}
+					  supportedFeatures.samplerAnisotropy; // Checking for anisotropy support
+	if (isSuitable) { fmt::print(stdout, "{0} is suitable and was selected!\n", deviceProperties.deviceName); }
 
 	return isSuitable;
 }
@@ -321,7 +315,8 @@ void Ravine::recreateSwapChain()
 
 	int width = 0, height = 0;
 	// If the window is minimized, wait for it to come back to the foreground.
-	// TODO: We probably want to handle that another way, which we should probably discuss.
+	// TODO: We probably want to handle that another way, which we should probably
+	// discuss.
 	while (width == 0 || height == 0)
 	{
 		width = window->extent.width;
@@ -338,7 +333,7 @@ void Ravine::recreateSwapChain()
 	swapChain->createImageViews();
 	const VkExtent3D extent = {swapChain->extent.width, swapChain->extent.height, 1};
 	renderPass->resizeAttachments(static_cast<uint32_t>(swapChain->imageViews.size()), extent,
-				      swapChain->imageViews.data());
+								  swapChain->imageViews.data());
 
 	// swapChain->createFramebuffers();
 	allocateCommandBuffers();
@@ -356,8 +351,8 @@ void Ravine::createDescriptorPool()
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChain->images.size());
 
-	// TODO: Change descriptor count accordingly to materials count instead of meshes count
-	// Material Uniforms
+	// TODO: Change descriptor count accordingly to materials count instead of
+	// meshes count Material Uniforms
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChain->images.size() * meshesCount);
 	// Image Uniforms
@@ -453,8 +448,7 @@ void Ravine::createDescriptorSets()
 			materialsInfo[meshId].range = sizeof(RvMaterialBufferObject);
 
 			descriptorWrites[meshWritesOffset + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset + 1].dstSet =
-			    descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset + 1].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
 			descriptorWrites[meshWritesOffset + 1].dstBinding = 0;
 			descriptorWrites[meshWritesOffset + 1].dstArrayElement = 0;
 			descriptorWrites[meshWritesOffset + 1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -465,18 +459,15 @@ void Ravine::createDescriptorSets()
 			imageInfo[meshId] = {};
 			imageInfo[meshId].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			RvMeshColored& mesh = meshes[meshId];
-			uint32_t textureId =
-			    mesh.texturesCount > 0 ? 1 + mesh.textureIds[0] : 0 /*Missing Texture (Pink)*/;
+			uint32_t textureId = mesh.texturesCount > 0 ? 1 + mesh.textureIds[0] : 0 /*Missing Texture (Pink)*/;
 			imageInfo[meshId].imageView = textures[textureId].view;
 			imageInfo[meshId].sampler = textureSampler;
 
 			descriptorWrites[meshWritesOffset + 2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset + 2].dstSet =
-			    descriptorSets[frameSetOffset + meshSetOffset + 1];
+			descriptorWrites[meshWritesOffset + 2].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 1];
 			descriptorWrites[meshWritesOffset + 2].dstBinding = 1;
 			descriptorWrites[meshWritesOffset + 2].dstArrayElement = 0;
-			descriptorWrites[meshWritesOffset + 2].descriptorType =
-			    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[meshWritesOffset + 2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrites[meshWritesOffset + 2].descriptorCount = 1;
 			descriptorWrites[meshWritesOffset + 2].pImageInfo = &imageInfo[meshId];
 
@@ -487,8 +478,7 @@ void Ravine::createDescriptorSets()
 			modelsInfo[meshId].range = sizeof(RvModelBufferObject);
 
 			descriptorWrites[meshWritesOffset + 3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset + 3].dstSet =
-			    descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset + 3].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
 			descriptorWrites[meshWritesOffset + 3].dstBinding = 0;
 			descriptorWrites[meshWritesOffset + 3].dstArrayElement = 0;
 			descriptorWrites[meshWritesOffset + 3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -502,8 +492,7 @@ void Ravine::createDescriptorSets()
 			animationsInfo[meshId].range = sizeof(RvBoneBufferObject);
 
 			descriptorWrites[meshWritesOffset + 4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[meshWritesOffset + 4].dstSet =
-			    descriptorSets[frameSetOffset + meshSetOffset + 2];
+			descriptorWrites[meshWritesOffset + 4].dstSet = descriptorSets[frameSetOffset + meshSetOffset + 2];
 			descriptorWrites[meshWritesOffset + 4].dstBinding = 1;
 			descriptorWrites[meshWritesOffset + 4].dstArrayElement = 0;
 			descriptorWrites[meshWritesOffset + 4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -512,8 +501,8 @@ void Ravine::createDescriptorSets()
 		}
 
 		// Update the sets for this frame
-		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(writesPerFrame), descriptorWrites.data(),
-				       0, nullptr);
+		vkUpdateDescriptorSets(device->handle, static_cast<uint32_t>(writesPerFrame), descriptorWrites.data(), 0,
+							   nullptr);
 
 		delete[] materialsInfo;
 		delete[] imageInfo;
@@ -570,8 +559,7 @@ void Ravine::createDescriptorSetLayout()
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
-		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &globalDescriptorSetLayout) !=
-		    VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &globalDescriptorSetLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create descriptor set layout!");
 		};
@@ -588,7 +576,7 @@ void Ravine::createDescriptorSetLayout()
 		layoutInfo.pBindings = bindings.data();
 
 		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &materialDescriptorSetLayout) !=
-		    VK_SUCCESS)
+			VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create descriptor set layout!");
 		};
@@ -604,8 +592,7 @@ void Ravine::createDescriptorSetLayout()
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
-		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &modelDescriptorSetLayout) !=
-		    VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(device->handle, &layoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create descriptor set layout!");
 		};
@@ -617,12 +604,9 @@ void Ravine::createDescriptorSetLayout()
 bool Ravine::loadScene(const string& filePath)
 {
 	auto buffer = rvTools::readFile(filePath);
-	scene = ofbx::load((ofbx::u8*)buffer.data(), static_cast<int>(buffer.size()),
-			   (ofbx::u64)ofbx::LoadFlags::TRIANGULATE);
-	if (scene == nullptr)
-	{
-		return false;
-	}
+	scene =
+		ofbx::load((ofbx::u8*)buffer.data(), static_cast<int>(buffer.size()), (ofbx::u64)ofbx::LoadFlags::TRIANGULATE);
+	if (scene == nullptr) { return false; }
 
 	// Load mesh
 	meshesCount = scene->getMeshCount();
@@ -765,8 +749,7 @@ bool Ravine::loadScene(const string& filePath)
 		for (uint32_t tId = 0; tId < textureCounts; tId++)
 		{
 			const ofbx::Texture* tex = mat->getTexture((ofbx::Texture::TextureType)tId);
-			if (tex == nullptr)
-				continue;
+			if (tex == nullptr) continue;
 
 			int textureId = 0;
 			char texPath[128];
@@ -790,16 +773,14 @@ bool Ravine::loadScene(const string& filePath)
 			meshes[i].textureIds[tId] = textureId;
 
 			// List texture if it isn't already
-			if (!listed)
-			{
-				texturesToLoad.push_back(texPath);
-			}
+			if (!listed) { texturesToLoad.push_back(texPath); }
 		}
 
 		loadBones(mesh, meshes[i]);
 	}
 
-	// fmt::print(stdout, "Loaded file with {0} animations.\n", scene->mNumAnimations);
+	// fmt::print(stdout, "Loaded file with {0} animations.\n",
+	// scene->mNumAnimations);
 
 	// meshes[0].animations.reserve(scene->mNumAnimations);
 	// if (scene->mNumAnimations > 0)
@@ -807,7 +788,8 @@ bool Ravine::loadScene(const string& filePath)
 	// 	//Record animation parameters
 	// 	for (uint32_t i = 0; i < scene->mNumAnimations; i++)
 	// 	{
-	// 		meshes[0].animations.push_back(new RvAnimation({ scene->mAnimations[i] }));
+	// 		meshes[0].animations.push_back(new RvAnimation({
+	// scene->mAnimations[i] }));
 	// 	}
 
 	// 	//Set current animation
@@ -824,15 +806,13 @@ void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
 	const auto geometry = mesh->getGeometry();
 	const ofbx::Skin* skin = geometry->getSkin();
 
-	if (skin == nullptr || IsMeshInvalid(mesh))
-		continue;
+	if (skin == nullptr || IsMeshInvalid(mesh)) continue;
 
 	for (int clusterIndex = 0, c = skin->getClusterCount(); clusterIndex < c; clusterIndex++)
 	{
 		const ofbx::Cluster* cluster = skin->getCluster(clusterIndex);
 
-		if (cluster->getIndicesCount() == 0)
-			continue;
+		if (cluster->getIndicesCount() == 0) continue;
 
 		const auto link = cluster->getLink();
 		ASSERT(link != nullptr);
@@ -848,8 +828,8 @@ void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
 				nodeIndex = data.FindNode(String(link->name), StringSearchCase::IgnoreCase);
 				if (nodeIndex == -1)
 				{
-					LOG(Warning, "Invalid mesh bone linkage. Mesh: {0}, bone: {1}. Skipping...",
-					    String(mesh->name), String(link->name));
+					LOG(Warning, "Invalid mesh bone linkage. Mesh: {0}, bone: {1}. Skipping...", String(mesh->name),
+						String(link->name));
 					continue;
 				}
 			}
@@ -882,201 +862,613 @@ void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
 	}
 
 	/*
-		
+					// Animation Class Attributes
+					{
+									/// <summary>
+									/// Single node animation data container.
+									/// </summary>
+									struct NodeAnimationData
+									{
+													String NodeName;
+													LinearCurve<Vector3> Position;
+													LinearCurve<Quaternion>
+	   Rotation; LinearCurve<Vector3> Scale;
 
-		// 
+													void EvaluateAll(float time,
+	   Transform* result, bool loop = true) const
+													{
+																	Position.Evaluate(result->Translation,
+	   time, loop); Rotation.Evaluate(result->Orientation, time, loop);
+																	Scale.Evaluate(result->Scale,
+	   time, loop);
+													}
+									};
 
-		// Sample Animation Data
-		{
-			// Skip if animation is not ready to use
-			if (anim == nullptr || !anim->IsLoaded())
-				return Value::Null;
-			PROFILE_CPU_ASSET(anim);
-			const float oldTimePos = prevTimePos;
+									struct AnimationData
+									{
+													/// The duration of the
+	   animation (in frames). double Duration = 0.0; double FramesPerSecond = 0.0;
 
-			// Calculate actual time position within the animation node (defined by length and loop mode)
-			const float pos = GetAnimPos(newTimePos, startTimePos, loop, length);
-			const float prevPos = GetAnimPos(prevTimePos, startTimePos, loop, length);
+													String RootNodeName;
 
-			// Get animation position (animation track position for channels sampling)
-			const float animPos = GetAnimSamplePos(length, anim, pos, speed);
-			const float animPrevPos = GetAnimSamplePos(length, anim, prevPos, speed);
+													Array<NodeAnimationData>
+	   Channels;
 
-			// Sample the animation
-			const auto nodes = node->GetNodes(this);
-			nodes->RootMotion = RootMotionData::Identity;
-			nodes->Position = pos;
-			nodes->Length = length;
-			const auto mapping = anim->GetMapping(_graph.BaseModel);
-			const auto emptyNodes = GetEmptyNodes();
-			for (int32 i = 0; i < nodes->Nodes.Count(); i++)
-			{
-				const int32 nodeToChannel = mapping->At(i);
-				nodes->Nodes[i] = emptyNodes->Nodes[i];
-				if (nodeToChannel != -1)
-				{
-					// Calculate the animated node transformation
-					anim->Data.Channels[nodeToChannel].Evaluate(animPos, &nodes->Nodes[i], false);
-				}
-			}
-		}
-		
-		// Sample Animation Data Blended 2 Clips
-		Variant AnimGraphExecutor::SampleAnimationsWithBlend(AnimGraphNode* node, bool loop, float length, float startTimePos, float prevTimePos, float& newTimePos, Animation* animA, Animation* animB, float speedA, float speedB, float alpha)
-		{
-			// Skip if any animation is not ready to use
-			if (animA == nullptr || !animA->IsLoaded() ||
-				animB == nullptr || !animB->IsLoaded())
-				return Value::Null;
+									public:
+													/// Gets the length of the
+	   animation (in seconds). FORCE_INLINE float GetLength() const
+													{
+																	return
+	   static_cast<float>(Duration / FramesPerSecond);
+													}
+									} Data;
 
-			// Calculate actual time position within the animation node (defined by length and loop mode)
-			const float pos = GetAnimPos(newTimePos, startTimePos, loop, length);
-			const float prevPos = GetAnimPos(prevTimePos, startTimePos, loop, length);
+									/// Contains the mapping for every skeleton
+	   node to the animation data channels.
+									/// Can be used for a simple lookup or to
+	   check if a given node is animated (unused nodes are using -1 index).
+	   typedef Array<int32> NodeToChannel;
 
-			// Get animation position (animation track position for channels sampling)
-			const float animPosA = GetAnimSamplePos(length, animA, pos, speedA);
-			const float animPrevPosA = GetAnimSamplePos(length, animA, prevPos, speedA);
-			const float animPosB = GetAnimSamplePos(length, animB, pos, speedB);
-			const float animPrevPosB = GetAnimSamplePos(length, animB, prevPos, speedB);
+									/// The skeleton nodes to animation channel
+	   indices mapping cache. Dictionary<SkinnedModel*, NodeToChannel>
+	   MappingCache;
+					}
 
-			// Sample the animations with blending
-			const auto nodes = node->GetNodes(this);
-			nodes->RootMotion = RootMotionData::Identity;
-			nodes->Position = pos;
-			nodes->Length = length;
-			const auto mappingA = animA->GetMapping(_graph.BaseModel);
-			const auto mappingB = animB->GetMapping(_graph.BaseModel);
-			const auto emptyNodes = GetEmptyNodes();
-			RootMotionData rootMotionA, rootMotionB;
-			int32 rootNodeIndexA = -1, rootNodeIndexB = -1;
-			if (_rootMotionMode != RootMotionMode::NoExtraction)
-			{
-				rootMotionA = rootMotionB = RootMotionData::Identity;
-				if (animA->Data.EnableRootMotion)
-					rootNodeIndexA = GetRootNodeIndex(animA);
-				if (animB->Data.EnableRootMotion)
-					rootNodeIndexB = GetRootNodeIndex(animB);
-			}
-			for (int32 i = 0; i < nodes->Nodes.Count(); i++)
-			{
-				const int32 nodeToChannelA = mappingA->At(i);
-				const int32 nodeToChannelB = mappingB->At(i);
-				Transform nodeA = emptyNodes->Nodes[i];
-				Transform nodeB = nodeA;
+					// Auxiliar Functions
+					void BlendAdditiveWeightedRotation(Quaternion& base,
+	   Quaternion& additive, float weight)
+					{
+									// Pick a shortest path between rotation to
+	   fix blending artifacts additive *= weight; if (Quaternion::Dot(base,
+	   additive) < 0) additive *= -1; base += additive;
+					}
+					int32 AnimGraphExecutor::GetRootNodeIndex(Animation* anim)
+					{
+									// TODO: cache the root node index (use
+	   dictionary with Animation* -> int32 for fast lookups) int32 rootNodeIndex =
+	   0; if (anim->Data.RootNodeName.HasChars())
+									{
+													auto& skeleton =
+	   _graph.BaseModel->Skeleton; for (int32 i = 0; i < skeleton.Nodes.Count();
+	   i++)
+													{
+																	if
+	   (skeleton.Nodes[i].Name == anim->Data.RootNodeName)
+																	{
+																					rootNodeIndex = i;
+																					break;
+																	}
+													}
+									}
+									return rootNodeIndex;
+					}
 
-				// Calculate the animated node transformations
-				if (nodeToChannelA != -1)
-				{
-					animA->Data.Channels[nodeToChannelA].Evaluate(animPosA, &nodeA, false);
-					if (rootNodeIndexA == i)
-						ExtractRootMotion(mappingA, rootNodeIndexA, animA, animPosA, animPrevPosA, nodeA, rootMotionA);
-				}
-				if (nodeToChannelB != -1)
-				{
-					animB->Data.Channels[nodeToChannelB].Evaluate(animPosB, &nodeB, false);
-					if (rootNodeIndexB == i)
-						ExtractRootMotion(mappingB, rootNodeIndexB, animB, animPosB, animPrevPosB, nodeB, rootMotionB);
-				}
+					// Sample Position Functions
+					float GetAnimPos(float& timePos, float startTimePos, bool
+	   loop, float length)
+					{
+									// Apply animation offset and looping to
+	   calculate the animation sampling position within [0;length] float result =
+	   startTimePos + timePos; if (result < 0.0f) // Reverse Playback
+									{
+													result = (loop) ? length -
+	   result : 0;
+									}
+									else if (result > length) // Normal Playback
+									{
+													result = (loop) ?
+	   Math::Mod(result, length) : length;
+									}
+									timePos = result;
+									return result;
+					}
+					float GetAnimSamplePos(float length, Animation* anim, float
+	   pos, float speed)
+					{
+									// Convert into animation local time (track
+	   length may be bigger so fill the gaps with animation clip and include
+	   playback speed)
+									// Also, scale the animation to fit the total
+	   animation node length without cut in a middle const auto animLength =
+	   anim->GetLength(); const int32 cyclesCount = Math::FloorToInt(length /
+	   animLength); const float cycleLength = animLength * (float)cyclesCount;
+									const float adjustRateScale = length /
+	   cycleLength; float animPos = pos * speed * adjustRateScale; while (animPos
+	   > animLength)
+									{
+													animPos -= animLength;
+									}
+									if (animPos < 0) animPos = animLength +
+	   animPos; animPos *= static_cast<float>(anim->Data.FramesPerSecond); return
+	   animPos;
+					}
 
-				// Blend
-				Transform::Lerp(nodeA, nodeB, alpha, nodes->Nodes[i]);
-			}
+					// Sample Animation Data
+					{
+									// Skip if animation is not ready to use
+									if (anim == nullptr || !anim->IsLoaded())
+													return Value::Null;
+									PROFILE_CPU_ASSET(anim);
+									const float oldTimePos = prevTimePos;
 
-			// Handle root motion
-			if (_rootMotionMode != RootMotionMode::NoExtraction)
-			{
-				RootMotionData::Lerp(rootMotionA, rootMotionB, alpha, nodes->RootMotion);
-			}
+									// Calculate actual time position within the
+	   animation node (defined by length and loop mode) const float pos =
+	   GetAnimPos(newTimePos, startTimePos, loop, length); const float prevPos =
+	   GetAnimPos(prevTimePos, startTimePos, loop, length);
 
-			return nodes;
-		}
+									// Get animation position (animation track
+	   position for channels sampling) const float animPos =
+	   GetAnimSamplePos(length, anim, pos, speed); const float animPrevPos =
+	   GetAnimSamplePos(length, anim, prevPos, speed);
 
-		// Setup GPU Data
-		void AnimatedModel::PreInitSkinningData()
-		{
-			ASSERT(SkinnedModel && SkinnedModel->IsLoaded());
+									// Sample the animation
+									const auto nodes = node->GetNodes(this);
+									nodes->RootMotion = RootMotionData::Identity;
+									nodes->Position = pos;
+									nodes->Length = length;
+									const auto mapping =
+	   anim->GetMapping(_graph.BaseModel); const auto emptyNodes =
+	   GetEmptyNodes(); for (int32 i = 0; i < nodes->Nodes.Count(); i++)
+									{
+													const int32 nodeToChannel =
+	   mapping->At(i); nodes->Nodes[i] = emptyNodes->Nodes[i]; if (nodeToChannel
+	   != -1)
+													{
+																	// Calculate
+	   the animated node transformation
+																	anim->Data.Channels[nodeToChannel].Evaluate(animPos,
+	   &nodes->Nodes[i], false);
+													}
+									}
+					}
 
-			ScopeLock lock(SkinnedModel->Locker);
+					// Sample Animation Data Blended 2 Clips
+					Variant
+	   AnimGraphExecutor::SampleAnimationsWithBlend(AnimGraphNode* node, bool
+	   loop, float length, float startTimePos, float prevTimePos, float&
+	   newTimePos, Animation* animA, Animation* animB, float speedA, float speedB,
+	   float alpha)
+					{
+									// Skip if any animation is not ready to use
+									if (animA == nullptr || !animA->IsLoaded() ||
+													animB == nullptr ||
+	   !animB->IsLoaded()) return Value::Null;
 
-			SetupSkinningData();
-			auto& skeleton = SkinnedModel->Skeleton;
-			const int32 bonesCount = skeleton.Bones.Count();
-			const int32 nodesCount = skeleton.Nodes.Count();
+									// Calculate actual time position within the
+	   animation node (defined by length and loop mode) const float pos =
+	   GetAnimPos(newTimePos, startTimePos, loop, length); const float prevPos =
+	   GetAnimPos(prevTimePos, startTimePos, loop, length);
 
-			// Get nodes global transformations for the initial pose
-			GraphInstance.NodesPose.Resize(nodesCount, false);
-			for (int32 nodeIndex = 0; nodeIndex < nodesCount; nodeIndex++)
-			{
-				Matrix localTransform;
-				skeleton.Nodes[nodeIndex].LocalTransform.GetWorld(localTransform);
-				const int32 parentIndex = skeleton.Nodes[nodeIndex].ParentIndex;
-				if (parentIndex != -1)
-					GraphInstance.NodesPose[nodeIndex] = localTransform * GraphInstance.NodesPose[parentIndex];
-				else
-					GraphInstance.NodesPose[nodeIndex] = localTransform;
-			}
-			GraphInstance.Invalidate();
-			GraphInstance.RootTransform = skeleton.Nodes[0].LocalTransform;
+									// Get animation position (animation track
+	   position for channels sampling) const float animPosA =
+	   GetAnimSamplePos(length, animA, pos, speedA); const float animPrevPosA =
+	   GetAnimSamplePos(length, animA, prevPos, speedA); const float animPosB =
+	   GetAnimSamplePos(length, animB, pos, speedB); const float animPrevPosB =
+	   GetAnimSamplePos(length, animB, prevPos, speedB);
 
-			// Setup bones transformations including bone offset matrix
-			Array<Matrix> identityMatrices; // TODO: use shared memory?
-			identityMatrices.Resize(bonesCount, false);
-			for (int32 boneIndex = 0; boneIndex < bonesCount; boneIndex++)
-			{
-				auto& bone = skeleton.Bones[boneIndex];
-				identityMatrices[boneIndex] = bone.OffsetMatrix * GraphInstance.NodesPose[bone.NodeIndex];
-			}
-			_skinningData.SetData(identityMatrices.Get(), true);
+									// Sample the animations with blending
+									const auto nodes = node->GetNodes(this);
+									nodes->RootMotion = RootMotionData::Identity;
+									nodes->Position = pos;
+									nodes->Length = length;
+									const auto mappingA =
+	   animA->GetMapping(_graph.BaseModel); const auto mappingB =
+	   animB->GetMapping(_graph.BaseModel); const auto emptyNodes =
+	   GetEmptyNodes(); RootMotionData rootMotionA, rootMotionB; int32
+	   rootNodeIndexA = -1, rootNodeIndexB = -1; if (_rootMotionMode !=
+	   RootMotionMode::NoExtraction)
+									{
+													rootMotionA = rootMotionB =
+	   RootMotionData::Identity; if (animA->Data.EnableRootMotion) rootNodeIndexA
+	   = GetRootNodeIndex(animA); if (animB->Data.EnableRootMotion) rootNodeIndexB
+	   = GetRootNodeIndex(animB);
+									}
+									for (int32 i = 0; i < nodes->Nodes.Count();
+	   i++)
+									{
+													const int32 nodeToChannelA =
+	   mappingA->At(i); const int32 nodeToChannelB = mappingB->At(i); Transform
+	   nodeA = emptyNodes->Nodes[i]; Transform nodeB = nodeA;
 
-			UpdateBounds();
-			UpdateSockets();
-		}
+													// Calculate the animated node
+	   transformations if (nodeToChannelA != -1)
+													{
+																	animA->Data.Channels[nodeToChannelA].Evaluate(animPosA,
+	   &nodeA, false); if (rootNodeIndexA == i) ExtractRootMotion(mappingA,
+	   rootNodeIndexA, animA, animPosA, animPrevPosA, nodeA, rootMotionA);
+													}
+													if (nodeToChannelB != -1)
+													{
+																	animB->Data.Channels[nodeToChannelB].Evaluate(animPosB,
+	   &nodeB, false); if (rootNodeIndexB == i) ExtractRootMotion(mappingB,
+	   rootNodeIndexB, animB, animPosB, animPrevPosB, nodeB, rootMotionB);
+													}
 
-		// Update data to GPU
-		void AnimatedModel::OnAnimationUpdated_Async()
-		{
-			// Update asynchronous stuff
-			auto& skeleton = SkinnedModel->Skeleton;
+													// Blend
+													Transform::Lerp(nodeA, nodeB,
+	   alpha, nodes->Nodes[i]);
+									}
 
-			// Copy pose from the master
-			if (_masterPose && _masterPose->SkinnedModel->Skeleton.Nodes.Count() == skeleton.Nodes.Count())
-			{
-				ANIM_GRAPH_PROFILE_EVENT("Copy Master Pose");
-				const auto& masterInstance = _masterPose->GraphInstance;
-				GraphInstance.NodesPose = masterInstance.NodesPose;
-				GraphInstance.RootTransform = masterInstance.RootTransform;
-				GraphInstance.RootMotion = masterInstance.RootMotion;
-			}
+									// Handle root motion
+									if (_rootMotionMode !=
+	   RootMotionMode::NoExtraction)
+									{
+													RootMotionData::Lerp(rootMotionA,
+	   rootMotionB, alpha, nodes->RootMotion);
+									}
 
-			// Calculate the final bones transformations and update skinning
-			{
-				ANIM_GRAPH_PROFILE_EVENT("Final Pose");
-				const int32 bonesCount = skeleton.Bones.Count();
-				Matrix3x4* output = (Matrix3x4*)_skinningData.Data.Get();
-				ASSERT(_skinningData.Data.Count() == bonesCount * sizeof(Matrix3x4));
-				for (int32 boneIndex = 0; boneIndex < bonesCount; boneIndex++)
-				{
-					auto& bone = skeleton.Bones[boneIndex];
-					Matrix matrix = bone.OffsetMatrix * GraphInstance.NodesPose[bone.NodeIndex];
-					output[boneIndex].SetMatrixTranspose(matrix);
-				}
-				_skinningData.OnDataChanged(!PerBoneMotionBlur);
-			}
+									return nodes;
+					}
 
-			UpdateBounds();
-			_blendShapes.Update(SkinnedModel.Get());
-		}
+					// Setup GPU Data
+					void AnimatedModel::PreInitSkinningData()
+					{
+									ASSERT(SkinnedModel &&
+	   SkinnedModel->IsLoaded());
+
+									ScopeLock lock(SkinnedModel->Locker);
+
+									SetupSkinningData();
+									auto& skeleton = SkinnedModel->Skeleton;
+									const int32 bonesCount =
+	   skeleton.Bones.Count(); const int32 nodesCount = skeleton.Nodes.Count();
+
+									// Get nodes global transformations for the
+	   initial pose GraphInstance.NodesPose.Resize(nodesCount, false); for (int32
+	   nodeIndex = 0; nodeIndex < nodesCount; nodeIndex++)
+									{
+													Matrix localTransform;
+													skeleton.Nodes[nodeIndex].LocalTransform.GetWorld(localTransform);
+													const int32 parentIndex =
+	   skeleton.Nodes[nodeIndex].ParentIndex; if (parentIndex != -1)
+																	GraphInstance.NodesPose[nodeIndex]
+	   = localTransform * GraphInstance.NodesPose[parentIndex]; else
+	   GraphInstance.NodesPose[nodeIndex] = localTransform;
+									}
+									GraphInstance.Invalidate();
+									GraphInstance.RootTransform =
+	   skeleton.Nodes[0].LocalTransform;
+
+									// Setup bones transformations including bone
+	   offset matrix Array<Matrix> identityMatrices; // TODO: use shared memory?
+									identityMatrices.Resize(bonesCount, false);
+									for (int32 boneIndex = 0; boneIndex <
+	   bonesCount; boneIndex++)
+									{
+													auto& bone =
+	   skeleton.Bones[boneIndex]; identityMatrices[boneIndex] = bone.OffsetMatrix
+	   * GraphInstance.NodesPose[bone.NodeIndex];
+									}
+									_skinningData.SetData(identityMatrices.Get(),
+	   true);
+
+									UpdateBounds();
+									UpdateSockets();
+					}
+
+					// Update data to GPU
+					void AnimatedModel::OnAnimationUpdated_Async()
+					{
+									// Update asynchronous stuff
+									auto& skeleton = SkinnedModel->Skeleton;
+
+									// Copy pose from the master
+									if (_masterPose &&
+	   _masterPose->SkinnedModel->Skeleton.Nodes.Count() ==
+	   skeleton.Nodes.Count())
+									{
+													ANIM_GRAPH_PROFILE_EVENT("Copy
+	   Master Pose"); const auto& masterInstance = _masterPose->GraphInstance;
+	   GraphInstance.NodesPose = masterInstance.NodesPose;
+	   GraphInstance.RootTransform = masterInstance.RootTransform;
+	   GraphInstance.RootMotion = masterInstance.RootMotion;
+									}
+
+									// Calculate the final bones transformations
+	   and update skinning
+									{
+													ANIM_GRAPH_PROFILE_EVENT("Final
+	   Pose"); const int32 bonesCount = skeleton.Bones.Count(); Matrix3x4* output
+	   = (Matrix3x4*)_skinningData.Data.Get(); ASSERT(_skinningData.Data.Count()
+	   == bonesCount * sizeof(Matrix3x4)); for (int32 boneIndex = 0; boneIndex <
+	   bonesCount; boneIndex++)
+													{
+																	auto& bone =
+	   skeleton.Bones[boneIndex]; Matrix matrix = bone.OffsetMatrix *
+	   GraphInstance.NodesPose[bone.NodeIndex];
+																	output[boneIndex].SetMatrixTranspose(matrix);
+													}
+													_skinningData.OnDataChanged(!PerBoneMotionBlur);
+									}
+
+									UpdateBounds();
+									_blendShapes.Update(SkinnedModel.Get());
+					}
+
+					// Mesh Loading for Reference
+					bool ProcessMesh(ImportedModelData& result,
+	   OpenFbxImporterData& data, const ofbx::Mesh* aMesh, MeshData& mesh, String&
+	   errorMsg, int32 triangleStart, int32 triangleEnd)
+					{
+									// Prepare
+									const int32 firstVertexOffset = triangleStart
+	   * 3; const int32 lastVertexOffset = triangleEnd * 3; const ofbx::Geometry*
+	   aGeometry = aMesh->getGeometry(); const int vertexCount = lastVertexOffset
+	   - firstVertexOffset + 3; ASSERT(firstVertexOffset + vertexCount <=
+	   aGeometry->getVertexCount()); const ofbx::Vec3* vertices =
+	   aGeometry->getVertices(); const ofbx::Vec3* normals =
+	   aGeometry->getNormals(); const ofbx::Vec3* tangents =
+	   aGeometry->getTangents(); const ofbx::Vec4* colors =
+	   aGeometry->getColors(); const ofbx::Vec2* uvs = aGeometry->getUVs(); const
+	   ofbx::Skin* skin = aGeometry->getSkin();
+
+									// Properties
+									mesh.Name = aMesh->name;
+									const ofbx::Material* aMaterial = nullptr;
+									if (aMesh->getMaterialCount() > 0)
+									{
+													if (aGeometry->getMaterials())
+																	aMaterial =
+	   aMesh->getMaterial(aGeometry->getMaterials()[triangleStart]); else
+																	aMaterial =
+	   aMesh->getMaterial(0);
+									}
+									mesh.MaterialSlotIndex =
+	   data.AddMaterial(result, aMaterial);
+
+									// Vertex positions
+									mesh.Positions.Resize(vertexCount, false);
+									for (int i = 0; i < vertexCount; i++)
+									{
+													mesh.Positions.Get()[i] =
+	   ToVector3(vertices[i + firstVertexOffset]);
+									}
+
+									// Indices (dummy index buffer)
+									if (vertexCount % 3 != 0)
+									{
+													errorMsg = TEXT("Invalid
+	   vertex count. It must be multiple of 3."); return true;
+									}
+									mesh.Indices.Resize(vertexCount, false);
+									for (int i = 0; i < vertexCount; i++)
+									{
+													mesh.Indices.Get()[i] = i;
+									}
+
+									// Texture coordinates
+									if (uvs)
+									{
+													mesh.UVs.Resize(vertexCount,
+	   false); for (int i = 0; i < vertexCount; i++)
+													{
+																	mesh.UVs.Get()[i]
+	   = ToVector2(uvs[i + firstVertexOffset]);
+													}
+													if (data.ConvertRH)
+													{
+																	for (int32 v =
+	   0; v < vertexCount; v++)
+																	{
+																					mesh.UVs[v].Y = 1.0f -
+	   mesh.UVs[v].Y;
+																	}
+													}
+									}
+
+									// Normals
+									if (data.Options.CalculateNormals || !normals)
+									{
+													if
+	   (mesh.GenerateNormals(data.Options.SmoothingNormalsAngle))
+													{
+																	errorMsg =
+	   TEXT("Failed to generate normals."); return true;
+													}
+									}
+									else if (normals)
+									{
+													mesh.Normals.Resize(vertexCount,
+	   false); for (int i = 0; i < vertexCount; i++)
+													{
+																	mesh.Normals.Get()[i]
+	   = ToVector3(normals[i + firstVertexOffset]);
+													}
+													if (data.ConvertRH)
+													{
+																	// Mirror
+	   normals along the Z axis for (int32 i = 0; i < vertexCount; i++)
+																	{
+																					mesh.Normals.Get()[i].Z *= -1.0f;
+																	}
+													}
+									}
+
+									// Tangents
+									if ((data.Options.CalculateTangents ||
+	   !tangents) && mesh.UVs.HasItems())
+									{
+													// Generated after full mesh
+	   data conversion
+									}
+									else if (tangents)
+									{
+													mesh.Tangents.Resize(vertexCount,
+	   false); for (int i = 0; i < vertexCount; i++)
+													{
+																	mesh.Tangents.Get()[i]
+	   = ToVector3(tangents[i
+	   + firstVertexOffset]);
+													}
+													if (data.ConvertRH)
+													{
+																	// Mirror
+	   tangents along the Z axis for (int32 i = 0; i < vertexCount; i++)
+																	{
+																					mesh.Tangents.Get()[i].Z *= -1.0f;
+																	}
+													}
+									}
+
+									// Lightmap UVs
+									if (data.Options.LightmapUVsSource ==
+	   ModelLightmapUVsSource::Disable)
+									{
+													// No lightmap UVs
+									}
+									else if (data.Options.LightmapUVsSource ==
+	   ModelLightmapUVsSource::Generate)
+									{
+													// Generate lightmap UVs
+													if
+	   (mesh.GenerateLightmapUVs())
+													{
+																	LOG(Error,
+	   "Failed to generate lightmap uvs");
+													}
+									}
+									else
+									{
+													// Select input channel index
+													int32 inputChannelIndex;
+													switch
+	   (data.Options.LightmapUVsSource)
+													{
+													case
+	   ModelLightmapUVsSource::Channel0: inputChannelIndex = 0; break; case
+	   ModelLightmapUVsSource::Channel1: inputChannelIndex = 1; break; case
+	   ModelLightmapUVsSource::Channel2: inputChannelIndex = 2; break; case
+	   ModelLightmapUVsSource::Channel3: inputChannelIndex = 3; break; default:
+																	inputChannelIndex
+	   = INVALID_INDEX; break;
+													}
+
+													// Check if has that channel
+	   texcoords const auto lightmapUVs = aGeometry->getUVs(inputChannelIndex); if
+	   (lightmapUVs)
+													{
+																	mesh.LightmapUVs.Resize(vertexCount,
+	   false); for (int i = 0; i < vertexCount; i++)
+																	{
+																					mesh.LightmapUVs.Get()[i] =
+	   ToVector2(lightmapUVs[i + firstVertexOffset]);
+																	}
+																	if
+	   (data.ConvertRH)
+																	{
+																					for (int32 v = 0; v < vertexCount;
+	   v++)
+																					{
+																									mesh.LightmapUVs[v].Y
+	   = 1.0f - mesh.LightmapUVs[v].Y;
+																					}
+																	}
+													}
+													else
+													{
+																	LOG(Warning,
+	   "Cannot import model lightmap uvs. Missing texcoords channel {0}.",
+	   inputChannelIndex);
+													}
+									}
+
+									// Vertex Colors
+									if (data.Options.ImportVertexColors && colors)
+									{
+													mesh.Colors.Resize(vertexCount,
+	   false); for (int i = 0; i < vertexCount; i++)
+													{
+																	mesh.Colors.Get()[i]
+	   = ToColor(colors[i + firstVertexOffset]);
+													}
+									}
+
+									// Blend Indices and Blend Weights
+									if (skin && skin->getClusterCount() > 0 &&
+	   result.Types & ImportDataTypes::Skeleton)
+									{
+													mesh.BlendIndices.Resize(vertexCount);
+													mesh.BlendWeights.Resize(vertexCount);
+													mesh.BlendIndices.SetAll(Int4::Zero);
+													mesh.BlendWeights.SetAll(Vector4::Zero);
+
+													for (int clusterIndex = 0, c =
+	   skin->getClusterCount(); clusterIndex < c; clusterIndex++)
+													{
+																	const
+	   ofbx::Cluster* cluster = skin->getCluster(clusterIndex);
+
+																	if
+	   (cluster->getIndicesCount() == 0) continue;
+
+																	const auto
+	   link = cluster->getLink(); ASSERT(link != nullptr);
+
+																	// Get bone
+	   (should be created earlier) const int32 boneIndex = data.FindBone(link); if
+	   (boneIndex == -1)
+																	{
+																					// Find the node where the bone is
+	   mapped const int32 nodeIndex = data.FindNode(link); if (nodeIndex == -1)
+																									continue;
+
+																					errorMsg = TEXT("Missing bone");
+																					return true;
+																	}
+
+																	// Apply the
+	   bone influences const int* clusterIndices = cluster->getIndices(); const
+	   double* clusterWeights = cluster->getWeights(); for (int j = 0; j <
+	   cluster->getIndicesCount(); j++)
+																	{
+																					int vtxIndex = clusterIndices[j] -
+	   firstVertexOffset; float vtxWeight = (float)clusterWeights[j];
+
+																					if (vtxWeight <= 0 || vtxIndex < 0
+	   || vtxIndex >= vertexCount) continue;
+
+																					auto& indices =
+	   mesh.BlendIndices[vtxIndex]; auto& weights = mesh.BlendWeights[vtxIndex];
+
+																					for (int32 k = 0; k < 4; k++)
+																					{
+																									if (vtxWeight >=
+	   weights.Raw[k])
+																									{
+																													for
+	   (int32 l = 2; l >= k; l--)
+																													{
+																																	indices.Raw[l
+	   + 1] = indices.Raw[l]; weights.Raw[l + 1] = weights.Raw[l];
+																													}
+
+																													indices.Raw[k]
+	   = boneIndex; weights.Raw[k] = vtxWeight; break;
+																									}
+																					}
+																	}
+													}
+
+													mesh.NormalizeBlendWeights();
+									}
+
+									return false;
+					}
 	*/
 }
 
-// void Ravine::boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms)
+// void Ravine::boneTransform(double timeInSeconds, vector<aiMatrix4x4>&
+// transforms)
 // {
 // 	const aiMatrix4x4 identity;
-// 	uint16_t otherindex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
-// 	double animDuration = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mDuration;
-// 	double otherDuration = meshes[0].animations[otherindex]->aiAnim->mDuration;
-// 	runTime += RvTime::deltaTime() * (animDuration / otherDuration * animInterpolation + 1.0 * (1.0 -
-// animInterpolation)); 	readNodeHierarchy(runTime, animDuration, otherDuration, meshes[0].rootNode, identity);
+// 	uint16_t otherindex = (meshes[0].curAnimId + 1) %
+// meshes[0].animations.size(); 	double animDuration =
+// meshes[0].animations[meshes[0].curAnimId]->aiAnim->mDuration; 	double
+// otherDuration = meshes[0].animations[otherindex]->aiAnim->mDuration;
+// runTime
+// += RvTime::deltaTime() * (animDuration / otherDuration * animInterpolation
+// + 1.0 * (1.0 - animInterpolation)); 	readNodeHierarchy(runTime, animDuration,
+// otherDuration, meshes[0].rootNode, identity);
 
 // 	transforms.resize(meshes[0].numBones);
 
@@ -1085,34 +1477,41 @@ void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
 // 	}
 // }
 
-// void Ravine::readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode,
-// 	const aiMatrix4x4& parentTransform)
+// void Ravine::readNodeHierarchy(double animationTime, double curDuration,
+// double otherDuration, const aiNode* pNode, 	const aiMatrix4x4&
+// parentTransform)
 // {
 // 	string nodeName(pNode->mName.data);
 
 // 	aiMatrix4x4 nodeTransformation(pNode->mTransformation);
 
-// 	uint16_t otherIndex = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
-// 	const aiNodeAnim* pNodeAnim = findNodeAnim(meshes[0].animations[meshes[0].curAnimId]->aiAnim, nodeName);
-// 	const aiNodeAnim* otherNodeAnim = findNodeAnim(meshes[0].animations[otherIndex]->aiAnim, nodeName);
+// 	uint16_t otherIndex = (meshes[0].curAnimId + 1) %
+// meshes[0].animations.size(); 	const aiNodeAnim* pNodeAnim =
+// findNodeAnim(meshes[0].animations[meshes[0].curAnimId]->aiAnim, nodeName);
+// 	const aiNodeAnim* otherNodeAnim =
+// findNodeAnim(meshes[0].animations[otherIndex]->aiAnim, nodeName);
 
 // 	double otherAnimTime = animationTime * curDuration / otherDuration;
 
-// 	double ticksPerSecond = meshes[0].animations[meshes[0].curAnimId]->aiAnim->mTicksPerSecond;
-// 	double TimeInTicks = animationTime * ticksPerSecond;
-// 	double animationTickTime = std::fmod(TimeInTicks, curDuration);
+// 	double ticksPerSecond =
+// meshes[0].animations[meshes[0].curAnimId]->aiAnim->mTicksPerSecond; 	double
+// TimeInTicks = animationTime * ticksPerSecond; 	double animationTickTime
+// = std::fmod(TimeInTicks, curDuration);
 
-// 	ticksPerSecond = meshes[0].animations[otherIndex]->aiAnim->mTicksPerSecond;
-// 	double otherTimeInTicks = otherAnimTime * ticksPerSecond;
-// 	double otherAnimationTime = std::fmod(otherTimeInTicks, otherDuration);
+// 	ticksPerSecond =
+// meshes[0].animations[otherIndex]->aiAnim->mTicksPerSecond; 	double
+// otherTimeInTicks = otherAnimTime * ticksPerSecond; 	double
+// otherAnimationTime = std::fmod(otherTimeInTicks, otherDuration);
 
 // 	if (pNodeAnim)
 // 	{
 // 		// Get interpolated matrices between current and next frame
-// 		aiMatrix4x4 matScale = interpolateScale(animInterpolation, animationTickTime, otherAnimationTime,
-// pNodeAnim, otherNodeAnim); 		aiMatrix4x4 matRotation = interpolateRotation(animInterpolation,
-// animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim); 		aiMatrix4x4 matTranslation =
-// interpolateTranslation(animInterpolation, animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+// 		aiMatrix4x4 matScale = interpolateScale(animInterpolation,
+// animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+// aiMatrix4x4 matRotation = interpolateRotation(animInterpolation,
+// animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
+// aiMatrix4x4 matTranslation = interpolateTranslation(animInterpolation,
+// animationTickTime, otherAnimationTime, pNodeAnim, otherNodeAnim);
 
 // 		nodeTransformation = matTranslation * matRotation * matScale;
 // 	}
@@ -1122,13 +1521,15 @@ void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
 // 	if (meshes[0].boneMapping.find(nodeName) != meshes[0].boneMapping.end())
 // 	{
 // 		uint32_t BoneIndex = meshes[0].boneMapping[nodeName];
-// 		meshes[0].boneInfo[BoneIndex].FinalTransformation = meshes[0].animGlobalInverseTransform *
-// 			globalTransformation * meshes[0].boneInfo[BoneIndex].BoneOffset;
+// 		meshes[0].boneInfo[BoneIndex].FinalTransformation =
+// meshes[0].animGlobalInverseTransform * 			globalTransformation
+// * meshes[0].boneInfo[BoneIndex].BoneOffset;
 // 	}
 
 // 	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
 // 	{
-// 		readNodeHierarchy(animationTime, curDuration, otherDuration, pNode->mChildren[i], globalTransformation);
+// 		readNodeHierarchy(animationTime, curDuration, otherDuration,
+// pNode->mChildren[i], globalTransformation);
 // 	}
 // }
 
@@ -1139,15 +1540,16 @@ void Ravine::createVertexBuffer()
 	/*
 	The vertex buffer should use "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT",
 	which is a more optimal memory but it's not accessible by CPU.
-	That's why we use a staging buffer to transfer vertex data to the vertex buffer.
+	That's why we use a staging buffer to transfer vertex data to the vertex
+	buffer.
 	*/
 	vertexBuffers.reserve(meshesCount);
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		vertexBuffers.push_back(device->createPersistentBuffer(
-		    meshes[i].vertices, sizeof(RvMeshColored) * meshes[i].vertexCount, sizeof(RvMeshColored),
-		    (VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
-		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
+			meshes[i].vertices, sizeof(RvMeshColored) * meshes[i].vertexCount, sizeof(RvMeshColored),
+			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
 		delete[] meshes[i].vertices;
 		meshes[i].vertexCount = 0;
 	}
@@ -1159,9 +1561,9 @@ void Ravine::createIndexBuffer()
 	for (size_t i = 0; i < meshesCount; i++)
 	{
 		indexBuffers.push_back(device->createPersistentBuffer(
-		    meshes[i].indices, sizeof(uint32_t) * meshes[i].indexCount, sizeof(uint32_t),
-		    (VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
+			meshes[i].indices, sizeof(uint32_t) * meshes[i].indexCount, sizeof(uint32_t),
+			(VkBufferUsageFlagBits)(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
 		delete[] meshes[i].indices;
 		meshes[i].indexCount = 0;
 	}
@@ -1178,25 +1580,21 @@ void Ravine::createUniformBuffers()
 
 	for (size_t i = 0; i < framesCount; i++)
 	{
-		globalBuffers[i] =
-		    device->createDynamicBuffer(sizeof(RvGlobalBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-						(VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-									   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		globalBuffers[i] = device->createDynamicBuffer(
+			sizeof(RvGlobalBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			(VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 		for (size_t j = 0; j < meshesCount; j++)
 		{
 			size_t frameOffset = i * meshesCount;
 			materialsBuffers[frameOffset + j] = device->createDynamicBuffer(
-			    sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			    (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-						       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+				sizeof(RvMaterialBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				(VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 			modelsBuffers[frameOffset + j] = device->createDynamicBuffer(
-			    sizeof(RvModelBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			    (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-						       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+				sizeof(RvModelBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				(VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 			animationsBuffers[frameOffset + j] = device->createDynamicBuffer(
-			    sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			    (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-						       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+				sizeof(RvBoneBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				(VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
 		}
 	}
 }
@@ -1209,11 +1607,12 @@ void Ravine::loadTextureImages()
 	textures = new RvTexture[texturesSize];
 
 	// Generate Pink 2x2 image for missing texture
-	unsigned char* pinkTexture = new unsigned char[16]; // 2x2 = 4 pixels <= 4 * RGBA = 4 * 4 char = 32 char
+	unsigned char* pinkTexture = new unsigned char[16]; // 2x2 = 4 pixels <= 4 * RGBA = 4 * 4 char = 32
+														// char
 	for (uint32_t i = 0; i < 4; i++)
 	{
 		pinkTexture[i * 4 + 0] = 255; // Red
-		pinkTexture[i * 4 + 1] = 0;   // Green
+		pinkTexture[i * 4 + 1] = 0;	  // Green
 		pinkTexture[i * 4 + 2] = 144; // Blue
 		pinkTexture[i * 4 + 3] = 255; // Alpha
 	}
@@ -1225,8 +1624,8 @@ void Ravine::loadTextureImages()
 		int texWidth, texHeight, texChannels;
 
 		fmt::print(stdout, "{0}\n", texturesToLoad[i - 1].c_str());
-		stbi_uc* pixels = stbi_load(("../data/" + texturesToLoad[i - 1]).c_str(), &texWidth, &texHeight,
-					    &texChannels, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load(("../data/" + texturesToLoad[i - 1]).c_str(), &texWidth, &texHeight, &texChannels,
+									STBI_rgb_alpha);
 
 		textures[i] = device->createTexture(pixels, texWidth, texHeight);
 
@@ -1267,7 +1666,7 @@ void Ravine::createTextureSampler()
 	// Mipmapping
 	samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerCreateInfo.mipLodBias = 0.0f; // Optional
-	samplerCreateInfo.minLod = 0.0f;     // Optional
+	samplerCreateInfo.minLod = 0.0f;	 // Optional
 	samplerCreateInfo.maxLod = static_cast<float>(mipLevels);
 
 	// Creating sampler
@@ -1310,8 +1709,7 @@ void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 #pragma region Secondary Command Buffers
-	beginInfo.flags =
-	    VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 	// Setup inheritance information to provide access modifiers from RenderPass
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
@@ -1330,36 +1728,34 @@ void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 	}
 
 	// Basic Drawing Commands
-	// Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
+	// Reference:
+	// https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Basic_drawing_commands
 	const size_t setsPerFrame = 1 + (meshesCount * 2);
 	const VkDeviceSize offsets[] = {0};
 
 	if (staticSolidPipelineEnabled)
 	{
 		// Bind Correct Graphics Pipeline
-		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-				  *staticGraphicsPipeline);
+		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, *staticGraphicsPipeline);
 
 		// Global, Material and Model Descriptor Sets
 		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-					staticGraphicsPipeline->layout, 0, 1,
-					&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+								staticGraphicsPipeline->layout, 0, 1, &descriptorSets[currentFrame * setsPerFrame], 0,
+								nullptr);
 
 		// Call drawing
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-						staticGraphicsPipeline->layout, 1, 2,
-						&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
-						nullptr);
+									staticGraphicsPipeline->layout, 1, 2,
+									&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1,
-					       &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0,
-					     VK_INDEX_TYPE_UINT32);
+								 VK_INDEX_TYPE_UINT32);
 			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame],
-					 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+							 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
@@ -1367,114 +1763,122 @@ void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 	{
 		// Bind Correct Graphics Pipeline
 		vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-				  *staticWireframeGraphicsPipeline);
+						  *staticWireframeGraphicsPipeline);
 
 		// Global, Material and Model Descriptor Sets
 		vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-					staticWireframeGraphicsPipeline->layout, 0, 1,
-					&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+								staticWireframeGraphicsPipeline->layout, 0, 1,
+								&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		// Call drawing
 		for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		{
 			const size_t meshSetOffset = meshIndex * 2;
 			vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-						staticWireframeGraphicsPipeline->layout, 1, 2,
-						&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
-						nullptr);
+									staticWireframeGraphicsPipeline->layout, 1, 2,
+									&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0, nullptr);
 
-			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1,
-					       &vertexBuffers[meshIndex].handle, offsets);
+			vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1, &vertexBuffers[meshIndex].handle, offsets);
 			vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0,
-					     VK_INDEX_TYPE_UINT32);
+								 VK_INDEX_TYPE_UINT32);
 			vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame],
-					 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+							 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
 		}
 	}
 
 	if (skinnedSolidPipelineEnabled)
 	{
 		// // Bind Correct Graphics Pipeline
-		// vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 		  *skinnedGraphicsPipeline);
+		// vkCmdBindPipeline(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
 
 		// // Global, Material and Model Descriptor Sets
-		// vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 			skinnedGraphicsPipeline->layout, 0, 1,
-		// 			&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		// vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS, 			skinnedGraphicsPipeline->layout, 0,
+		// 1, 			&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		// // Call drawing
 		// for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		// {
 		// 	const size_t meshSetOffset = meshIndex * 2;
-		// 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 				skinnedGraphicsPipeline->layout, 1, 2,
-		// 				&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
-		// 				nullptr);
+		// 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS, 				skinnedGraphicsPipeline->layout, 1,
+		// 2, 				&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
+		// nullptr);
 
 		// 	vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1,
 		// 			       &vertexBuffers[meshIndex].handle, offsets);
-		// 	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0,
-		// 			     VK_INDEX_TYPE_UINT32);
+		// 	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame],
+		// indexBuffers[meshIndex].handle, 0,
+		// VK_INDEX_TYPE_UINT32);
 		// 	vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame],
-		// 			 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		// 			 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1,
+		// 0, 0, 0);
 		// }
 	}
 
 	if (skinnedSolidPipelineEnabled)
 	{
 		// // Bind Correct Graphics Pipeline
-		// vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 		  *skinnedGraphicsPipeline);
+		// vkCmdBindPipeline(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS, *skinnedGraphicsPipeline);
 
 		// // Global, Material and Model Descriptor Sets
-		// vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 			skinnedGraphicsPipeline->layout, 0, 1,
-		// 			&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		// vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS, 			skinnedGraphicsPipeline->layout, 0,
+		// 1, 			&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
 
 		// // Call drawing
 		// for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		// {
 		// 	const size_t meshSetOffset = meshIndex * 2;
-		// 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 				skinnedGraphicsPipeline->layout, 1, 2,
-		// 				&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
-		// 				nullptr);
+		// 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS, 				skinnedGraphicsPipeline->layout, 1,
+		// 2, 				&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
+		// nullptr);
 
 		// 	vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1,
 		// 			       &vertexBuffers[meshIndex].handle, offsets);
-		// 	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0,
-		// 			     VK_INDEX_TYPE_UINT32);
+		// 	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame],
+		// indexBuffers[meshIndex].handle, 0,
+		// VK_INDEX_TYPE_UINT32);
 		// 	vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame],
-		// 			 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		// 			 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1,
+		// 0, 0, 0);
 		// }
 	}
 
 	if (skinnedWiredPipelineEnabled)
 	{
 		// // Perform the same with wireframe rendering
-		// vkCmdBindPipeline(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		// 		  *skinnedWireframeGraphicsPipeline);
+		// vkCmdBindPipeline(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS,
+		// *skinnedWireframeGraphicsPipeline);
 
 		// // Global, Material and Model Descriptor Sets
-		// vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+		// vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS,
 		// 			skinnedWireframeGraphicsPipeline->layout, 0, 1,
-		// 			&descriptorSets[currentFrame * setsPerFrame], 0, nullptr);
+		// 			&descriptorSets[currentFrame * setsPerFrame], 0,
+		// nullptr);
 
 		// for (size_t meshIndex = 0; meshIndex < meshesCount; meshIndex++)
 		// {
 		// 	const size_t meshSetOffset = meshIndex * 2;
-		// 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+		// 	vkCmdBindDescriptorSets(secondaryCmdBuffers[currentFrame],
+		// VK_PIPELINE_BIND_POINT_GRAPHICS,
 		// 				skinnedWireframeGraphicsPipeline->layout, 1, 2,
-		// 				&descriptorSets[currentFrame * setsPerFrame + meshSetOffset + 1], 0,
-		// 				nullptr);
+		// 				&descriptorSets[currentFrame * setsPerFrame + meshSetOffset +
+		// 1], 0, 				nullptr);
 
 		// 	vkCmdBindVertexBuffers(secondaryCmdBuffers[currentFrame], 0, 1,
 		// 			       &vertexBuffers[meshIndex].handle, offsets);
-		// 	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame], indexBuffers[meshIndex].handle, 0,
-		// 			     VK_INDEX_TYPE_UINT32);
+		// 	vkCmdBindIndexBuffer(secondaryCmdBuffers[currentFrame],
+		// indexBuffers[meshIndex].handle, 0,
+		// VK_INDEX_TYPE_UINT32);
 		// 	vkCmdDrawIndexed(secondaryCmdBuffers[currentFrame],
-		// 			 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1, 0, 0, 0);
+		// 			 static_cast<uint32_t>(indexBuffers[meshIndex].instancesCount), 1,
+		// 0, 0, 0);
 		// }
 	}
 
@@ -1495,7 +1899,8 @@ void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 	}
 
 	// Starting a Render Pass
-	// Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
+	// Reference:
+	// https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers#page_Starting_a_render_pass
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = renderPass->handle;
@@ -1511,7 +1916,7 @@ void Ravine::recordCommandBuffers(const uint32_t currentFrame)
 	renderPassInfo.pClearValues = clearValues.data();
 
 	vkCmdBeginRenderPass(primaryCmdBuffers[currentFrame], &renderPassInfo,
-			     VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+						 VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
 	// Execute Skinned Mesh Pipeline - Secondary Command Buffer
 	vkCmdExecuteCommands(primaryCmdBuffers[currentFrame], 1, &secondaryCmdBuffers[currentFrame]);
@@ -1556,8 +1961,7 @@ template <int N>
 static void toString(ofbx::DataView view, char (&out)[N])
 {
 	int len = int(view.end - view.begin);
-	if (len > sizeof(out) - 1)
-		len = sizeof(out) - 1;
+	if (len > sizeof(out) - 1) len = sizeof(out) - 1;
 	strncpy_s(out, (const char*)view.begin, len);
 	out[len] = 0;
 }
@@ -1590,8 +1994,7 @@ static void catProperty(char (&out)[N], const ofbx::IElementProperty* prop)
 template <typename T>
 static void showArray(const char* label, const char* format, ofbx::IElementProperty* prop)
 {
-	if (!ImGui::CollapsingHeader(label))
-		return;
+	if (!ImGui::CollapsingHeader(label)) return;
 
 	int count = prop->getCount();
 	ImGui::Text("Count: %d", count);
@@ -1644,8 +2047,7 @@ void Ravine::showFbxGUI(ofbx::IElementProperty* prop)
 	}
 
 	ImGui::PopID();
-	if (prop->getNext())
-		showFbxGUI(prop->getNext());
+	if (prop->getNext()) showFbxGUI(prop->getNext());
 }
 
 void Ravine::showFbxGUI(const ofbx::IElement* parent)
@@ -1660,8 +2062,7 @@ void Ravine::showFbxGUI(const ofbx::IElement* parent)
 		bool first = true;
 		while (prop)
 		{
-			if (!first)
-				strcat_s(label, ", ");
+			if (!first) strcat_s(label, ", ");
 			first = false;
 			catProperty(label, prop);
 			prop = prop->getNext();
@@ -1670,20 +2071,16 @@ void Ravine::showFbxGUI(const ofbx::IElement* parent)
 
 		ImGui::PushID((const void*)id.begin);
 		ImGuiTreeNodeFlags flags = selectedElement == element ? ImGuiTreeNodeFlags_Selected : 0;
-		if (!element->getFirstChild())
-			flags |= ImGuiTreeNodeFlags_Leaf;
+		if (!element->getFirstChild()) flags |= ImGuiTreeNodeFlags_Leaf;
 		if (ImGui::TreeNodeEx(label, flags))
 		{
-			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
-				selectedElement = element;
-			if (element->getFirstChild())
-				showFbxGUI(element);
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) selectedElement = element;
+			if (element->getFirstChild()) showFbxGUI(element);
 			ImGui::TreePop();
 		}
 		else
 		{
-			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
-				selectedElement = element;
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) selectedElement = element;
 		}
 		ImGui::PopID();
 	}
@@ -1759,25 +2156,20 @@ void Ravine::showObjectGUI(const ofbx::Object* object)
 	sprintf_s(tmp, "%" PRId64 " %s (%s)", object->id, object->name, label);
 	if (ImGui::TreeNodeEx(tmp, flags))
 	{
-		if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
-			selectedObject = object;
+		if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) selectedObject = object;
 		int i = 0;
 		while (ofbx::Object* child = object->resolveObjectLink(i))
 		{
 			showObjectGUI(child);
 			++i;
 		}
-		if (object->getType() == ofbx::Object::Type::ANIMATION_CURVE)
-		{
-			showCurveGUI(object);
-		}
+		if (object->getType() == ofbx::Object::Type::ANIMATION_CURVE) { showCurveGUI(object); }
 
 		ImGui::TreePop();
 	}
 	else
 	{
-		if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
-			selectedObject = object;
+		if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) selectedObject = object;
 	}
 }
 
@@ -1789,8 +2181,7 @@ void Ravine::showObjectsGUI(const ofbx::IScene* scene)
 		return;
 	}
 	const ofbx::Object* root = scene->getRoot();
-	if (root)
-		showObjectGUI(root);
+	if (root) showObjectGUI(root);
 
 	int count = scene->getAnimationStackCount();
 	for (int i = 0; i < count; ++i)
@@ -1824,16 +2215,12 @@ void Ravine::drawGuiElements()
 		lastFps = "FPS - " + to_string(RvTime::framesPerSecond());
 	}
 	ImGui::TextUnformatted(lastFps.c_str());
-	if (ImGui::MenuItem("Exit Ravine", 0, false))
-	{
-		glfwSetWindowShouldClose(*window, true);
-	}
+	if (ImGui::MenuItem("Exit Ravine", 0, false)) { glfwSetWindowShouldClose(*window, true); }
 	ImGui::EndMainMenuBar();
 
 	if (showPipelinesMenu)
 	{
-		if (ImGui::Begin("Configurations Menu", &showPipelinesMenu, {400, 300}, -1,
-				 ImGuiWindowFlags_NoCollapse))
+		if (ImGui::Begin("Configurations Menu", &showPipelinesMenu, {400, 300}, -1, ImGuiWindowFlags_NoCollapse))
 		{
 			ImGui::TextUnformatted("Graphics Pipelines");
 			{
@@ -1861,16 +2248,14 @@ void Ravine::drawGuiElements()
 		if (ImGui::Begin("Elements"))
 		{
 			const ofbx::IElement* root = scene->getRootElement();
-			if (root && root->getFirstChild())
-				showFbxGUI(root);
+			if (root && root->getFirstChild()) showFbxGUI(root);
 		}
 		ImGui::End();
 
 		if (ImGui::Begin("Properties") && selectedElement)
 		{
 			ofbx::IElementProperty* prop = selectedElement->getFirstProperty();
-			if (prop)
-				showFbxGUI(prop);
+			if (prop) showFbxGUI(prop);
 		}
 		ImGui::End();
 
@@ -1880,14 +2265,18 @@ void Ravine::drawGuiElements()
 
 void Ravine::drawFrame()
 {
-	// Reference: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation
+	// Reference:
+	// https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation
 	// Should perform the following operations:
 	//	- Acquire an image from the swap chain
-	//	- Execute the command buffer with that image as attachment in the framebuffer
+	//	- Execute the command buffer with that image as attachment in the
+	// framebuffer
 	//	- Return the image to the swap chain for presentation
-	// As such operations are performed asynchronously, we must use sync them, either with fences or semaphores:
-	// Fences are best fitted to syncronize the application itself with the renderization operations, while
-	// semaphores are used to syncronize operations within or across command queues - thus our best fit.
+	// As such operations are performed asynchronously, we must use sync them,
+	// either with fences or semaphores: Fences are best fitted to syncronize the
+	// application itself with the renderization operations, while semaphores are
+	// used to syncronize operations within or across command queues - thus our
+	// best fit.
 
 	// Handle resize and such
 	if (window->framebufferResized)
@@ -1896,10 +2285,7 @@ void Ravine::drawFrame()
 		window->framebufferResized = false;
 	}
 	uint32_t frameIndex;
-	if (!swapChain->acquireNextFrame(frameIndex))
-	{
-		recreateSwapChain();
-	}
+	if (!swapChain->acquireNextFrame(frameIndex)) { recreateSwapChain(); }
 
 	// //Update bone transforms
 	// if (!meshes[0].animations.empty()) {
@@ -1927,10 +2313,7 @@ void Ravine::drawFrame()
 	// Make sure to record all new Commands
 	recordCommandBuffers(frameIndex);
 
-	if (!swapChain->submitNextFrame(primaryCmdBuffers.data(), frameIndex))
-	{
-		recreateSwapChain();
-	}
+	if (!swapChain->submitNextFrame(primaryCmdBuffers.data(), frameIndex)) { recreateSwapChain(); }
 }
 
 void Ravine::setupFpsCam()
@@ -1948,9 +2331,10 @@ void Ravine::setupFpsCam()
 void Ravine::updateUniformBuffer(uint32_t currentFrame)
 {
 	/*
-	Using a UBO this way is not the most efficient way to pass frequently changing values to the shader.
-	A more efficient way to pass a small buffer of data to shaders are push constants.
-	Reference: https://vulkan-tutorial.com/Uniform_buffers/Descriptor_layout_and_buffer
+	Using a UBO this way is not the most efficient way to pass frequently changing
+	values to the shader. A more efficient way to pass a small buffer of data to
+	shaders are push constants. Reference:
+	https://vulkan-tutorial.com/Uniform_buffers/Descriptor_layout_and_buffer
 	*/
 
 #pragma region Inputs
@@ -1986,17 +2370,13 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 		lookRot = glm::rotate(lookRot, glm::radians(camera->verRot), glm::vec3(1, 0, 0));
 
 		// Calculate translation
-		if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS)
-			translation.z -= 2.0f * deltaTime;
+		if (glfwGetKey(*window, GLFW_KEY_W) == GLFW_PRESS) translation.z -= 2.0f * deltaTime;
 
-		if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS)
-			translation.x -= 2.0f * deltaTime;
+		if (glfwGetKey(*window, GLFW_KEY_A) == GLFW_PRESS) translation.x -= 2.0f * deltaTime;
 
-		if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS)
-			translation.z += 2.0f * deltaTime;
+		if (glfwGetKey(*window, GLFW_KEY_S) == GLFW_PRESS) translation.z += 2.0f * deltaTime;
 
-		if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS)
-			translation.x += 2.0f * deltaTime;
+		if (glfwGetKey(*window, GLFW_KEY_D) == GLFW_PRESS) translation.x += 2.0f * deltaTime;
 
 		if (glfwGetKey(*window, GLFW_KEY_Q) || glfwGetKey(*window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 			translation.y -= 2.0f * deltaTime;
@@ -2018,40 +2398,30 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 	if (glfwGetKey(*window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
 		animInterpolation += 0.001f;
-		if (animInterpolation > 1.0f)
-		{
-			animInterpolation = 1.0f;
-		}
+		if (animInterpolation > 1.0f) { animInterpolation = 1.0f; }
 		fmt::print(stdout, "{0}\n", animInterpolation);
 	}
 	if (glfwGetKey(*window, GLFW_KEY_DOWN) == GLFW_PRESS)
 	{
 		animInterpolation -= 0.001f;
-		if (animInterpolation < 0.0f)
-		{
-			animInterpolation = 0.0f;
-		}
+		if (animInterpolation < 0.0f) { animInterpolation = 0.0f; }
 		fmt::print(stdout, "{0}\n", animInterpolation);
 	}
 	// SWAP ANIMATIONS
 	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_PRESS && !keyUpPressed)
 	{
 		keyUpPressed = true;
-		// meshes[0].curAnimId = (meshes[0].curAnimId + 1) % meshes[0].animations.size();
+		// meshes[0].curAnimId = (meshes[0].curAnimId + 1) %
+		// meshes[0].animations.size();
 	}
-	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE)
-	{
-		keyUpPressed = false;
-	}
+	if (glfwGetKey(*window, GLFW_KEY_RIGHT) == GLFW_RELEASE) { keyUpPressed = false; }
 	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_PRESS && !keyDownPressed)
 	{
 		keyDownPressed = true;
-		// meshes[0].curAnimId = (meshes[0].curAnimId - 1) % meshes[0].animations.size();
+		// meshes[0].curAnimId = (meshes[0].curAnimId - 1) %
+		// meshes[0].animations.size();
 	}
-	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_RELEASE)
-	{
-		keyDownPressed = false;
-	}
+	if (glfwGetKey(*window, GLFW_KEY_LEFT) == GLFW_RELEASE) { keyDownPressed = false; }
 
 	camera->Translate(lookRot * translation);
 
@@ -2064,13 +2434,14 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 	ubo.view = camera->GetViewMatrix();
 
 	// Projection matrix with FOV of 45 degrees
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->extent.width / (float)swapChain->extent.height,
-				    0.1f, 200.0f);
+	ubo.proj =
+		glm::perspective(glm::radians(45.0f), swapChain->extent.width / (float)swapChain->extent.height, 0.1f, 200.0f);
 
 	ubo.camPos = camera->pos;
 	ubo.lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	// Flipping coordinates (because glm was designed for openGL, with fliped Y coordinate)
+	// Flipping coordinates (because glm was designed for openGL, with fliped Y
+	// coordinate)
 	ubo.proj[1][1] *= -1;
 
 	// Transfering uniform data to uniform buffer
@@ -2090,7 +2461,7 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 		void* materialsData;
 		vkMapMemory(device->handle, materialsBuffers[currentFrame * meshesCount + meshId].memory, 0,
-			    sizeof(materialsUbo), 0, &materialsData);
+					sizeof(materialsUbo), 0, &materialsData);
 		memcpy(materialsData, &materialsUbo, sizeof(materialsUbo));
 		vkUnmapMemory(device->handle, materialsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
@@ -2100,18 +2471,15 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 		// Model matrix updates
 		modelsUbo.model = glm::translate(glm::mat4(1.0f), uniformPosition);
-		modelsUbo.model =
-		    glm::rotate(modelsUbo.model, glm::radians(uniformRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-		modelsUbo.model =
-		    glm::rotate(modelsUbo.model, glm::radians(uniformRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-		modelsUbo.model =
-		    glm::rotate(modelsUbo.model, glm::radians(uniformRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		modelsUbo.model = glm::rotate(modelsUbo.model, glm::radians(uniformRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
 		modelsUbo.model = glm::scale(modelsUbo.model, uniformScale);
 
 		// Transfering model data to gpu buffer
 		void* modelData;
-		vkMapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory, 0,
-			    sizeof(modelsUbo), 0, &modelData);
+		vkMapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(modelsUbo), 0,
+					&modelData);
 		memcpy(modelData, &modelsUbo, sizeof(modelsUbo));
 		vkUnmapMemory(device->handle, modelsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
@@ -2121,12 +2489,13 @@ void Ravine::updateUniformBuffer(uint32_t currentFrame)
 
 		// for (size_t i = 0; i < meshes[0].boneTransforms.size(); i++)
 		// {
-		// 	bonesUbo.transformMatrixes[i] = glm::transpose(glm::make_mat4(&meshes[0].boneTransforms[i].a1));
+		// 	bonesUbo.transformMatrixes[i] =
+		// glm::transpose(glm::make_mat4(&meshes[0].boneTransforms[i].a1));
 		// }
 
 		void* bonesData;
-		vkMapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory, 0,
-			    sizeof(bonesUbo), 0, &bonesData);
+		vkMapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory, 0, sizeof(bonesUbo),
+					0, &bonesData);
 		memcpy(bonesData, &bonesUbo, sizeof(bonesUbo));
 		vkUnmapMemory(device->handle, animationsBuffers[currentFrame * meshesCount + meshId].memory);
 #pragma endregion
@@ -2203,16 +2572,11 @@ void Ravine::cleanup()
 	}
 
 	// Destroy pipelines
-	if (skinnedGraphicsPipeline)
-		delete skinnedGraphicsPipeline;
-	if (skinnedWireframeGraphicsPipeline)
-		delete skinnedWireframeGraphicsPipeline;
-	if (staticGraphicsPipeline)
-		delete staticGraphicsPipeline;
-	if (staticWireframeGraphicsPipeline)
-		delete staticWireframeGraphicsPipeline;
-	if (staticLineGraphicsPipeline)
-		delete staticLineGraphicsPipeline;
+	if (skinnedGraphicsPipeline) delete skinnedGraphicsPipeline;
+	if (skinnedWireframeGraphicsPipeline) delete skinnedWireframeGraphicsPipeline;
+	if (staticGraphicsPipeline) delete staticGraphicsPipeline;
+	if (staticWireframeGraphicsPipeline) delete staticWireframeGraphicsPipeline;
+	if (staticLineGraphicsPipeline) delete staticLineGraphicsPipeline;
 
 	// Stop GLSLang
 	glslang::FinalizeProcess();
@@ -2225,8 +2589,7 @@ void Ravine::cleanup()
 	rvDebug::destroyDebugCallback(instance);
 #endif
 
-	if (scene)
-		scene->destroy();
+	if (scene) scene->destroy();
 
 	// Destroy VK surface and instance
 	delete window;

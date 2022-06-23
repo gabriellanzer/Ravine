@@ -185,7 +185,7 @@ class Ravine
 
 	// Load scene file and populates meshes vector
 	bool loadScene(const string& filePath);
-	// void loadBones(const aiMesh* pMesh, RvSkinnedMeshColored& meshData);
+	void loadBones(const ofbx::Mesh* mesh, struct RvSkinnedMeshColored& meshData);
 	// //TODO: Move to Blend-tree
 	// void boneTransform(double timeInSeconds, vector<aiMatrix4x4>& transforms);
 	// void readNodeHierarchy(double animationTime, double curDuration, double otherDuration, const aiNode* pNode,

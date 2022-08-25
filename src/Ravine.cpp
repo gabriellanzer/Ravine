@@ -776,7 +776,7 @@ bool Ravine::loadScene(const string& filePath)
 			if (!listed) { texturesToLoad.push_back(texPath); }
 		}
 
-		loadBones(mesh, meshes[i]);
+		// loadBones(mesh, meshes[i]);
 	}
 
 	// fmt::print(stdout, "Loaded file with {0} animations.\n",
@@ -801,65 +801,70 @@ bool Ravine::loadScene(const string& filePath)
 	return true;
 }
 
+static bool IsMeshInvalid(const ofbx::Mesh* aMesh)
+{
+    return aMesh->getGeometry()->getVertexCount() == 0;
+}
+
 void Ravine::loadBones(const ofbx::Mesh* mesh, RvSkinnedMeshColored& meshData)
 {
-	const auto geometry = mesh->getGeometry();
-	const ofbx::Skin* skin = geometry->getSkin();
+	// const auto geometry = mesh->getGeometry();
+	// const ofbx::Skin* skin = geometry->getSkin();
 
-	if (skin == nullptr || IsMeshInvalid(mesh)) continue;
+	// if (skin == nullptr || IsMeshInvalid(mesh)) continue;
 
-	for (int clusterIndex = 0, c = skin->getClusterCount(); clusterIndex < c; clusterIndex++)
-	{
-		const ofbx::Cluster* cluster = skin->getCluster(clusterIndex);
+	// for (int clusterIndex = 0, c = skin->getClusterCount(); clusterIndex < c; clusterIndex++)
+	// {
+	// 	const ofbx::Cluster* cluster = skin->getCluster(clusterIndex);
 
-		if (cluster->getIndicesCount() == 0) continue;
+	// 	if (cluster->getIndicesCount() == 0) continue;
 
-		const auto link = cluster->getLink();
-		ASSERT(link != nullptr);
+	// 	const auto link = cluster->getLink();
+	// 	ASSERT(link != nullptr);
 
-		// Create bone if missing
-		int32 boneIndex = data.FindBone(link);
-		if (boneIndex == -1)
-		{
-			// Find the node where the bone is mapped
-			int32 nodeIndex = data.FindNode(link);
-			if (nodeIndex == -1)
-			{
-				nodeIndex = data.FindNode(String(link->name), StringSearchCase::IgnoreCase);
-				if (nodeIndex == -1)
-				{
-					LOG(Warning, "Invalid mesh bone linkage. Mesh: {0}, bone: {1}. Skipping...", String(mesh->name),
-						String(link->name));
-					continue;
-				}
-			}
+	// 	// Create bone if missing
+	// 	int32 boneIndex = data.FindBone(link);
+	// 	if (boneIndex == -1)
+	// 	{
+	// 		// Find the node where the bone is mapped
+	// 		int32 nodeIndex = data.FindNode(link);
+	// 		if (nodeIndex == -1)
+	// 		{
+	// 			nodeIndex = data.FindNode(String(link->name), StringSearchCase::IgnoreCase);
+	// 			if (nodeIndex == -1)
+	// 			{
+	// 				LOG(Warning, "Invalid mesh bone linkage. Mesh: {0}, bone: {1}. Skipping...", String(mesh->name),
+	// 					String(link->name));
+	// 				continue;
+	// 			}
+	// 		}
 
-			// Add bone
-			boneIndex = data.Bones.Count();
-			data.Bones.EnsureCapacity(Math::Max(128, boneIndex + 16));
-			data.Bones.Resize(boneIndex + 1);
-			auto& bone = data.Bones[boneIndex];
+	// 		// Add bone
+	// 		boneIndex = data.Bones.Count();
+	// 		data.Bones.EnsureCapacity(Math::Max(128, boneIndex + 16));
+	// 		data.Bones.Resize(boneIndex + 1);
+	// 		auto& bone = data.Bones[boneIndex];
 
-			// Setup bone
-			bone.NodeIndex = nodeIndex;
-			bone.ParentBoneIndex = -1;
-			bone.FbxObj = link;
-			bone.OffsetMatrix = GetOffsetMatrix(data, aMesh, link);
-			bone.OffsetMatrix.Invert();
+	// 		// Setup bone
+	// 		bone.NodeIndex = nodeIndex;
+	// 		bone.ParentBoneIndex = -1;
+	// 		bone.FbxObj = link;
+	// 		bone.OffsetMatrix = GetOffsetMatrix(data, aMesh, link);
+	// 		bone.OffsetMatrix.Invert();
 
-			// Mirror offset matrices (RH to LH)
-			if (data.ConvertRH)
-			{
-				auto& m = bone.OffsetMatrix;
-				m.M13 = -m.M13;
-				m.M23 = -m.M23;
-				m.M43 = -m.M43;
-				m.M31 = -m.M31;
-				m.M32 = -m.M32;
-				m.M34 = -m.M34;
-			}
-		}
-	}
+	// 		// Mirror offset matrices (RH to LH)
+	// 		if (data.ConvertRH)
+	// 		{
+	// 			auto& m = bone.OffsetMatrix;
+	// 			m.M13 = -m.M13;
+	// 			m.M23 = -m.M23;
+	// 			m.M43 = -m.M43;
+	// 			m.M31 = -m.M31;
+	// 			m.M32 = -m.M32;
+	// 			m.M34 = -m.M34;
+	// 		}
+	// 	}
+	// }
 
 	/*
 					// Animation Class Attributes

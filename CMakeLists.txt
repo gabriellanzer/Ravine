@@ -19,8 +19,8 @@ conan_cmake_run(REQUIRES
 				glslang/11.7.0
 				openfbx/cci.20210426
                 BASIC_SETUP NO_OUTPUT_DIRS
-				IMPORTS "., license* -> ../licenses @ folder=True, ignore_case=True"
-				IMPORTS "include, * -> ../include @ ignore_case=True"
+				IMPORTS "., license* -> ../../licenses @ folder=True, ignore_case=True"
+				IMPORTS "include, * -> ../../include @ ignore_case=True"
 				CMAKE_TARGETS BUILD missing)
 
 # Configure Includes

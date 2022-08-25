@@ -1,3 +1,5 @@
+#if FALSE
+
 // Copyright (c) 2012-2022 Wojciech Figat. All rights reserved.
 
 // Import OpenFBX library
@@ -1314,3 +1316,4 @@ bool ModelTool::ImportDataOpenFBX(const char* path, ImportedModelData& data, Opt
 
     return false;
 }
+#endif

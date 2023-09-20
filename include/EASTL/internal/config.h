@@ -89,8 +89,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTL_VERSION
-	#define EASTL_VERSION   "3.13.06"
-	#define EASTL_VERSION_N  31305
+	#define EASTL_VERSION   "3.18.00"
+	#define EASTL_VERSION_N  31800
 #endif
 
 
@@ -154,7 +154,7 @@
 		#define EA_CPP14_CONSTEXPR constexpr
 	#else
 		#define EA_CPP14_CONSTEXPR  // not supported
-		#define EA_NO_CPP14_CONSTEXPR 
+		#define EA_NO_CPP14_CONSTEXPR
 	#endif
 #endif
 
@@ -245,6 +245,20 @@ namespace eastl
 		#define EASTL_DLL 1
 	#else
 		#define EASTL_DLL 0
+	#endif
+#endif
+
+
+///////////////////////////////////////////////////////////////////////////////
+// EASTL_IF_NOT_DLL
+//
+// Utility to include expressions only for static builds.
+//
+#ifndef EASTL_IF_NOT_DLL
+	#if EASTL_DLL
+		#define EASTL_IF_NOT_DLL(x)
+	#else
+		#define EASTL_IF_NOT_DLL(x) x
 	#endif
 #endif
 
@@ -434,6 +448,8 @@ namespace eastl
 // the front of the container, but not use it if the container is empty.
 // In practice it's often easier and more efficient to do this than to write
 // extra code to check if the container is empty.
+//
+// NOTE: If this is enabled, EASTL_ASSERT_ENABLED must also be enabled
 //
 // Example usage:
 //     template <typename T, typename Allocator>
@@ -816,7 +832,7 @@ namespace eastl
 // Defined as 0 or 1.
 //
 #ifndef EASTL_INT128_SUPPORTED
-	#if defined(EA_COMPILER_INTMAX_SIZE) && (EA_COMPILER_INTMAX_SIZE >= 16) // If the compiler supports int128_t (recent versions of GCC do)...
+	#if defined(__SIZEOF_INT128__) || (defined(EA_COMPILER_INTMAX_SIZE) && (EA_COMPILER_INTMAX_SIZE >= 16))
 		#define EASTL_INT128_SUPPORTED 1
 	#else
 		#define EASTL_INT128_SUPPORTED 0
@@ -855,7 +871,7 @@ namespace eastl
 	#if EASTL_INT128_SUPPORTED
 		#define EASTL_INT128_DEFINED 1
 
-		#if defined(__GNUC__)
+		#if defined(__SIZEOF_INT128__) || defined(EA_COMPILER_GNUC) || defined(__clang__)
 			typedef __int128_t   eastl_int128_t;
 			typedef __uint128_t eastl_uint128_t;
 		#else
@@ -999,7 +1015,7 @@ namespace eastl
 ///////////////////////////////////////////////////////////////////////////////
 // EASTL_OPERATOR_EQUALS_OTHER_ENABLED
 //
-// Defined as 0 or 1. Default is 0 until such day that it's deemeed safe.
+// Defined as 0 or 1. Default is 0 until such day that it's deemed safe.
 // When enabled, enables operator= for other char types, e.g. for code
 // like this:
 //     eastl::string8  s8;
@@ -1265,7 +1281,7 @@ namespace eastl
 // useful macro identifier for our type traits implementation.
 //
 #ifndef EASTL_COMPILER_INTRINSIC_TYPE_TRAITS_AVAILABLE
-	#if defined(_MSC_VER) && (_MSC_VER >= 1500) // VS2008 or later
+	#if defined(_MSC_VER) && (_MSC_VER >= 1500) && !defined(EA_COMPILER_CLANG_CL) // VS2008 or later
 		#pragma warning(push, 0)
 			#include <yvals.h>
 		#pragma warning(pop)
@@ -1274,9 +1290,9 @@ namespace eastl
 		#else
 			#define EASTL_COMPILER_INTRINSIC_TYPE_TRAITS_AVAILABLE 0
 		#endif
-	#elif defined(EA_COMPILER_CLANG) && defined(__APPLE__) && defined(_CXXCONFIG) // Apple clang but with GCC's libstdc++.
+	#elif defined(__clang__) && defined(__APPLE__) && defined(_CXXCONFIG) // Apple clang but with GCC's libstdc++.
 		#define EASTL_COMPILER_INTRINSIC_TYPE_TRAITS_AVAILABLE 0
-	#elif defined(EA_COMPILER_CLANG)
+	#elif defined(__clang__)
 		#define EASTL_COMPILER_INTRINSIC_TYPE_TRAITS_AVAILABLE 1
 	#elif defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003) && !defined(__GCCXML__)
 		#define EASTL_COMPILER_INTRINSIC_TYPE_TRAITS_AVAILABLE 1
@@ -1316,7 +1332,7 @@ namespace eastl
 //
 // Defined as 0 or 1; default is 1.
 // Specifies whether the min and max algorithms are available.
-// It may be useful to disable the min and max algorithems because sometimes
+// It may be useful to disable the min and max algorithms because sometimes
 // #defines for min and max exist which would collide with EASTL min and max.
 // Note that there are already alternative versions of min and max in EASTL
 // with the min_alt and max_alt functions. You can use these without colliding
@@ -1530,13 +1546,8 @@ namespace eastl
 //    size_t alignment = EASTL_ALIGN_OF(int);
 //
 ///////////////////////////////////////////////////////////////////////////////
-
 #ifndef EASTL_ALIGN_OF
-	#if !defined(__GNUC__) || (__GNUC__ >= 3) // GCC 2.x doesn't do __alignof correctly all the time.
-		#define EASTL_ALIGN_OF __alignof
-	#else
-		#define EASTL_ALIGN_OF(type) ((size_t)offsetof(struct{ char c; type m; }, m))
-	#endif
+	#define EASTL_ALIGN_OF alignof
 #endif
 
 
@@ -1754,20 +1765,13 @@ typedef EASTL_SSIZE_T eastl_ssize_t; // Signed version of eastl_size_t. Concept 
 	#endif
 #endif
 
+
 /// EASTL_TUPLE_ENABLED
 /// EASTL tuple implementation depends on variadic template support
 #if EASTL_VARIADIC_TEMPLATES_ENABLED && !defined(EA_COMPILER_NO_TEMPLATE_ALIASES)
 	#define EASTL_TUPLE_ENABLED 1
 #else
 	#define EASTL_TUPLE_ENABLED 0
-#endif
-
-/// EA_ONCE
-///
-/// This is a fix for the EA_ONCE define that's broken in EABase versions prior to 2.00.40
-///
-#ifndef EA_ONCE
-	#define EA_ONCE()
 #endif
 
 
@@ -1791,6 +1795,7 @@ typedef EASTL_SSIZE_T eastl_ssize_t; // Signed version of eastl_size_t. Concept 
 		#ifdef _MSC_VER
 			#pragma warning(disable: 4455) // disable warning C4455: literal suffix identifiers that do not start with an underscore are reserved
 		#endif
+
 	#else
 		#define EASTL_USER_LITERALS_ENABLED 0
 	#endif
@@ -1838,25 +1843,54 @@ typedef EASTL_SSIZE_T eastl_ssize_t; // Signed version of eastl_size_t. Concept 
 
 
 /// EASTL_HAS_UNIQUE_OBJECT_REPRESENTATIONS_AVAILABLE
-#if defined(_MSC_VER) && (_MSC_VER >= 1913)  // VS2017+
-	#define EASTL_HAS_UNIQUE_OBJECT_REPRESENTATIONS_AVAILABLE 1
-#elif defined(EA_COMPILER_CLANG)
+#if defined(__clang__)
 	#if !__is_identifier(__has_unique_object_representations)
 		#define EASTL_HAS_UNIQUE_OBJECT_REPRESENTATIONS_AVAILABLE 1
 	#else
 		#define EASTL_HAS_UNIQUE_OBJECT_REPRESENTATIONS_AVAILABLE 0
 	#endif
+#elif defined(_MSC_VER) && (_MSC_VER >= 1913)  // VS2017+
+	#define EASTL_HAS_UNIQUE_OBJECT_REPRESENTATIONS_AVAILABLE 1
 #else
 	#define EASTL_HAS_UNIQUE_OBJECT_REPRESENTATIONS_AVAILABLE 0
 #endif
 
 
-
 /// EASTL_ENABLE_PAIR_FIRST_ELEMENT_CONSTRUCTOR
-/// This feature define allows users to toggle the problematic eastl::pair implicit 
+/// This feature define allows users to toggle the problematic eastl::pair implicit
 /// single element constructor.
 #ifndef EASTL_ENABLE_PAIR_FIRST_ELEMENT_CONSTRUCTOR
-	#define EASTL_ENABLE_PAIR_FIRST_ELEMENT_CONSTRUCTOR 1
+	#define EASTL_ENABLE_PAIR_FIRST_ELEMENT_CONSTRUCTOR 0
 #endif
+
+/// EASTL_SYSTEM_BIG_ENDIAN_STATEMENT
+/// EASTL_SYSTEM_LITTLE_ENDIAN_STATEMENT
+/// These macros allow you to write endian specific macros as statements.
+/// This allows endian specific code to be macro expanded from within other macros
+///
+#if defined(EA_SYSTEM_BIG_ENDIAN)
+	#define EASTL_SYSTEM_BIG_ENDIAN_STATEMENT(...) __VA_ARGS__
+#else
+	#define EASTL_SYSTEM_BIG_ENDIAN_STATEMENT(...)
+#endif
+
+#if defined(EA_SYSTEM_LITTLE_ENDIAN)
+	#define EASTL_SYSTEM_LITTLE_ENDIAN_STATEMENT(...) __VA_ARGS__
+#else
+	#define EASTL_SYSTEM_LITTLE_ENDIAN_STATEMENT(...)
+#endif
+
+/// EASTL_CONSTEXPR_BIT_CAST_SUPPORTED
+/// eastl::bit_cast, in order to be implemented as constexpr, requires explicit compiler support.
+/// This macro defines whether it's possible for bit_cast to be constexpr.
+///
+#if (defined(EA_COMPILER_MSVC) && defined(EA_COMPILER_MSVC_VERSION_14_26) && EA_COMPILER_VERSION >= EA_COMPILER_MSVC_VERSION_14_26) \
+	|| EA_COMPILER_HAS_BUILTIN(__builtin_bit_cast)
+	#define EASTL_CONSTEXPR_BIT_CAST_SUPPORTED 1
+#else
+	#define EASTL_CONSTEXPR_BIT_CAST_SUPPORTED 0
+#endif
+
+
 
 #endif // Header include guard

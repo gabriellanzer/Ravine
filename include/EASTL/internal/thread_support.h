@@ -19,10 +19,12 @@
 //
 // fatal error C1189: <mutex> is not supported when compiling with /clr or /clr:pure 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-#if defined(EA_HAVE_CPP11_MUTEX) && !defined(EA_COMPILER_MANAGED_CPP)
-	#define EASTL_CPP11_MUTEX_ENABLED 1
-#else
-	#define EASTL_CPP11_MUTEX_ENABLED 0
+#if !defined(EASTL_CPP11_MUTEX_ENABLED)
+	#if defined(EA_HAVE_CPP11_MUTEX) && !defined(EA_COMPILER_MANAGED_CPP)
+		#define EASTL_CPP11_MUTEX_ENABLED 1
+	#else
+		#define EASTL_CPP11_MUTEX_ENABLED 0
+	#endif
 #endif
 
 #if EASTL_CPP11_MUTEX_ENABLED
@@ -37,15 +39,12 @@
 	#include <pthread.h>
 #endif
 
+// copy constructor could not be generated because a base class copy constructor is inaccessible or deleted.
+// assignment operator could not be generated because a base class assignment operator is inaccessible or deleted.
+// non dll-interface class used as base for DLL-interface classkey 'identifier'.
+EA_DISABLE_VC_WARNING(4625 4626 4275);
 
-#if defined(_MSC_VER)
-	#pragma warning(push)
-	#pragma warning(disable: 4625) // copy constructor could not be generated because a base class copy constructor is inaccessible or deleted.
-	#pragma warning(disable: 4626) // assignment operator could not be generated because a base class assignment operator is inaccessible or deleted.
-	#pragma warning(disable: 4275) // non dll-interface class used as base for DLL-interface classkey 'identifier'.
-#endif
 
-	
 #if defined(EA_PLATFORM_MICROSOFT)
 	#if defined(EA_PROCESSOR_POWERPC)
 		extern "C" long  __stdcall _InterlockedIncrement(long volatile* Addend);
@@ -80,7 +79,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if !defined(EASTL_THREAD_SUPPORT_AVAILABLE)
-	#if defined(EA_COMPILER_CLANG) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
+	#if defined(__clang__) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
 		#define EASTL_THREAD_SUPPORT_AVAILABLE 1
 	#elif defined(EA_COMPILER_MSVC)
 		#define EASTL_THREAD_SUPPORT_AVAILABLE 1
@@ -98,7 +97,7 @@ namespace eastl
 		/// Returns the new value.
 		inline int32_t atomic_increment(int32_t* p32) EA_NOEXCEPT
 		{
-			#if defined(EA_COMPILER_CLANG) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
+			#if defined(__clang__) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
 				return __sync_add_and_fetch(p32, 1);
 			#elif defined(EA_COMPILER_MSVC)
 				static_assert(sizeof(long) == sizeof(int32_t), "unexpected size");
@@ -121,7 +120,7 @@ namespace eastl
 		/// Returns the new value.
 		inline int32_t atomic_decrement(int32_t* p32) EA_NOEXCEPT
 		{
-			#if defined(EA_COMPILER_CLANG) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
+			#if defined(__clang__) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
 				return __sync_add_and_fetch(p32, -1);
 			#elif defined(EA_COMPILER_MSVC)
 				return _InterlockedDecrement((volatile long*)p32); // volatile long cast is OK because int32_t == long on Microsoft platforms.
@@ -148,7 +147,7 @@ namespace eastl
 		/// the two as would be the case with simple C code.
 		inline bool atomic_compare_and_swap(int32_t* p32, int32_t newValue, int32_t condition)
 		{
-			#if defined(EA_COMPILER_CLANG) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
+			#if defined(__clang__) || (defined(EA_COMPILER_GNUC) && (EA_COMPILER_VERSION >= 4003))
 				return __sync_bool_compare_and_swap(p32, condition, newValue);
 			#elif defined(EA_COMPILER_MSVC)
 				return ((int32_t)_InterlockedCompareExchange((volatile long*)p32, (long)newValue, (long)condition) == condition);
@@ -241,17 +240,7 @@ namespace eastl
 } // namespace eastl
 
 
-#if defined(_MSC_VER)
-	#pragma warning(pop)
-#endif
+EA_RESTORE_VC_WARNING();
 
 
 #endif // Header include guard
-
-
-
-
-
-
-
-
